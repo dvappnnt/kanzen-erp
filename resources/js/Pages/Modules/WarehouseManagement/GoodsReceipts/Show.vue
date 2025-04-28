@@ -1,0 +1,99 @@
+<script setup>
+import AppLayout from "@/Layouts/AppLayout.vue";
+import HeaderActions from "@/Components/HeaderActions.vue";
+import { ref, computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+import moment from "moment";
+import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
+import ProfileCard from "@/Components/Sections/ProfileCard.vue";
+import DisplayInformation from "@/Components/Sections/DisplayInformation.vue";
+import { singularizeAndFormat } from "@/utils/global";
+import { useColors } from "@/Composables/useColors";
+import QRCode from 'qrcode.vue';
+import { router } from '@inertiajs/vue3';
+
+const modelName = "goods-recepts";
+const page = usePage();
+
+const getQrUrl = (id) => {
+    return route('qr.goods-recepts', { purchase_order: id });
+};
+
+const headerActions = ref([
+    {
+        text: "Go Back",
+        url: `/${modelName}`,
+        inertia: true,
+        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600",
+    },
+]);
+
+const profileDetails = [
+    { label: "Name", value: "name", class: "text-xl font-bold" },
+    { label: "Email", value: "email", class: "text-gray-500" },
+    {
+        label: "Company",
+        value: (row) => row.company.name,
+        class: "text-gray-600 font-semibold",
+    },
+    {
+        has_qr: true,
+        qr_data: (row) => getQrUrl(row.token),
+        created_at: (row) => moment(row.created_at).fromNow()
+    }
+];
+
+const contactDetails = ref([
+    { label: "Located At", value: "address" },
+    { label: "Mobile", value: "mobile" },
+    { label: "Landline", value: "landline" },
+    { label: "Description", value: "description" },
+    { label: "Website", value: "website" },
+]);
+
+const companyDetails = ref([
+    { label: "Located At", value: "address" },
+    { label: "Mobile", value: "mobile" },
+    { label: "Landline", value: "landline" },
+    { label: "Description", value: "description" },
+    { label: "Website", value: "website" },
+]);
+
+const modelData = computed(() => page.props.modelData || {});
+</script>
+
+<template>
+    <AppLayout :title="`${singularizeAndFormat(modelName)} Details`">
+        <template #header>
+            <div class="flex justify-between items-center">
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                    {{ singularizeAndFormat(modelName) }} Details
+                </h2>
+                <HeaderActions :actions="headerActions" />
+            </div>
+        </template>
+
+        <div class="max-w-12xl mx-auto">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg pt-6">
+                <HeaderInformation
+                    :title="`${singularizeAndFormat(modelName)} Details`"
+                    :modelData="modelData"
+                />
+                <ProfileCard :modelData="modelData" :columns="profileDetails" />
+
+                <div class="border-t border-gray-200" />
+                <DisplayInformation
+                    title="Contact Information"
+                    :modelData="modelData"
+                    :rowDetails="contactDetails"
+                />
+                <div class="border-t border-gray-200" />
+                <DisplayInformation
+                    title="Company Information"
+                    :modelData="modelData.company"
+                    :rowDetails="companyDetails"
+                />
+            </div>
+        </div>
+    </AppLayout>
+</template>
