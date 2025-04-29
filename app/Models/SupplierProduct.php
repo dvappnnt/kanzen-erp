@@ -11,7 +11,7 @@ class SupplierProduct extends Model
 
     protected $fillable = [
         'supplier_id',
-        'product_id',
+        'product_id'
     ];
 
     public function supplier()
@@ -22,5 +22,11 @@ class SupplierProduct extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function details()
+    {
+        return $this->hasMany(SupplierProductDetail::class, 'product_id', 'product_id')
+            ->where('supplier_id', $this->supplier_id);
     }
 }

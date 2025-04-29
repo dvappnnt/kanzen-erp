@@ -32,7 +32,7 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['company'])->findOrFail($id);
+        $model = $this->modelClass::with(['company', 'warehouse', 'supplier'])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,

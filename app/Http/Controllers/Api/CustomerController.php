@@ -25,11 +25,12 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'company_id' => 'required|exists:companies,id',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|string|max:255',
-            'mobile' => 'required|string|max:255',
+            'email' => 'nullable|email|string|max:255',
+            'mobile' => 'nullable|string|max:255',
             'landline' => 'nullable|string|max:255',
-            'address' => 'required|string|max:255',
+            'address' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1024',
             'website' => 'nullable|url|string|max:255',
             'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
@@ -60,11 +61,12 @@ class CustomerController extends Controller
         $model = $this->modelClass::findOrFail($id);
 
         $validated = $request->validate([
+            'company_id' => 'required|exists:companies,id',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|string|max:255',
-            'mobile' => 'required|string|max:255',
+            'email' => 'nullable|email|string|max:255',
+            'mobile' => 'nullable|string|max:255',
             'landline' => 'nullable|string|max:255',
-            'address' => 'required|string|max:255',
+            'address' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1024',
             'website' => 'nullable|url|string|max:255',
             'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',

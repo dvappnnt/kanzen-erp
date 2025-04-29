@@ -51,3 +51,16 @@ export function formatDate(format, dateString) {
 
     return format.split('').map(char => map[char] ?? char).join('');
 }
+
+export function formatNumber(number, { style = 'decimal', currency = 'USD', minimumFractionDigits, maximumFractionDigits } = {}) {
+    const options = { style };
+
+    if (style === 'currency') {
+        options.currency = currency;
+    } else {
+        options.minimumFractionDigits = minimumFractionDigits ?? 0;
+        options.maximumFractionDigits = maximumFractionDigits ?? 2;
+    }
+
+    return new Intl.NumberFormat('en-US', options).format(number);
+}

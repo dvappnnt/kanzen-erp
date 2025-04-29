@@ -104,6 +104,9 @@ Route::group(['prefix' => 'public'], function () {
         Route::get('/suppliers/{supplier}', [QrController::class, 'suppliers'])->name('qr.suppliers');
         Route::get('/warehouses/{warehouse}', [QrController::class, 'warehouses'])->name('qr.warehouses');
         Route::get('/companies/{company}', [QrController::class, 'companies'])->name('qr.companies');
+        Route::get('/purchase-orders/{purchaseOrder}', [QrController::class, 'purchaseOrders'])->name('qr.purchase-orders');
+        Route::get('/goods-receipts/{goodsReceipt}', [QrController::class, 'goodsReceipts'])->name('qr.goods-receipts');
+        Route::get('/purchase-requisitions/{purchaseRequisition}', [QrController::class, 'purchaseRequisitions'])->name('qr.purchase-requisitions');
     });
 });
 

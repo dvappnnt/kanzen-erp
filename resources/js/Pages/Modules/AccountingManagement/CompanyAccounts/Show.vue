@@ -7,7 +7,7 @@ import moment from "moment";
 import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
 import ProfileCard from "@/Components/Sections/ProfileCard.vue";
 import DisplayInformation from "@/Components/Sections/DisplayInformation.vue";
-import { singularizeAndFormat } from "@/utils/global";
+import { singularizeAndFormat, formatNumber } from "@/utils/global";
 
 const modelName = "company-accounts";
 
@@ -35,7 +35,7 @@ const accountDetails = ref([
     { label: "Account Number", value: (row) => row.number || "-" },
     { label: "Account Type", value: (row) => row.type || "-" },
     { label: "Status", value: (row) => row.status || "-" },
-    { label: "Balance", value: (row) => row.balance || "-" },
+    { label: "Balance", value: (row) => formatNumber(row.balance, { style: 'currency', currency: 'PHP' }) || "-" },
     { label: "Currency", value: (row) => row.currency || "-" },
 ]);
 

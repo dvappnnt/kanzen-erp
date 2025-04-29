@@ -28,7 +28,11 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string|max:1024',
             'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
+            'has_variation' => 'nullable', // just "required" here, no boolean check
         ]);
+
+        // Force has_variation to real boolean
+        $validated['has_variation'] = filter_var($validated['has_variation'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if ($request->hasFile('avatar')) {
             $avatarPath = $request->file('avatar')->store('companies/avatars', 'public');
@@ -36,6 +40,7 @@ class ProductController extends Controller
         }
 
         $validated['created_by_user_id'] = auth()->user()->id;
+
         $company = $this->modelClass::create($validated);
 
         return response()->json([
@@ -59,7 +64,11 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string|max:1024',
             'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
+            'has_variation' => 'nullable', // just "required" here, no boolean check
         ]);
+
+        // Force has_variation to real boolean
+        $validated['has_variation'] = filter_var($validated['has_variation'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if ($request->hasFile('avatar')) {
             if ($model->avatar && \Storage::disk('public')->exists($model->avatar)) {

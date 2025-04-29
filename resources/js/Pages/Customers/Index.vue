@@ -9,13 +9,11 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
-import { formatName, formatDate, formatNumber } from "@/utils/global";
 
-const modelName = "journal-entries";
+const modelName = "customers";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
 
-// Access appSettings from Inertia.js page props
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 // Define Header Actions
@@ -23,15 +21,16 @@ const headerActions = ref([
     {
         text: "Export",
         url: `/${modelName}/export`,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
+        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600",
     },
     {
         text: "Create",
         url: `/${modelName}/create`,
         inertia: true,
-        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
+        class: "px-4 py-2 rounded",
         style: computed(() => ({
-            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
+            backgroundColor: buttonPrimaryBgColor.value,
+            color: buttonPrimaryTextColor.value
         })),
     },
 ]);
@@ -39,32 +38,14 @@ const headerActions = ref([
 // Define Table Columns
 const columns = ref([
     {
-        label: "Reference Number",
-        value: "reference_number",
+        label: "Name",
+        value: "name",
+        has_avatar: true,
+        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
     },
-    {
-        label: "Reference Date",
-        value: (row) => formatDate("M d Y", row.reference_date),
-    },
-    {
-        label: "Total Debit",
-        value: (row) => formatNumber(row.total_debit, { style: 'currency', currency: 'PHP' }),
-    },
-    {
-        label: "Total Credit",
-        value: (row) => formatNumber(row.total_credit, { style: 'currency', currency: 'PHP' }),
-    },
-    {
-        label: "Remarks",
-        value: "remarks",
-    },
-    {
-        label: "Created At",
-        value: (row) => moment(row.created_at).fromNow(), // Display like "2 days ago"
-    },
-    {
-        label: "Actions",
-    },
+    { label: "Email", value: "email" },
+    { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
+    { label: "Actions" },
 ]);
 
 const mapCustomButtons = (row) => ({
@@ -125,11 +106,11 @@ onMounted(() => fetchTableData());
 </script>
 
 <template>
-    <AppLayout :title="formatName(modelName)">
+    <AppLayout :title="modelName.charAt(0).toUpperCase() + modelName.slice(1)">
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    {{ formatName(modelName) }}
+                    {{ modelName.charAt(0).toUpperCase() + modelName.slice(1) }}
                 </h2>
                 <HeaderActions :actions="headerActions" />
             </div>

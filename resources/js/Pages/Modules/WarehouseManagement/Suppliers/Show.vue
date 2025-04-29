@@ -54,7 +54,7 @@ const navigationTabs = ref([
         permission: "read suppliers"
     },
     {
-        text: "Supplier Products Information",
+        text: "Products Information",
         url: `/${modelName}/${modelData.value.id}/products`,
         inertia: true,
         permission: "read supplier products"

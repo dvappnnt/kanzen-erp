@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('product_variations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+            $table->string('sku')->unique()->nullable();                // SKU for this variation
+            $table->string('barcode')->nullable();          // Optional barcode
             $table->string('name')->nullable(); // Default
             $table->boolean('is_default')->default(false);
             $table->softDeletes();

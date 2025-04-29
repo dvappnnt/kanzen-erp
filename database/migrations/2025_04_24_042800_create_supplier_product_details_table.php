@@ -11,13 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('supplier_product_variations', function (Blueprint $table) {
+        Schema::create('supplier_product_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->foreignId('product_variation_id')->constrained()->onDelete('cascade');
-            $table->string('sku')->unique();                // SKU for this variation
-            $table->string('barcode')->nullable();          // Optional barcode
+            $table->foreignId('product_variation_id')->constrained('product_variations')->onDelete('cascade');
             $table->string('currency')->default('PHP');
             $table->decimal('price', 10, 2)->default(0);    // Supplier-specific price
             $table->decimal('cost', 10, 2)->default(0);     // Internal cost, if tracked
@@ -33,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('supplier_product_variations');
+        Schema::dropIfExists('supplier_product_details');
     }
 };

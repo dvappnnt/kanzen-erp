@@ -434,7 +434,7 @@
                         "
                     >
                         <span
-                            class="mdi mdi-account-group text-xl"
+                            class="mdi mdi-account-group-outline text-xl"
                             :style="
                                 route().current()?.startsWith('users.')
                                     ? { color: activeTextColor }
@@ -442,6 +442,32 @@
                             "
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Users</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read customers')"
+                        :href="route('customers.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('customers.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('customers.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-star-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('customers.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Customers</span>
                     </Link>
 
                     <Link

@@ -7,7 +7,7 @@ import moment from "moment";
 import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
 import ProfileCard from "@/Components/Sections/ProfileCard.vue";
 import DisplayInformation from "@/Components/Sections/DisplayInformation.vue";
-import { singularizeAndFormat, formatDate } from "@/utils/global";
+import { singularizeAndFormat, formatDate, formatNumber } from "@/utils/global";
 
 const modelName = "journal-entries";
 
@@ -30,8 +30,8 @@ const profileDetails = [
 ];
 
 const journalEntryDetails = [
-    { label: "Total Debit", value: "total_debit", class: "text-gray-500" },
-    { label: "Total Credit", value: "total_credit", class: "text-gray-500" },
+    { label: "Total Debit", value: (row) => formatNumber(row.total_debit, { style: 'currency', currency: 'PHP' }), class: "text-gray-500" },
+    { label: "Total Credit", value: (row) => formatNumber(row.total_credit, { style: 'currency', currency: 'PHP' }), class: "text-gray-500" },
     { label: "Remarks", value: "remarks", class: "text-gray-500" },
 ];
 
