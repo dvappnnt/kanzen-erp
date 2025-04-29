@@ -9,7 +9,7 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
-
+import { formatNumber } from "@/utils/global";
 const modelName = "expenses";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
@@ -40,7 +40,7 @@ const columns = ref([
     { label: "Supplier", value: (row) => row.supplier?.name || "-" },
     { label: "Payment Method", value: "payment_method" },
     { label: "Currency", value: "currency" },
-    { label: "Amount", value: "amount" },
+    { label: "Amount", value: (row) => formatNumber(row.amount, { style: 'currency', currency: 'PHP' }) },
     { label: "Expense Date", value: "expense_date" },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },

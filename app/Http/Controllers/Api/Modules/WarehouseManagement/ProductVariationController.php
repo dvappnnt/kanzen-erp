@@ -15,32 +15,7 @@ class ProductVariationController extends Controller
     {
         $variations = ProductVariation::with(['attributes.attribute', 'attributes.attributeValue'])
             ->where('product_id', $product->id)
-            ->get()
-            ->map(function ($variation) {
-                return [
-                    'id' => $variation->id,
-                    'name' => $variation->name,
-                    'is_default' => $variation->is_default,
-                    'attributes' => $variation->attributes->map(function ($attr) {
-                        return [
-                            'id' => $attr->id,
-                            'attribute_id' => $attr->attribute_id,
-                            'attribute_value_id' => $attr->attribute_value_id,
-                            'product_variation_id' => $attr->product_variation_id,
-                            'created_at' => $attr->created_at,
-                            'updated_at' => $attr->updated_at,
-                            'attribute' => [
-                                'id' => $attr->attribute->id,
-                                'name' => $attr->attribute->name
-                            ],
-                            'value' => [
-                                'id' => $attr->attributeValue->id,
-                                'value' => $attr->attributeValue->value
-                            ]
-                        ];
-                    })
-                ];
-            });
+            ->get();
 
         return response()->json($variations);
     }
@@ -50,6 +25,8 @@ class ProductVariationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'is_default' => 'boolean',
+            'sku' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:255',
             'attributes' => 'required|array',
             'attributes.*.attribute_id' => 'required|exists:attributes,id',
             'attributes.*.attribute_value_id' => 'required|exists:attribute_values,id'
@@ -69,6 +46,8 @@ class ProductVariationController extends Controller
             $variation = ProductVariation::create([
                 'product_id' => $product->id,
                 'name' => $validated['name'],
+                'sku' => $validated['sku'],
+                'barcode' => $validated['barcode'],
                 'is_default' => $validated['is_default']
             ]);
 
@@ -98,6 +77,10 @@ class ProductVariationController extends Controller
         $variation = ProductVariation::findOrFail($id);
 
         $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'is_default' => 'boolean',
+            'sku' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:255',
             'attributes' => 'required|array',
             'attributes.*.attribute_id' => 'required|exists:attributes,id',
             'attributes.*.attribute_value_id' => 'required|exists:attribute_values,id'
@@ -108,6 +91,13 @@ class ProductVariationController extends Controller
 
             // Delete existing attributes
             $variation->attributes()->delete();
+
+            $variation->update([
+                'name' => $validated['name'],
+                'sku' => $validated['sku'],
+                'barcode' => $validated['barcode'],
+                'is_default' => $validated['is_default']
+            ]);
 
             // Create new attributes
             foreach ($validated['attributes'] as $attribute) {

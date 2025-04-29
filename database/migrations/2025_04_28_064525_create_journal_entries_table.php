@@ -16,13 +16,23 @@ return new class extends Migration
             $table->foreignId('company_id')->nullable()->constrained('companies')->nullOnDelete(); // Which company it belongs to
             $table->string('reference_number')->nullable(); // Optional reference no
             $table->date('reference_date')->nullable();     // Reference date
-            $table->decimal('total_debit', 15, 2)->default(0);
-            $table->decimal('total_credit', 15, 2)->default(0);
             $table->text('remarks')->nullable();            // Optional remarks or notes
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->softDeletes();
             $table->timestamps();
         });
+
+        Schema::create('journal_entry_details', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('journal_entry_id')->constrained()->onDelete('cascade');
+            $table->foreignId('account_id')->constrained('company_accounts')->onDelete('cascade');
+            $table->decimal('debit', 15, 2)->default(0);
+            $table->decimal('credit', 15, 2)->default(0);
+            $table->text('remarks')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+
     }
 
     /**
@@ -31,5 +41,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('journal_entries');
+        Schema::dropIfExists('journal_entry_details');
     }
 };

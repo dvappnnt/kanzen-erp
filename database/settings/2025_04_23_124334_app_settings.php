@@ -30,7 +30,7 @@ return new class extends SettingsMigration {
             ['name' => 'sidebar_hover_bg_color', 'payload' => '#3355db'], // Not active
             ['name' => 'sidebar_hover_text_color', 'payload' => '#212121'], // Not active
             ['name' => 'sidebar_active_bg_color', 'payload' => '#3355db'],
-            ['name' => 'sidebar_active_text_color', 'payload' => '#212121'],
+            ['name' => 'sidebar_active_text_color', 'payload' => '#ffffff'],
 
             // Button
             ['name' => 'button_primary_bg_color', 'payload' => '#3355db'],

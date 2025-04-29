@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Modules\AccountingManagement\JournalEntryController
 
 use App\Http\Controllers\Api\Modules\WarehouseManagement\SupplierController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderDetailController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\GoodsReceiptController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseRequisitionController;
@@ -69,10 +70,10 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('suppliers', SupplierController::class);
     Route::get('autocomplete/suppliers', [SupplierController::class, 'autocomplete'])->name('suppliers.autocomplete');
-    Route::get('suppliers/{supplier}/products', [SupplierController::class, 'products'])->name('suppliers.products');
 
     Route::group(['prefix' => 'suppliers/{supplier}'], function () {
         Route::apiResource('products', SupplierProductController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+        Route::put('products/{product}/details/{detail}', [SupplierProductController::class, 'updateDetail']);
     });
 
     Route::apiResource('attributes', AttributeController::class);
@@ -87,7 +88,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('product-specifications', ProductSpecificationController::class);
     Route::get('autocomplete/product-specifications', [ProductSpecificationController::class, 'autocomplete'])->name('product-specifications.autocomplete');
 
-    Route::group(['prefix' => 'products/{product}'], function () {
+    Route::group(['prefix' => 'products/{product}', 'as' => 'products.'], function () {
         Route::apiResource('variations', ProductVariationController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     });
 
@@ -99,6 +100,14 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::get('autocomplete/purchase-orders', [PurchaseOrderController::class, 'autocomplete'])->name('purchase-orders.autocomplete');
+    
+    // Add nested route for purchase order details
+    Route::group(['prefix' => 'purchase-orders/{purchaseOrder}'], function () {
+        Route::apiResource('details', PurchaseOrderDetailController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    });
+
+    Route::apiResource('purchase-order-details', PurchaseOrderDetailController::class);
+    Route::get('autocomplete/purchase-order-details', [PurchaseOrderDetailController::class, 'autocomplete'])->name('purchase-order-details.autocomplete');
 
     Route::apiResource('goods-receipts', GoodsReceiptController::class);
     Route::get('autocomplete/goods-receipts', [GoodsReceiptController::class, 'autocomplete'])->name('goods-receipts.autocomplete');

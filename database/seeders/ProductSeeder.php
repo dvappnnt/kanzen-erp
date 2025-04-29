@@ -6,6 +6,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Models\ProductVariationAttribute;
+use App\Models\Product;
 
 class ProductSeeder extends Seeder
 {
@@ -38,6 +40,23 @@ class ProductSeeder extends Seeder
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
+
+                $product = Product::where('name', $productName)->first();
+
+                $defaultVariation = $product->variations()->create([
+                    'name' => 'Default Product Variation',
+                    'is_default' => true,
+                ]);
+
+                $conditionAttributeId = DB::table('attributes')->where('name', 'Condition')->value('id');
+
+                foreach (['New'] as $condition) {
+                    ProductVariationAttribute::create([
+                        'product_variation_id' => $defaultVariation->id,
+                        'attribute_id' => $conditionAttributeId,
+                        'attribute_value_id' => DB::table('attribute_values')->where('value', $condition)->value('id'),
+                    ]);
+                }
             }
         }
 

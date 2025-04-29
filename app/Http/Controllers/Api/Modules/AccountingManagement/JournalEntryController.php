@@ -24,6 +24,7 @@ class JournalEntryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'company_id' => 'required|exists:companies,id',
             'reference_number' => 'required|string|max:255',
             'reference_date' => 'required|date',
             'total_debit' => 'required|numeric',
@@ -50,6 +51,7 @@ class JournalEntryController extends Controller
         $model = $this->modelClass::findOrFail($id);
 
         $validated = $request->validate([
+            'company_id' => 'required|exists:companies,id',
             'reference_number' => 'required|string|max:255',
             'reference_date' => 'required|date',
             'total_debit' => 'required|numeric',

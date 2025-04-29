@@ -6,29 +6,20 @@ import FormField from "@/Components/Form/Field.vue";
 import InputError from "@/Components/InputError.vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { ref, computed } from "vue";
-import { parseInput } from "@/utils/parseInput";
 import { useToast } from "vue-toastification";
 import { singularizeAndFormat } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
 
-const modelName = "journal-entries";
 const page = usePage();
+const modelName = "customers";
 const isSubmitting = ref(false);
 const toast = useToast();
 
-const formData = ref({
-    company_id: page.props.auth?.user?.company_id,
-    total_debit: 0.00,
-    total_credit: 0.00,
-});
-const errors = ref({}); // Object to hold error messages
+const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 const companies = computed(() =>
     Array.isArray(page.props.companies) ? page.props.companies : []
 );
-
-// Get colors from composable
-const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 const headerActions = ref([
     {
@@ -39,7 +30,7 @@ const headerActions = ref([
     },
 ]);
 
-const fields = ref([
+const fields = computed(() => [
     {
         id: "company_id",
         label: "Company",
@@ -50,58 +41,68 @@ const fields = ref([
             value: company.id,
             text: company.name.charAt(0).toUpperCase() + company.name.slice(1),
         })),
+        placeholder: "Select company",
     },
     {
-        id: "reference_number",
-        label: "Reference Number",
-        model: "reference_number",
+        id: "name",
+        label: "Name",
+        model: "name",
         type: "text",
-        required: true,
-        placeholder: "Enter reference number (e.g., JRN-2025-00001)",
-    },
-    {
-        id: "reference_date",
-        label: "Reference Date",
-        model: "reference_date",
-        type: "date",
+        placeholder: "Enter full name",
         required: true,
     },
     {
-        id: "total_debit",
-        label: "Total Debit",
-        model: "total_debit",
-        type: "number",
-        required: true,
-        placeholder: "Enter total debit amount",
-    },
-    {
-        id: "total_credit",
-        label: "Total Credit",
-        model: "total_credit",
-        type: "number",
-        required: true,
-        placeholder: "Enter total credit amount",
-    },
-    {
-        id: "remarks",
-        label: "Remarks",
-        model: "remarks",
-        type: "textarea",
+        id: "email",
+        label: "Email Address",
+        model: "email",
+        type: "email",
+        placeholder: "Enter email address",
         required: false,
-        placeholder: "Enter any remarks (optional)",
+    },
+    {
+        id: "landline",
+        label: "Landline",
+        model: "landline",
+        type: "text",
+        placeholder: "Enter landline number",
+        required: false,
+    },
+    {
+        id: "mobile",
+        label: "Mobile",
+        model: "mobile",
+        type: "text",
+        placeholder: "Enter mobile number",
+        required: false,
+    },
+    {
+        id: "address",
+        label: "Address",
+        model: "address",
+        type: "textarea",
+        placeholder: "Enter address",
+        required: false,
+    },
+    {
+        id: "avatar",
+        label: "Avatar",
+        model: "avatar",
+        type: "file",
+        placeholder: "Upload avatar",
+        required: false,
     },
 ]);
+
+const formData = ref({
+    company_id: page.props.auth?.user?.company_id,
+});
+const errors = ref({});
 
 const submitForm = async () => {
     try {
         isSubmitting.value = true;
 
-        const formDataObj = parseInput(fields.value, formData.value);
-        const response = await axios.post(`/api/${modelName}`, formDataObj, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
+        const response = await axios.post(`/api/${modelName}`, formData.value);
         toast.success("Submitted successfully!");
         const modelDataId = response.data.modelData.id;
         router.get(`/${modelName}/${modelDataId}`);
@@ -117,12 +118,11 @@ const submitForm = async () => {
 </script>
 
 <template>
-    <AppLayout :title="`Create ${singularizeAndFormat(modelName)}`">
+    <AppLayout :title="`Create ${singularizeAndFormat(modelName)} Details`">
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Create
-                    {{ singularizeAndFormat(modelName) }}
+                    Create {{ singularizeAndFormat(modelName) }} Details
                 </h2>
                 <HeaderActions :actions="headerActions" />
             </div>
@@ -135,17 +135,17 @@ const submitForm = async () => {
                 @submitted="submitForm"
             >
                 <template #title>
-                    Create
-                    {{ singularizeAndFormat(modelName) }}
+                    Create a new
+                    {{ singularizeAndFormat(modelName).toLowerCase() }}
                 </template>
                 <template #description>
                     <p>
-                        Fill out the form below to create a new
+                        Fill in the form below to create a new
                         {{ singularizeAndFormat(modelName).toLowerCase() }}.
                     </p>
                     <p class="mt-1 text-sm text-gray-500">
                         <span class="text-red-500 font-semibold">*</span>
-                        Fields marked with this symbol are required.
+                        Fields with this mark are required.
                     </p>
                 </template>
 
@@ -162,7 +162,7 @@ const submitForm = async () => {
                             :options="field.options || []"
                             v-model="formData[field.model]"
                         />
-                        <!-- Display field-specific errors -->
+                        <!-- InputError component for showing field-specific errors -->
                         <InputError :message="errors[field.model]" />
                     </div>
                 </template>

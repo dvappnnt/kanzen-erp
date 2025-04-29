@@ -18,21 +18,22 @@ class PurchaseOrderController extends Controller
 
     public function index()
     {
-        return $this->modelClass::with(['parent'])->latest()->paginate(perPage: 10);
+        return $this->modelClass::with(['company', 'warehouse', 'supplier'])->latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'purchase_requisition_id' => 'required|exists:purchase_requisitions,id',
+            'company_id' => 'required|exists:companies,id',
+            'warehouse_id' => 'required|exists:warehouses,id',
             'supplier_id' => 'required|exists:suppliers,id',
-            'order_date' => 'required|date',
+            'order_date' => 'nullable|date',
             'expected_delivery_date' => 'nullable|date',
             'delivery_date' => 'nullable|date',
             'payment_terms' => 'nullable|string|max:255',
             'shipping_terms' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1024',
-            'subtotal' => 'required|numeric|min:0',
+            'subtotal' => 'nullable|numeric|min:0',
         ]);
 
         $model = $this->modelClass::create($validated);
@@ -45,7 +46,7 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::findOrFail($id);
+        $model = $this->modelClass::with(['company', 'warehouse', 'supplier'])->findOrFail($id);
         return $model;
     }
 
@@ -93,7 +94,7 @@ class PurchaseOrderController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::with(['parent'])
+        $models = $this->modelClass::with(['company', 'warehouse', ''])
             ->where('name', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();

@@ -11,6 +11,8 @@ class ProductVariation extends Model
 
     protected $fillable = [
         'product_id',
+        'sku',
+        'barcode',
         'name',
         'is_default'
     ];
@@ -30,5 +32,10 @@ class ProductVariation extends Model
         return $this->belongsToMany(Supplier::class, 'supplier_product_variations')
             ->withPivot('price', 'cost', 'lead_time_days')
             ->withTimestamps();
+    }
+
+    public function supplierProductDetails()
+    {
+        return $this->hasMany(SupplierProductDetail::class, 'product_variation_id');
     }
 }

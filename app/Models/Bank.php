@@ -12,5 +12,12 @@ class Bank extends Model
     protected $fillable = [
         'name',
         'code',
+        'phone',
+        'email',
+        'address',
+        'city',
+        'state',
+        'zip',
+        'website',
     ];
 }

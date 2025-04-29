@@ -2,30 +2,30 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class SupplierProductVariation extends Model
+class SupplierProductDetail extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'supplier_id',
         'product_id',
         'product_variation_id',
-        'sku',
-        'barcode',
         'currency',
         'price',
         'cost',
         'lead_time_days',
-        'is_default',
-        'has_variation',
+        'is_default'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'cost' => 'decimal:2',
+        'lead_time_days' => 'integer',
+        'is_default' => 'boolean'
     ];
 
     public function supplier()
@@ -40,6 +40,11 @@ class SupplierProductVariation extends Model
 
     public function variation()
     {
-        return $this->belongsTo(ProductVariation::class);
+        return $this->belongsTo(ProductVariation::class, 'product_variation_id');
+    }
+
+    public function purchaseOrderDetails()
+    {
+        return $this->hasMany(PurchaseOrderDetail::class);
     }
 }

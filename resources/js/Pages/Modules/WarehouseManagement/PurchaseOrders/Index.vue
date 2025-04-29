@@ -37,13 +37,10 @@ const headerActions = ref([
 
 // Define Table Columns
 const columns = ref([
-    {
-        label: "Name",
-        value: "name",
-        has_avatar: true,
-        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
-    },
-    { label: "Address", value: "address" },
+    { label: "Number", value: "number" },
+    { label: "Warehouse", value: (row) => row.warehouse.name },
+    { label: "Company", value: (row) => row.company.name },
+    { label: "Supplier", value: (row) => row.supplier.name },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },
 ]);
