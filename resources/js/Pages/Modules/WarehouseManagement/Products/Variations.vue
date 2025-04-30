@@ -158,14 +158,14 @@ const handleNewAttributeSubmit = async () => {
         const { data } = await axios.post("/api/attributes", {
             name: newAttributeForm.value.name,
         });
-
+        
         // Add to available attributes
         availableAttributes.value.push(data.modelData);
-
+        
         // Select the new attribute
         const index = newAttributeForm.value.currentRowIndex;
         selectedRows.value[index].attributeId = data.modelData.id;
-
+        
         showNewAttributeModal.value = false;
         toast.success(data.message || "Attribute created successfully");
 
@@ -185,18 +185,18 @@ const handleNewValueSubmit = async () => {
             attribute_id: parseInt(newValueForm.value.attributeId),
             value: newValueForm.value.value,
         });
-
+        
         // Add to attribute values
         const attributeId = newValueForm.value.attributeId;
         if (!attributeValues.value[attributeId]) {
             attributeValues.value[attributeId] = [];
         }
         attributeValues.value[attributeId].push(data.modelData);
-
+        
         // Select the new value
         const index = newValueForm.value.currentRowIndex;
         selectedRows.value[index].valueId = data.modelData.id;
-
+        
         showNewValueModal.value = false;
         toast.success(data.message || "Value created successfully");
     } catch (error) {
@@ -211,7 +211,7 @@ const handleAttributeChange = async (index, attributeId) => {
         selectedRows.value[index].attributeId = "";
         return;
     }
-
+    
     selectedRows.value[index].valueId = "";
     if (attributeId && !attributeValues.value[attributeId]) {
         await loadAttributeValues(attributeId);
@@ -561,21 +561,21 @@ const toggleDetails = (variationId) => {
                                                     >id:</span
                                                 >
                                                 <span>{{ attr.id }}</span>
-
+                                                
                                                 <span class="text-purple-600"
                                                     >attribute_id:</span
                                                 >
                                                 <span>{{
                                                     attr.attribute_id
                                                 }}</span>
-
+                                                
                                                 <span class="text-purple-600"
                                                     >value_id:</span
                                                 >
                                                 <span>{{
                                                     attr.attribute_value_id
                                                 }}</span>
-
+                                                
                                                 <span class="text-purple-600"
                                                     >created_at:</span
                                                 >
@@ -586,7 +586,7 @@ const toggleDetails = (variationId) => {
                                                         "YYYY-MM-DD HH:mm:ss"
                                                     )
                                                 }}</span>
-
+                                                
                                                 <span class="text-purple-600"
                                                     >updated_at:</span
                                                 >
@@ -665,17 +665,17 @@ const toggleDetails = (variationId) => {
                         </div>
                     </div>
 
-                    <div class="flex items-center">
-                        <label class="inline-flex items-center">
-                            <input
-                                type="checkbox"
-                                v-model="formData.is_default"
-                                class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                            <span class="ml-2 text-sm text-gray-600"
-                                >Set as Default</span
-                            >
-                        </label>
+                        <div class="flex items-center">
+                            <label class="inline-flex items-center">
+                                <input
+                                    type="checkbox"
+                                    v-model="formData.is_default"
+                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+                                <span class="ml-2 text-sm text-gray-600"
+                                    >Set as Default</span
+                                >
+                            </label>
                     </div>
 
                     <div class="overflow-x-auto">

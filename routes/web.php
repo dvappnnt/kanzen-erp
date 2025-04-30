@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\CompanyController;
@@ -43,9 +44,7 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/pos', [PosController::class, 'index'])->name('pos');
 
@@ -71,10 +70,11 @@ Route::middleware([
     
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show', 'edit', 'create']);
+    
     Route::resource('goods-receipts', GoodsReceiptController::class)->only(['index', 'show', 'edit', 'create']);
+
     Route::resource('purchase-requisitions', PurchaseRequisitionController::class)->only(['index', 'show', 'edit', 'create']);
-    Route::post('purchase-requisitions/{purchaseRequisition}/approve', [PurchaseRequisitionController::class, 'approve'])->name('purchase-requisitions.approve');
-    Route::post('purchase-requisitions/{purchaseRequisition}/reject', [PurchaseRequisitionController::class, 'reject'])->name('purchase-requisitions.reject');
+    Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
 
     Route::resource('suppliers', SupplierController::class)->only(['index', 'show', 'edit', 'create']);
     Route::prefix('suppliers/{supplier}')->group(function () {
@@ -100,6 +100,7 @@ Route::middleware([
 
 Route::group(['prefix' => 'public'], function () {
     Route::group(['prefix' => 'qr'], function () {
+        Route::get('/warehouse-products/{product}', [QrController::class, 'warehouseProducts'])->name('qr.warehouse-products');
         Route::get('/products/{product}', [QrController::class, 'products'])->name('qr.products');
         Route::get('/suppliers/{supplier}', [QrController::class, 'suppliers'])->name('qr.suppliers');
         Route::get('/warehouses/{warehouse}', [QrController::class, 'warehouses'])->name('qr.warehouses');

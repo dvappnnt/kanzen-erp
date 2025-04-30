@@ -4,13 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Company;
-use App\Models\AiAssistant;
-use App\Models\AiAction;
-use App\Models\AiMessage;
 use App\Models\User;
-use App\Models\BookingSetting;
-use App\Models\BookingSettingSchedule;
-use App\Models\UserWalletBalance;
+use App\Models\ApprovalLevelSetting;
 
 class CompanySeeder extends Seeder
 {
@@ -70,5 +65,22 @@ class CompanySeeder extends Seeder
         
         // Update the company with the created_by_user_id
         $company->update(['created_by_user_id' => $superAdmin->id]);
+
+        // Create Approval Level Settings
+        ApprovalLevelSetting::create([
+            'type' => 'purchase-order',
+            'company_id' => $company->id,
+            'user_id' => $superAdmin->id,
+            'level' => 2,
+            'label' => 'Checked By:'
+        ]);
+
+        ApprovalLevelSetting::create([
+            'type' => 'purchase-order',
+            'company_id' => $company->id,
+            'user_id' => $superAdmin->id,
+            'level' => 1,
+            'label' => 'Approved By:'
+        ]);
     }
 }

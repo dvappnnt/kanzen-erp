@@ -65,7 +65,7 @@ class PurchaseOrderDetailController extends Controller
 
             DB::commit();
 
-            return response()->json([
+        return response()->json([
                 'message' => 'Purchase order detail created successfully',
                 'data' => $detail
             ], 201);
@@ -113,7 +113,7 @@ class PurchaseOrderDetailController extends Controller
 
             DB::commit();
 
-            return response()->json([
+        return response()->json([
                 'message' => 'Purchase order detail updated successfully',
                 'data' => $detail
             ]);

@@ -19,17 +19,25 @@ return new class extends Migration
             $table->date('date'); // Goods receipt date
             $table->text('notes')->nullable(); // Optional notes
             $table->foreignId('created_by_user_id')->constrained('users')->onDelete('cascade'); // Who created it
+            $table->enum('status', [
+                'pending',              // Initial GR created
+                'partially-received',   // Optional
+                'in-warehouse',              // Stock moved to warehouse_products
+            ])->default('pending');
             $table->softDeletes();
             $table->timestamps();
         });
 
         Schema::create('goods_receipt_details', function (Blueprint $table) {
             $table->id();
+            $table->string('delivery_order_number')->nullable();
             $table->foreignId('goods_receipt_id')->constrained()->onDelete('cascade');
             $table->foreignId('purchase_order_detail_id')->constrained()->onDelete('cascade');
             $table->integer('expected_qty')->default(0);
             $table->integer('received_qty')->default(0);
             $table->text('notes')->nullable();
+            $table->boolean('has_serials')->default(false);
+            $table->softDeletes();
             $table->timestamps();
         });
 
@@ -40,6 +48,7 @@ return new class extends Migration
             $table->string('batch_number')->nullable(); // For batch-controlled items
             $table->date('manufactured_at')->nullable();
             $table->date('expired_at')->nullable(); // Optional, useful for perishables
+            $table->softDeletes();
             $table->timestamps();
         });
     }

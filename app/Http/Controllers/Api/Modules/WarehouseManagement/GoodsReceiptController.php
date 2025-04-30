@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\WarehouseProduct;
+use App\Models\WarehouseProductSerial;
+use App\Models\WarehouseTransfer;
+use Illuminate\Support\Facades\DB;
 
 class GoodsReceiptController extends Controller
 {
@@ -18,7 +22,7 @@ class GoodsReceiptController extends Controller
 
     public function index()
     {
-        return $this->modelClass::with(['parent'])->latest()->paginate(perPage: 10);
+        return $this->modelClass::with(['company', 'purchaseOrder', 'purchaseOrder.supplier','purchaseOrder.company','purchaseOrder.warehouse'])->latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
@@ -87,7 +91,7 @@ class GoodsReceiptController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::with(['parent'])
+        $models = $this->modelClass::with(['company'])
             ->where('name', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
@@ -102,5 +106,83 @@ class GoodsReceiptController extends Controller
             'data' => $models,
             'message' => "{$this->modelName}s retrieved successfully."
         ], 200);
+    }
+
+    public function transfer($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $goodsReceipt = $this->modelClass::with([
+                'details.purchaseOrderDetail.supplierProductDetail',
+                'details.serials',
+                'purchaseOrder.warehouse'
+            ])->findOrFail($id);
+
+            // Check if all items are fully received
+            foreach ($goodsReceipt->details as $detail) {
+                if ($detail->expected_qty !== $detail->received_qty) {
+                    throw new \Exception('All items must be fully received before transfer');
+                }
+            }
+
+            // Create warehouse transfer record
+            $transfer = WarehouseTransfer::create([
+                'goods_receipt_id' => $goodsReceipt->id,
+                'destination_warehouse_id' => $goodsReceipt->purchaseOrder->warehouse_id,
+                'created_by_user_id' => request()->user()->id
+            ]);
+
+            // Process each detail
+            foreach ($goodsReceipt->details as $detail) {
+                // Find or create warehouse product
+                $warehouseProduct = WarehouseProduct::firstOrCreate(
+                    [
+                        'warehouse_id' => $goodsReceipt->purchaseOrder->warehouse_id,
+                        'supplier_product_detail_id' => $detail->purchaseOrderDetail->supplier_product_detail_id,
+                    ],
+                    [
+                        'qty' => 0,
+                        'has_serials' => count($detail->serials) > 0,
+                        'price' => $detail->purchaseOrderDetail->price,
+                        'last_cost' => $detail->purchaseOrderDetail->price
+                    ]
+                );
+
+                // Update quantity
+                $warehouseProduct->qty += $detail->received_qty;
+                $warehouseProduct->save();
+
+                // Transfer serials if any
+                if ($detail->serials->count() > 0) {
+                    foreach ($detail->serials as $serial) {
+                        WarehouseProductSerial::create([
+                            'warehouse_product_id' => $warehouseProduct->id,
+                            'serial_number' => $serial->serial_number,
+                            'batch_number' => $serial->batch_number,
+                            'manufactured_at' => $serial->manufactured_at,
+                            'expired_at' => $serial->expired_at
+                        ]);
+                    }
+                }
+            }
+
+            // Update goods receipt status - this will trigger the model events
+            // that will update the purchase order status
+            $goodsReceipt->status = 'in-warehouse';
+            $goodsReceipt->save();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Items transferred to warehouse successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 422);
+        }
     }
 }
