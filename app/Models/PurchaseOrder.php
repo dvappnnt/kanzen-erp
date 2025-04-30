@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use App\Models\GoodsReceipt;
+use App\Models\GoodsReceiptDetail;
 
 class PurchaseOrder extends Model
 {
@@ -27,6 +31,7 @@ class PurchaseOrder extends Model
         'created_by_user_id',
         'approved_by',
         'approved_at',
+        'approval_level',
     ];
 
     protected $casts = [
@@ -73,10 +78,10 @@ class PurchaseOrder extends Model
     protected static function booted()
     {
         static::creating(function ($modelData) {
-            $modelData->created_by_user_id = auth()->user()->id;
+            $modelData->created_by_user_id = Auth::id();
 
             if (empty($modelData->number)) {
-                $company = \App\Models\Company::find($modelData->company_id);
+                $company = Company::find($modelData->company_id);
 
                 if ($company) {
                     $prefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
@@ -86,6 +91,63 @@ class PurchaseOrder extends Model
                     $modelData->number = 'UNK-PO-' . sprintf('%06d', rand(1, 999999));
                 }
             }
+
+            // Set initial status if not set
+            if (empty($modelData->status)) {
+                $modelData->status = 'draft';
+            }
+
+            $approvalLevelSetting = ApprovalLevelSetting::where('type', 'purchase-order')->where('company_id', $modelData->company_id)->first();
+            if ($approvalLevelSetting) {
+                ApprovalLevel::create([
+                    'purchase_order_id' => $modelData->id,
+                    'level' => $approvalLevelSetting->level,
+                    'label' => $approvalLevelSetting->label,
+                    'user_id' => $approvalLevelSetting->user_id
+                ]);
+            }
+        });
+
+        static::updated(function ($purchaseOrder) {
+            // Check if status was changed to 'ordered'
+            if ($purchaseOrder->status === 'ordered' && $purchaseOrder->wasChanged('status')) {
+                // Check if a goods receipt already exists
+                if (!$purchaseOrder->goodsReceipts()->exists()) {
+                    DB::transaction(function () use ($purchaseOrder) {
+                        // Create the goods receipt
+                        $company = Company::find($purchaseOrder->company_id);
+                        $prefix = $company ? strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3)) : 'UNK';
+                        $count = GoodsReceipt::where('company_id', $purchaseOrder->company_id)->withTrashed()->count() + 1;
+                        $number = sprintf('%s-GR-%06d', $prefix, $count);
+
+                        $goodsReceipt = GoodsReceipt::create([
+                            'company_id' => $purchaseOrder->company_id,
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'number' => $number,
+                            'date' => now(),
+                            'status' => 'pending',
+                            'notes' => "Auto-generated from PO: {$purchaseOrder->number}",
+                            'created_by_user_id' => Auth::id()
+                        ]);
+
+                        // Create goods receipt details for each purchase order detail
+                        foreach ($purchaseOrder->details as $poDetail) {
+                            GoodsReceiptDetail::create([
+                                'goods_receipt_id' => $goodsReceipt->id,
+                                'purchase_order_detail_id' => $poDetail->id,
+                                'expected_qty' => $poDetail->qty,
+                                'received_qty' => 0,
+                                'notes' => null
+                            ]);
+                        }
+                    });
+                }
+            }
         });
     }
-} 
+
+    public function goodsReceipts()
+    {
+        return $this->hasMany(GoodsReceipt::class);
+    }
+}

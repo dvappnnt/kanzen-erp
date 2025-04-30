@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PurchaseOrderDetail extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'purchase_order_id',
@@ -43,18 +44,8 @@ class PurchaseOrderDetail extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function supplierProductVariation()
-    {
-        return $this->belongsTo(SupplierProductVariation::class);
-    }
-
     public function purchaseRequisitionItem()
     {
         return $this->belongsTo(PurchaseRequisitionItem::class);
-    }
-
-    public function goodsReceiptItems()
-    {
-        return $this->hasMany(GoodsReceiptItem::class);
     }
 }

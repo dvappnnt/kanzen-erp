@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+use App\Models\WarehouseProduct;
 
 class Warehouse extends Model
 {
@@ -61,6 +62,11 @@ class Warehouse extends Model
     public function goodsReceipts()
     {
         return $this->hasMany(GoodsReceipt::class);
+    }
+
+    public function products()
+    {
+        return $this->hasMany(WarehouseProduct::class);
     }
 
     protected static function booted()

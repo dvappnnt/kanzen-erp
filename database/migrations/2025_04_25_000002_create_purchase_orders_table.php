@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
             $table->foreignId('purchase_requisition_id')->nullable()->constrained()->onDelete('set null');
-            $table->enum('status', ['draft', 'pending', 'approved', 'rejected', 'ordered', 'received', 'cancelled'])->default('draft');
+            $table->enum('status', ['draft', 'pending', 'partially-approved', 'approved', 'rejected', 'ordered', 'received', 'cancelled'])->default('draft');
             $table->date('order_date');
             $table->date('expected_delivery_date')->nullable();
             $table->date('delivery_date')->nullable();
@@ -26,6 +26,7 @@ return new class extends Migration
             $table->decimal('tax_amount', 15, 2)->default(0);
             $table->decimal('shipping_cost', 15, 2)->default(0);
             $table->decimal('total_amount', 15, 2)->default(0);
+            $table->integer('approval_level')->default(1);
             $table->foreignId('created_by_user_id')->constrained('users')->onDelete('cascade');
             $table->timestamp('approved_at')->nullable();
             $table->softDeletes();
@@ -42,6 +43,7 @@ return new class extends Migration
             $table->decimal('price', 15, 2);
             $table->decimal('total', 15, 2);
             $table->text('notes')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

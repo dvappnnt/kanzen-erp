@@ -64,3 +64,29 @@ export function formatNumber(number, { style = 'decimal', currency = 'USD', mini
 
     return new Intl.NumberFormat('en-US', options).format(number);
 }
+
+export function getStatusPillClass(status) {
+    const normalized = String(status).toLowerCase(); // Normalize
+
+    const statusMap = {
+        draft: "bg-gray-100",
+        pending: "bg-yellow-100",
+        'partially-approved': "bg-blue-100",
+        approved: "bg-green-100",
+        rejected: "bg-red-100",
+        ordered: "bg-indigo-100",
+        received: "bg-green-100",
+        cancelled: "bg-red-100",
+        'in-warehouse': "bg-green-100"
+    };
+
+    // Simple badge style with just background color and rounded corners
+    return `inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusMap[normalized] || "bg-gray-100"}`;
+}
+
+export function humanReadable(input) {
+    return String(input)
+        .replace(/_/g, ' ')        // convert snake_case to space
+        .replace(/-/g, ' ')        // convert kebab-case to space
+        .replace(/\b\w/g, (char) => char.toUpperCase()); // capitalize each word
+}

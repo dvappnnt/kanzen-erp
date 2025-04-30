@@ -55,4 +55,13 @@ class PurchaseRequisitionController extends Controller
             'modelData' => $model,
         ]);
     }
+
+    public function print($id)
+    {
+        $model = $this->modelClass::with(['company'])->findOrFail($id);
+
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Print", [
+            'modelData' => $model,
+        ]);
+    }
 }

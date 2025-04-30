@@ -9,7 +9,7 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
-import { formatName, formatDate } from "@/utils/global";
+import { formatName, formatDate, getStatusPillClass, humanReadable } from "@/utils/global";
 const modelName = "purchase-orders";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
@@ -37,10 +37,24 @@ const headerActions = ref([
 
 // Define Table Columns
 const columns = ref([
-    { label: "Number", value: "number" },
+    {
+        label: "Number",
+        value: "number",
+        uri: (row) => route("purchase-orders.show", row.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-file-document-outline",
+    },
     { label: "Warehouse", value: (row) => row.warehouse.name },
     { label: "Company", value: (row) => row.company.name },
     { label: "Supplier", value: (row) => row.supplier.name },
+    {
+        label: "Status",
+        value: "status",
+        render: (row) => ({
+            text: humanReadable(row.status),
+            class: getStatusPillClass(row.status),
+        }),
+    },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },
 ]);

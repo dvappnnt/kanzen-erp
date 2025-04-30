@@ -21,7 +21,12 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\SupplierController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderDetailController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\GoodsReceiptController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\GoodsReceiptDetailController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseProductController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseProductSerialController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseTransferController;
+
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseRequisitionController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\SupplierProductController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductVariationAttributeController;
@@ -97,8 +102,18 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('warehouses', WarehouseController::class);
     Route::get('autocomplete/warehouses', [WarehouseController::class, 'autocomplete'])->name('warehouses.autocomplete');
+    Route::get('warehouses/{warehouse}/products', [WarehouseController::class, 'products'])->name('warehouses.products');
+
+    Route::apiResource('warehouse-products', WarehouseProductController::class);
+    Route::get('autocomplete/warehouse-products', [WarehouseProductController::class, 'autocomplete'])->name('warehouse-products.autocomplete');
 
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    Route::post('purchase-orders/{purchaseOrder}/pending', [PurchaseOrderController::class, 'pending'])->name('purchase-orders.pending');
+    Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
+    Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->name('purchase-orders.approve');
+    Route::post('purchase-orders/{purchaseOrder}/reject', [PurchaseOrderController::class, 'reject'])->name('purchase-orders.reject');
+    Route::post('purchase-orders/{purchaseOrder}/order', [PurchaseOrderController::class, 'order'])->name('purchase-orders.order');
+    Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
     Route::get('autocomplete/purchase-orders', [PurchaseOrderController::class, 'autocomplete'])->name('purchase-orders.autocomplete');
     
     // Add nested route for purchase order details
@@ -111,6 +126,21 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('goods-receipts', GoodsReceiptController::class);
     Route::get('autocomplete/goods-receipts', [GoodsReceiptController::class, 'autocomplete'])->name('goods-receipts.autocomplete');
+    Route::post('goods-receipts/{goodsReceipt}/transfer', [GoodsReceiptController::class, 'transfer'])->name('goods-receipts.transfer');
+
+    Route::apiResource('goods-receipt-details', GoodsReceiptDetailController::class);
+    Route::get('autocomplete/goods-receipt-details', [GoodsReceiptDetailController::class, 'autocomplete'])->name('goods-receipt-details.autocomplete');
+    Route::post('goods-receipt-details/{goodsReceiptDetail}/receive', [GoodsReceiptDetailController::class, 'receive'])->name('goods-receipt-details.receive');
+    Route::post('goods-receipt-details/{goodsReceiptDetail}/return', [GoodsReceiptDetailController::class, 'return'])->name('goods-receipt-details.return');
+
+    Route::apiResource('warehouse-product-serials', WarehouseProductSerialController::class);
+    Route::get('autocomplete/warehouse-product-serials', [WarehouseProductSerialController::class, 'autocomplete'])->name('warehouse-product-serials.autocomplete');
+
+    Route::apiResource('warehouse-transfers', WarehouseTransferController::class);
+    Route::get('autocomplete/warehouse-transfers', [WarehouseTransferController::class, 'autocomplete'])->name('warehouse-transfers.autocomplete');
+
+    // Add route for deleting serials
+    Route::delete('goods-receipt-serials/{serial}', [GoodsReceiptDetailController::class, 'deleteSerial'])->name('goods-receipt-serials.delete');
 
     Route::apiResource('roles', RoleController::class);
     Route::get('autocomplete/roles', [RoleController::class, 'autocomplete'])->name('roles.autocomplete');

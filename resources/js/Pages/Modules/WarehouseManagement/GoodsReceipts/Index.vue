@@ -9,8 +9,12 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
-import { formatName, formatDate } from "@/utils/global";
-
+import {
+    formatName,
+    formatDate,
+    getStatusPillClass,
+    humanReadable,
+} from "@/utils/global";
 const modelName = "goods-receipts";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
@@ -39,13 +43,43 @@ const headerActions = ref([
 // Define Table Columns
 const columns = ref([
     {
-        label: "Name",
-        value: "name",
-        has_avatar: true,
-        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
+        label: "Number",
+        value: "number",
+        uri: (row) => route("goods-receipts.show", row.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-truck-fast-outline",
     },
-    { label: "Address", value: "address" },
-    { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
+    {
+        label: "PO No.",
+        value: (row) => row.purchase_order.number,
+        uri: (row) => route("purchase-orders.show", row.purchase_order.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-file-document-outline",
+    },
+    {
+        label: "Warehouse",
+        value: (row) => row.purchase_order.warehouse.name,
+    },
+    {
+        label: "Company",
+        value: (row) => row.purchase_order.company.name,
+    },
+    {
+        label: "Supplier",
+        value: (row) => row.purchase_order.supplier.name,
+    },
+    {
+        label: "Status",
+        value: "status",
+        render: (row) => ({
+            text: humanReadable(row.status),
+            class: getStatusPillClass(row.status),
+        }),
+    },
+    {
+        label: "Created At",
+        value: (row) => moment(row.created_at).fromNow(),
+    },
     { label: "Actions" },
 ]);
 

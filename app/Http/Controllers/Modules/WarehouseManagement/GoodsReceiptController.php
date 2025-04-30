@@ -32,7 +32,18 @@ class GoodsReceiptController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['company'])->findOrFail($id);
+        $model = $this->modelClass::with([
+            'company',
+            'purchaseOrder',
+            'purchaseOrder.supplier',
+            'purchaseOrder.warehouse',
+            'details',
+            'details.purchaseOrderDetail',
+            'details.purchaseOrderDetail.supplierProductDetail',
+            'details.purchaseOrderDetail.supplierProductDetail.product',
+            'details.purchaseOrderDetail.supplierProductDetail.variation',
+            'details.serials'
+        ])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,

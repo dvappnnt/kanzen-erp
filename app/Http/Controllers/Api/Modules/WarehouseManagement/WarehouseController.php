@@ -127,4 +127,66 @@ class WarehouseController extends Controller
             'message' => "{$this->modelName}s retrieved successfully."
         ], 200);
     }
+
+    public function products($id)
+    {
+        $warehouse = $this->modelClass::findOrFail($id);
+        
+        $query = $warehouse->products()
+            ->with([
+                'supplierProductDetail.product',
+                'supplierProductDetail.variation',
+                'serials',
+                'transfers.originWarehouse',
+                'transfers.destinationWarehouse',
+                'transfers.createdByUser:id,name',
+                'transfers.goodsReceipt:id,number'
+            ]);
+
+        // Apply filters
+        if (request()->has('product')) {
+            $query->whereHas('supplierProductDetail.product', function ($q) {
+                $q->where('name', 'like', '%' . request('product') . '%');
+            });
+        }
+
+        if (request()->has('variation')) {
+            $query->whereHas('supplierProductDetail.variation', function ($q) {
+                $q->where('name', 'like', '%' . request('variation') . '%');
+            });
+        }
+
+        if (request()->has('min_qty')) {
+            $query->where('qty', '>=', request('min_qty'));
+        }
+
+        if (request()->has('max_qty')) {
+            $query->where('qty', '<=', request('max_qty'));
+        }
+
+        if (request()->has('min_price')) {
+            $query->where('price', '>=', request('min_price'));
+        }
+
+        if (request()->has('max_price')) {
+            $query->where('price', '<=', request('max_price'));
+        }
+
+        // Get total count before pagination
+        $total = $query->count();
+
+        // If total results are less than or equal to default per page,
+        // or if we're not filtering, return all results without pagination
+        if ($total <= 10 && !request()->hasAny(['product', 'variation', 'min_qty', 'max_qty', 'min_price', 'max_price'])) {
+            $products = $query->get();
+            return response()->json([
+                'data' => $products,
+                'message' => 'Warehouse products retrieved successfully'
+            ]);
+        }
+
+        // Otherwise, return paginated results
+        $products = $query->paginate(request('per_page', 10));
+        return response()->json($products);
+    }
 }
