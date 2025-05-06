@@ -1,19 +1,18 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Modules\AccountingManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
-class CustomerController extends Controller
+class AccountTypeController extends Controller
 {
     protected $modelClass;
     protected $modelName;
 
     public function __construct()
     {
-        $this->modelClass = \App\Models\Customer::class;
+        $this->modelClass = \App\Models\AccountType::class;
         $this->modelName = class_basename($this->modelClass);
     }
 
@@ -25,28 +24,15 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'company_id' => 'required|exists:companies,id',
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|string|max:255',
-            'mobile' => 'nullable|string|max:255',
-            'landline' => 'nullable|string|max:255',
-            'address' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:1024',
-            'website' => 'nullable|url|string|max:255',
-            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
+            'code' => 'required|string|max:255',
         ]);
 
-        if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('companies/avatars', 'public');
-            $validated['avatar'] = $avatarPath;
-        }
-
-        $validated['created_by_user_id'] = auth()->user()->id;
-        $company = $this->modelClass::create($validated);
+        $model = $this->modelClass::create($validated);
 
         return response()->json([
-            'modelData' => $company,
-            'message' => "{$this->modelName} '{$company->name}' created successfully.",
+            'modelData' => $model,
+            'message' => "{$this->modelName} '{$model->name}' created successfully.",
         ]);
     }
 
@@ -61,25 +47,9 @@ class CustomerController extends Controller
         $model = $this->modelClass::findOrFail($id);
 
         $validated = $request->validate([
-            'company_id' => 'required|exists:companies,id',
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|string|max:255',
-            'mobile' => 'nullable|string|max:255',
-            'landline' => 'nullable|string|max:255',
-            'address' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:1024',
-            'website' => 'nullable|url|string|max:255',
-            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
+            'code' => 'required|string|max:255',
         ]);
-
-        if ($request->hasFile('avatar')) {
-            if ($model->avatar && Storage::disk('public')->exists($model->avatar)) {
-                Storage::disk('public')->delete($model->avatar);
-            }
-
-            $avatarPath = $request->file('avatar')->store('companies/avatars', 'public');
-            $validated['avatar'] = $avatarPath;
-        }
 
         $model->update($validated);
 
@@ -115,7 +85,8 @@ class CustomerController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::where('name', 'like', "%{$searchTerm}%")
+        $models = $this->modelClass::with(['parent'])
+            ->where('name', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
 

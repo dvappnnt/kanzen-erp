@@ -119,7 +119,7 @@ const confirmAction = async () => {
 
 // Get initials for avatar fallback
 const getInitials = (name) => {
-    if (!name) return "N/A";
+    if (!name) return "-";
     return name
         .split(" ")
         .map((n) => n[0]?.toUpperCase())
@@ -252,7 +252,7 @@ const handleCustomAction = async (action, row) => {
                                 >
                                     {{ getInitials(row[col.value]) }}
                                 </div>
-                                <span>{{ row[col.value] || "N/A" }}</span>
+                                <span>{{ row[col.value] || "-" }}</span>
                             </div>
                         </template>
                         <template v-else-if="col.label === 'Actions'">
@@ -338,7 +338,7 @@ const handleCustomAction = async (action, row) => {
                                             {{
                                                 typeof col.value === "function"
                                                     ? col.value(row)
-                                                    : row[col.value] || "N/A"
+                                                    : row[col.value] || "-"
                                             }}
                                         </span>
                                     </a>
@@ -347,7 +347,7 @@ const handleCustomAction = async (action, row) => {
                                     {{
                                         typeof col.value === "function"
                                             ? col.value(row)
-                                            : row[col.value] || "N/A"
+                                            : row[col.value] || "-"
                                     }}
                                 </template>
                             </span>

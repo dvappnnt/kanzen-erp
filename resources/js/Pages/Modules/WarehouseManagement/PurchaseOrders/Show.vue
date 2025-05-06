@@ -95,6 +95,20 @@ const itemForm = ref({});
 const purchaseOrderDetails = ref([]);
 const showEditModal = ref(false);
 const editingDetail = ref(null);
+const showRemarksModal = ref(false);
+const actionType = ref('');
+const remarks = ref('');
+
+const hasDetails = computed(() => {
+    return purchaseOrderDetails.value.length > 0;
+});
+
+const calculateOrderTotal = computed(() => {
+    return purchaseOrderDetails.value?.reduce((sum, detail) => {
+        const total = Number(detail.total) || 0;
+        return sum + total;
+    }, 0) || 0;
+});
 
 const loadSupplierProducts = async () => {
     if (!modelData.value?.supplier_id) {
@@ -366,25 +380,6 @@ const handlePending = async () => {
     }
 };
 
-const handleCancel = async () => {
-    if (!confirm("Are you sure you want to cancel this purchase order?"))
-        return;
-
-    try {
-        isLoading.value = true;
-        await axios.post(`/api/purchase-orders/${modelData.value.id}/cancel`);
-        toast.success("Purchase order cancelled successfully");
-        window.location.reload();
-    } catch (error) {
-        console.error("Error cancelling purchase order:", error);
-        toast.error(
-            error.response?.data?.message || "Failed to cancel purchase order"
-        );
-    } finally {
-        isLoading.value = false;
-    }
-};
-
 const handleOrder = async () => {
     try {
         isLoading.value = true;
@@ -408,22 +403,6 @@ const handleOrder = async () => {
     }
 };
 
-const handleReceive = async () => {
-    try {
-        isLoading.value = true;
-        await axios.post(`/api/purchase-orders/${modelData.value.id}/receive`);
-        toast.success("Purchase order marked as received");
-        window.location.reload();
-    } catch (error) {
-        console.error("Error marking purchase order as received:", error);
-        toast.error(
-            error.response?.data?.message || "Failed to mark as received"
-        );
-    } finally {
-        isLoading.value = false;
-    }
-};
-
 const handlePrint = () => {
     // Open the print window
     const printWindow = window.open(`${window.location.origin}/purchase-orders/${modelData.value.id}/print`, '_blank');
@@ -434,35 +413,68 @@ const handlePrint = () => {
     };
 };
 
-const handleApprove = async () => {
+const openRemarksModal = (type) => {
+    actionType.value = type;
+    remarks.value = '';
+    showRemarksModal.value = true;
+};
+
+const closeRemarksModal = () => {
+    showRemarksModal.value = false;
+    actionType.value = '';
+    remarks.value = '';
+};
+
+const handleAction = async () => {
     try {
         isLoading.value = true;
-        await axios.post(`/api/purchase-orders/${modelData.value.id}/approve`);
-        toast.success("Purchase order approved successfully");
+        let endpoint = '';
+        let successMessage = '';
+        
+        switch (actionType.value) {
+            case 'approve':
+                endpoint = 'approve';
+                successMessage = 'Purchase order approved successfully';
+                break;
+            case 'reject':
+                endpoint = 'reject';
+                successMessage = 'Purchase order rejected successfully';
+                break;
+            case 'cancel':
+                endpoint = 'cancel';
+                successMessage = 'Purchase order cancelled successfully';
+                break;
+        }
+
+        // First, create the approval remark if remarks exist
+        if (remarks.value.trim()) {
+            await axios.post('/api/approval-remarks', {
+                model_type: 'PurchaseOrder',
+                model_id: modelData.value.id,
+                purchase_order_id: modelData.value.id,
+                status: actionType.value,
+                remarks: remarks.value,
+            });
+        }
+
+        // Then update the purchase order status
+        await axios.post(`/api/purchase-orders/${modelData.value.id}/${endpoint}`);
+        
+        toast.success(successMessage);
+        closeRemarksModal();
         window.location.reload();
     } catch (error) {
-        console.error("Error approving purchase order:", error);
-        toast.error(error.response?.data?.message || "Failed to approve purchase order");
+        console.error(`Error ${actionType.value}ing purchase order:`, error);
+        toast.error(error.response?.data?.message || `Failed to ${actionType.value} purchase order`);
     } finally {
         isLoading.value = false;
     }
 };
 
-const handleReject = async () => {
-    if (!confirm("Are you sure you want to reject this purchase order?")) return;
-    
-    try {
-        isLoading.value = true;
-        await axios.post(`/api/purchase-orders/${modelData.value.id}/reject`);
-        toast.success("Purchase order rejected successfully");
-        window.location.reload();
-    } catch (error) {
-        console.error("Error rejecting purchase order:", error);
-        toast.error(error.response?.data?.message || "Failed to reject purchase order");
-    } finally {
-        isLoading.value = false;
-    }
-};
+// Replace the existing button click handlers
+const handleApprove = () => openRemarksModal('approve');
+const handleReject = () => openRemarksModal('reject');
+const handleCancel = () => openRemarksModal('cancel');
 
 onMounted(async () => {
     await loadSupplierProducts();
@@ -491,7 +503,7 @@ onMounted(async () => {
                 <!-- Action Buttons -->
                 <div class="px-6 py-4 flex justify-end space-x-3">
                     <button
-                        v-if="modelData.status === 'draft'"
+                        v-if="modelData.status === 'draft' && hasDetails"
                         @click="handlePending"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -593,28 +605,6 @@ onMounted(async () => {
                             />
                         </svg>
                         Process Order
-                    </button>
-
-                    <button
-                        v-if="modelData.status === 'ordered'"
-                        @click="handleReceive"
-                        :disabled="isLoading"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 mr-2"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z"
-                            />
-                            <path
-                                d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z"
-                            />
-                        </svg>
-                        Receive
                     </button>
 
                     <button
@@ -1044,6 +1034,16 @@ onMounted(async () => {
                                         </tr>
                                     </tbody>
                                 </table>
+                                
+                                <!-- Total Section -->
+                                <div class="mt-4 flex justify-end px-2">
+                                    <div class="text-right">
+                                        <div class="text-sm text-gray-600">Total Amount</div>
+                                        <div class="text-xl font-bold text-gray-900">
+                                            {{ formatNumber(calculateOrderTotal, { style: "currency", currency: "PHP", minimumFractionDigits: 2 }) }}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1128,6 +1128,48 @@ onMounted(async () => {
                     :disabled="isLoading"
                 >
                     Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remarks Modal -->
+    <div v-if="showRemarksModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                {{ actionType.charAt(0).toUpperCase() + actionType.slice(1) }} Purchase Order
+            </h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Remarks (Optional)</label>
+                    <textarea
+                        v-model="remarks"
+                        rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Enter your remarks here..."
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button
+                    @click="closeRemarksModal"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    :disabled="isLoading"
+                >
+                    Cancel
+                </button>
+                <button
+                    @click="handleAction"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white"
+                    :class="{
+                        'bg-green-600 hover:bg-green-700': actionType === 'approve',
+                        'bg-red-600 hover:bg-red-700': actionType === 'reject' || actionType === 'cancel'
+                    }"
+                    :disabled="isLoading"
+                >
+                    Confirm
                 </button>
             </div>
         </div>

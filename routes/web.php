@@ -10,9 +10,11 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Public\QrController;
+
+use App\Http\Controllers\Modules\CustomerRelationshipManagement\CustomerController;
+use App\Http\Controllers\Modules\CustomerRelationshipManagement\AgentController;
 
 use App\Http\Controllers\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Modules\AccountingManagement\CompanyAccountController;
@@ -67,7 +69,7 @@ Route::middleware([
     Route::resource('companies', CompanyController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('customers', CustomerController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('categories', CategoryController::class)->only(['index', 'show', 'edit', 'create']);
-    
+    Route::resource('agents', AgentController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show', 'edit', 'create']);
     

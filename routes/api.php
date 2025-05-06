@@ -10,7 +10,9 @@ use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\CountryController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\CustomerController;
+
+use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\CustomerController;
+use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\AgentController;
 
 use App\Http\Controllers\Api\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\CompanyAccountController;
@@ -22,10 +24,12 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderController
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderDetailController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\GoodsReceiptController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\GoodsReceiptDetailController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\GoodsReceiptDetailRemarkController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseProductController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseProductSerialController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseTransferController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\ApprovalRemarkController;
 
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseRequisitionController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\SupplierProductController;
@@ -54,6 +58,9 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('customers', CustomerController::class);
     Route::get('autocomplete/customers', [CustomerController::class, 'autocomplete'])->name('customers.autocomplete');
+
+    Route::apiResource('agents', AgentController::class);
+    Route::get('autocomplete/agents', [AgentController::class, 'autocomplete'])->name('agents.autocomplete');
 
     Route::apiResource('expenses', ExpenseController::class);
     Route::get('autocomplete/expenses', [ExpenseController::class, 'autocomplete'])->name('expenses.autocomplete');
@@ -121,8 +128,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
         Route::apiResource('details', PurchaseOrderDetailController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     });
 
+    Route::apiResource('approval-remarks', ApprovalRemarkController::class);
+
     Route::apiResource('purchase-order-details', PurchaseOrderDetailController::class);
     Route::get('autocomplete/purchase-order-details', [PurchaseOrderDetailController::class, 'autocomplete'])->name('purchase-order-details.autocomplete');
+
+    Route::apiResource('goods-receipt-detail-remarks', GoodsReceiptDetailRemarkController::class);
 
     Route::apiResource('goods-receipts', GoodsReceiptController::class);
     Route::get('autocomplete/goods-receipts', [GoodsReceiptController::class, 'autocomplete'])->name('goods-receipts.autocomplete');

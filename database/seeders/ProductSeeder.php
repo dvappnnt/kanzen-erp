@@ -81,11 +81,29 @@ class ProductSeeder extends Seeder
                     'company_id' => 2,
                     'category_id' => $category->id,
                     'name' => $productName,
+                    'unit_of_measure' => 'pcs',
                     'description' => null,
                     'avatar' => null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
+
+                $product = Product::where('name', $productName)->first();
+
+                $defaultVariation = $product->variations()->create([
+                    'name' => 'Default Product Variation',
+                    'is_default' => true,
+                ]);
+
+                $conditionAttributeId = DB::table('attributes')->where('name', 'Condition')->value('id');
+
+                foreach (['New'] as $condition) {
+                    ProductVariationAttribute::create([
+                        'product_variation_id' => $defaultVariation->id,
+                        'attribute_id' => $conditionAttributeId,
+                        'attribute_value_id' => DB::table('attribute_values')->where('value', $condition)->value('id'),
+                    ]);
+                }
             }
         }
         /* Datablitz Products */

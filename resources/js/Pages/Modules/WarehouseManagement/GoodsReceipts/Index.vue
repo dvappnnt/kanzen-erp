@@ -29,15 +29,6 @@ const headerActions = ref([
         url: `/${modelName}/export`,
         class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
     },
-    {
-        text: "Create",
-        url: `/${modelName}/create`,
-        inertia: true,
-        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
-        style: computed(() => ({
-            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
-        })),
-    },
 ]);
 
 // Define Table Columns

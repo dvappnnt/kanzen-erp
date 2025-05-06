@@ -94,7 +94,7 @@ class GoodsReceipt extends Model
         } elseif ($totalReceived < $totalExpected) {
             $this->status = 'partially-received';
         } elseif ($totalReceived === $totalExpected) {
-            $this->status = 'in-warehouse';
+            $this->status = 'fully-received';
         }
 
         if ($this->isDirty('status')) {

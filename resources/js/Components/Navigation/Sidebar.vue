@@ -409,6 +409,69 @@
 
                     <div
                         v-if="
+                            hasPermission('read banks') ||
+                            hasPermission('read company accounts')
+                        "
+                        v-show="!isMinimized"
+                        class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                    >
+                        CRM
+                    </div>
+
+                    <Link
+                        v-if="hasPermission('read customers')"
+                        :href="route('customers.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('customers.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('customers.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-star-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('customers.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Customers</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read agents')"
+                        :href="route('agents.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('agents.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('agents.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-group-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('agents.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Agents</span>
+                    </Link>
+
+                    <div
+                        v-if="
                             hasPermission('read users') ||
                             hasPermission('read companies')
                         "
@@ -444,31 +507,7 @@
                         <span v-show="!isMinimized" class="ml-3">Users</span>
                     </Link>
 
-                    <Link
-                        v-if="hasPermission('read customers')"
-                        :href="route('customers.index')"
-                        :class="[
-                            'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route().current()?.startsWith('customers.')
-                                ? 'active-link'
-                                : 'hover:bg-gray-100',
-                        ]"
-                        :style="
-                            route().current()?.startsWith('customers.')
-                                ? activeStyles
-                                : sidebarTextStyle
-                        "
-                    >
-                        <span
-                            class="mdi mdi-account-star-outline text-xl"
-                            :style="
-                                route().current()?.startsWith('customers.')
-                                    ? { color: activeTextColor }
-                                    : sidebarTextStyle
-                            "
-                        ></span>
-                        <span v-show="!isMinimized" class="ml-3">Customers</span>
-                    </Link>
+                    
 
                     <Link
                         v-if="hasPermission('read companies')"

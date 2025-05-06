@@ -2,36 +2,23 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
-use App\Models\WarehouseProduct;
 
-class Warehouse extends Model
+class Agent extends Model
 {
-    use HasFactory, SoftDeletes;
+    use SoftDeletes;
 
     protected $fillable = [
-        'name',
-        'code',
         'company_id',
-        'address',
-        'city',
-        'state',
-        'postal_code',
-        'country',
-        'phone',
+        'name',
         'email',
-        'notes',
-        'is_active',
-        'manager_id',
-        'created_by',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
+        'country_id',
+        'landline',
+        'mobile',
+        'address',
+        'avatar',
     ];
 
     public function company()
@@ -39,34 +26,9 @@ class Warehouse extends Model
         return $this->belongsTo(Company::class);
     }
 
-    public function manager()
+    public function country()
     {
-        return $this->belongsTo(User::class, 'manager_id');
-    }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function purchaseRequisitions()
-    {
-        return $this->hasMany(PurchaseRequisition::class);
-    }
-
-    public function purchaseOrders()
-    {
-        return $this->hasMany(PurchaseOrder::class);
-    }
-
-    public function goodsReceipts()
-    {
-        return $this->hasMany(GoodsReceipt::class);
-    }
-
-    public function products()
-    {
-        return $this->hasMany(WarehouseProduct::class);
+        return $this->belongsTo(Country::class);
     }
 
     protected static function booted()

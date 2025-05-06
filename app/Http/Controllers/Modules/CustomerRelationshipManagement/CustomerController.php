@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Modules\CustomerRelationshipManagement;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -10,16 +11,18 @@ class CustomerController extends Controller
 {
     protected $modelClass;
     protected $modelName;
+    protected $modulePath;
 
     public function __construct()
     {
         $this->modelClass = \App\Models\Customer::class;
         $this->modelName = Str::plural(Str::singular(class_basename($this->modelClass)));
+        $this->modulePath = 'Modules/CustomerRelationshipManagement';
     }
 
     public function index()
     {
-        return Inertia::render("{$this->modelName}/Index");
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Index");
     }
 
     public function create()
@@ -27,7 +30,7 @@ class CustomerController extends Controller
         $companiesQuery = \App\Models\Company::orderBy('name', 'asc');
         $companies = $companiesQuery->get();
 
-        return Inertia::render("{$this->modelName}/Create", [
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Create", [
             'companies' => $companies,
         ]);
     }
@@ -36,7 +39,7 @@ class CustomerController extends Controller
     {
         $model = $this->modelClass::with('company')->findOrFail($id);
 
-        return Inertia::render("{$this->modelName}/Show", [
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,
         ]);
     }
@@ -47,7 +50,7 @@ class CustomerController extends Controller
         $companiesQuery = \App\Models\Company::orderBy('name', 'asc');
         $companies = $companiesQuery->get();
 
-        return Inertia::render("{$this->modelName}/Edit", [
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Edit", [
             'modelData' => $model,
             'companies' => $companies,
         ]);

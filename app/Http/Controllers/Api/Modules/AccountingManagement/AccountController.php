@@ -4,43 +4,28 @@ namespace App\Http\Controllers\Api\Modules\AccountingManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
-class CompanyAccountController extends Controller
+class AccountController extends Controller
 {
     protected $modelClass;
     protected $modelName;
 
     public function __construct()
     {
-        $this->modelClass = \App\Models\CompanyAccount::class;
+        $this->modelClass = \App\Models\Account::class;
         $this->modelName = class_basename($this->modelClass);
     }
 
-    public function index(Request $request)
+    public function index()
     {
-        $query = $this->modelClass::with(['bank', 'company']);
-
-        if ($request->get('name')) {
-            $query = $this->modelClass::where('name', 'like', "%{$request->get('name')}%");
-        }
-
-        return $query->latest()->paginate(perPage: 10);
+        return $this->modelClass::latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'company_id' => 'required|exists:companies,id',
-            'bank_id' => 'required|exists:banks,id',
-            'number' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
-            'status' => 'required|string|max:255',
-            'number' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'balance' => 'required|numeric',
-            'currency' => 'required|string|max:255',
+            'code' => 'required|string|max:255',
         ]);
 
         $model = $this->modelClass::create($validated);
@@ -53,7 +38,7 @@ class CompanyAccountController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['bank', 'company'])->findOrFail($id);
+        $model = $this->modelClass::findOrFail($id);
         return $model;
     }
 
@@ -62,14 +47,8 @@ class CompanyAccountController extends Controller
         $model = $this->modelClass::findOrFail($id);
 
         $validated = $request->validate([
-            'company_id' => 'required|exists:companies,id',
-            'bank_id' => 'required|exists:banks,id',
-            'number' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
-            'status' => 'required|string|max:255',
-            'balance' => 'required|numeric',
-            'currency' => 'required|string|max:255',
+            'code' => 'required|string|max:255',
         ]);
 
         $model->update($validated);
@@ -106,7 +85,8 @@ class CompanyAccountController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::where('name', 'like', "%{$searchTerm}%")
+        $models = $this->modelClass::with(['parent'])
+            ->where('name', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
 
