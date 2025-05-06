@@ -25,7 +25,8 @@ return new class extends Migration
         Schema::create('journal_entry_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('journal_entry_id')->constrained()->onDelete('cascade');
-            $table->foreignId('account_id')->constrained('company_accounts')->onDelete('cascade');
+            $table->foreignId('company_account_id')->constrained()->onDelete('cascade');
+            $table->string('name')->nullable(); // particulars
             $table->decimal('debit', 15, 2)->default(0);
             $table->decimal('credit', 15, 2)->default(0);
             $table->text('remarks')->nullable();

@@ -11,7 +11,8 @@ class JournalEntryDetail extends Model
 
     protected $fillable = [
         'journal_entry_id',
-        'account_id',
+        'company_account_id',
+        'name',
         'debit',
         'credit',
         'remarks',
@@ -24,6 +25,6 @@ class JournalEntryDetail extends Model
 
     public function account()
     {
-        return $this->belongsTo(CompanyAccount::class);
+        return $this->belongsTo(CompanyAccount::class, 'company_account_id');
     }
 }

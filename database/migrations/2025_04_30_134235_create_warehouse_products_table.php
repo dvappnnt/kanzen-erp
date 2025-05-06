@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('warehouse_products', function (Blueprint $table) {
             $table->id();
+            $table->string('slug')->unique();
+            $table->string('token', 64)->unique();
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
             $table->foreignId('supplier_product_detail_id')->constrained()->onDelete('cascade');
             $table->integer('critical_level_qty')->default(0);

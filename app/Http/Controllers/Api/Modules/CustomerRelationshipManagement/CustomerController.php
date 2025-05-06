@@ -1,59 +1,58 @@
 <?php
 
-namespace App\Http\Controllers\Api\Modules\AccountingManagement;
+namespace App\Http\Controllers\Api\Modules\CustomerRelationshipManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-class CompanyAccountController extends Controller
+class CustomerController extends Controller
 {
     protected $modelClass;
     protected $modelName;
 
     public function __construct()
     {
-        $this->modelClass = \App\Models\CompanyAccount::class;
+        $this->modelClass = \App\Models\Customer::class;
         $this->modelName = class_basename($this->modelClass);
     }
 
-    public function index(Request $request)
+    public function index()
     {
-        $query = $this->modelClass::with(['bank', 'company']);
-
-        if ($request->get('name')) {
-            $query = $this->modelClass::where('name', 'like', "%{$request->get('name')}%");
-        }
-
-        return $query->latest()->paginate(perPage: 10);
+        return $this->modelClass::latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'company_id' => 'required|exists:companies,id',
-            'bank_id' => 'required|exists:banks,id',
-            'number' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
-            'status' => 'required|string|max:255',
-            'number' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'balance' => 'required|numeric',
-            'currency' => 'required|string|max:255',
+            'email' => 'nullable|email|string|max:255',
+            'mobile' => 'nullable|string|max:255',
+            'landline' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1024',
+            'website' => 'nullable|url|string|max:255',
+            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
         ]);
 
-        $model = $this->modelClass::create($validated);
+        if ($request->hasFile('avatar')) {
+            $avatarPath = $request->file('avatar')->store('companies/avatars', 'public');
+            $validated['avatar'] = $avatarPath;
+        }
+
+        $validated['created_by_user_id'] = auth()->user()->id;
+        $company = $this->modelClass::create($validated);
 
         return response()->json([
-            'modelData' => $model,
-            'message' => "{$this->modelName} '{$model->name}' created successfully.",
+            'modelData' => $company,
+            'message' => "{$this->modelName} '{$company->name}' created successfully.",
         ]);
     }
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['bank', 'company'])->findOrFail($id);
+        $model = $this->modelClass::findOrFail($id);
         return $model;
     }
 
@@ -63,14 +62,24 @@ class CompanyAccountController extends Controller
 
         $validated = $request->validate([
             'company_id' => 'required|exists:companies,id',
-            'bank_id' => 'required|exists:banks,id',
-            'number' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
-            'status' => 'required|string|max:255',
-            'balance' => 'required|numeric',
-            'currency' => 'required|string|max:255',
+            'email' => 'nullable|email|string|max:255',
+            'mobile' => 'nullable|string|max:255',
+            'landline' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1024',
+            'website' => 'nullable|url|string|max:255',
+            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
         ]);
+
+        if ($request->hasFile('avatar')) {
+            if ($model->avatar && Storage::disk('public')->exists($model->avatar)) {
+                Storage::disk('public')->delete($model->avatar);
+            }
+
+            $avatarPath = $request->file('avatar')->store('companies/avatars', 'public');
+            $validated['avatar'] = $avatarPath;
+        }
 
         $model->update($validated);
 

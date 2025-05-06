@@ -21,8 +21,22 @@ class GoodsReceiptDetail extends Model
 
     protected $casts = [
         'expected_qty' => 'decimal:2',
-        'received_qty' => 'decimal:2'
+        'received_qty' => 'decimal:2',
+        'has_serials' => 'boolean'
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Add observer for when serials are saved
+        static::saved(function ($model) {
+            if ($model->serials()->exists()) {
+                $model->has_serials = true;
+                $model->saveQuietly(); // Save without triggering other events
+            }
+        });
+    }
 
     public function goodsReceipt()
     {
@@ -37,5 +51,20 @@ class GoodsReceiptDetail extends Model
     public function serials()
     {
         return $this->hasMany(GoodsReceiptSerial::class);
+    }
+
+    public function getHasSerialsAttribute($value)
+    {
+        // Return true if there are any serials associated
+        if ($this->serials()->exists()) {
+            return true;
+        }
+        
+        // Return true if the product requires serials
+        if ($this->purchaseOrderDetail?->supplierProductDetail?->product?->has_serials) {
+            return true;
+        }
+
+        return (bool) $value;
     }
 } 

@@ -96,11 +96,13 @@ class PurchaseOrder extends Model
             if (empty($modelData->status)) {
                 $modelData->status = 'draft';
             }
+        });
 
-            $approvalLevelSetting = ApprovalLevelSetting::where('type', 'purchase-order')->where('company_id', $modelData->company_id)->first();
-            if ($approvalLevelSetting) {
+        static::created(function ($purchaseOrder) {
+            $approvalLevelSettings = ApprovalLevelSetting::where('type', 'purchase-order')->where('company_id', $purchaseOrder->company_id)->get();
+            foreach($approvalLevelSettings as $approvalLevelSetting) {
                 ApprovalLevel::create([
-                    'purchase_order_id' => $modelData->id,
+                    'purchase_order_id' => $purchaseOrder->id,
                     'level' => $approvalLevelSetting->level,
                     'label' => $approvalLevelSetting->label,
                     'user_id' => $approvalLevelSetting->user_id
@@ -149,5 +151,10 @@ class PurchaseOrder extends Model
     public function goodsReceipts()
     {
         return $this->hasMany(GoodsReceipt::class);
+    }
+
+    public function approvalRemarks()
+    {
+        return $this->hasMany(ApprovalRemark::class);
     }
 }

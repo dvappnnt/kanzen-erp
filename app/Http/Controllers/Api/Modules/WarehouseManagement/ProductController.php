@@ -18,7 +18,7 @@ class ProductController extends Controller
 
     public function index()
     {
-        return $this->modelClass::with(['category'])->latest()->paginate(perPage: 10);
+        return $this->modelClass::with(['category'])->latest()->paginate(perPage: 50);
     }
 
     public function store(Request $request)
@@ -27,7 +27,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string|max:1024',
-            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
+            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg,webp,avif|max:2048',
             'has_variation' => 'nullable', // just "required" here, no boolean check
         ]);
 
@@ -63,7 +63,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string|max:1024',
-            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
+            'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg,webp,avif|max:2048',
             'has_variation' => 'nullable', // just "required" here, no boolean check
         ]);
 

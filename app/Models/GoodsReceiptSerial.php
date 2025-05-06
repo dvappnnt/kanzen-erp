@@ -14,6 +14,7 @@ class GoodsReceiptSerial extends Model
         'goods_receipt_detail_id',
         'serial_number',
         'batch_number',
+        'notes',
         'manufactured_at',
         'expired_at'
     ];

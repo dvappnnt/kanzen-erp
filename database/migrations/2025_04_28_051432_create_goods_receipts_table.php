@@ -21,7 +21,8 @@ return new class extends Migration
             $table->foreignId('created_by_user_id')->constrained('users')->onDelete('cascade'); // Who created it
             $table->enum('status', [
                 'pending',              // Initial GR created
-                'partially-received',   // Optional
+                'partially-received',
+                'fully-received',
                 'in-warehouse',              // Stock moved to warehouse_products
             ])->default('pending');
             $table->softDeletes();
@@ -48,6 +49,7 @@ return new class extends Migration
             $table->string('batch_number')->nullable(); // For batch-controlled items
             $table->date('manufactured_at')->nullable();
             $table->date('expired_at')->nullable(); // Optional, useful for perishables
+            $table->text('notes')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

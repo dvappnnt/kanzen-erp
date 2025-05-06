@@ -13,8 +13,6 @@ class JournalEntry extends Model
         'company_id',
         'reference_number',
         'reference_date',
-        'total_debit',
-        'total_credit',
         'remarks',
         'created_by_user_id',
     ];

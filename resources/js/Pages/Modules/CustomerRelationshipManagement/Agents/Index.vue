@@ -9,12 +9,11 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
-import { formatName, formatDate, getStatusPillClass, humanReadable } from "@/utils/global";
-const modelName = "purchase-orders";
+
+const modelName = "agents";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
 
-// Get colors from composable
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 // Define Header Actions
@@ -22,15 +21,16 @@ const headerActions = ref([
     {
         text: "Export",
         url: `/${modelName}/export`,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
+        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600",
     },
     {
         text: "Create",
         url: `/${modelName}/create`,
         inertia: true,
-        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
+        class: "px-4 py-2 rounded",
         style: computed(() => ({
-            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
+            backgroundColor: buttonPrimaryBgColor.value,
+            color: buttonPrimaryTextColor.value
         })),
     },
 ]);
@@ -38,23 +38,12 @@ const headerActions = ref([
 // Define Table Columns
 const columns = ref([
     {
-        label: "Number",
-        value: "number",
-        uri: (row) => route("purchase-orders.show", row.id),
-        class: "text-green-600 hover:underline",
-        icon: "mdi-file-document-outline",
+        label: "Name",
+        value: "name",
+        has_avatar: true,
+        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
     },
-    { label: "Warehouse", value: (row) => row.warehouse.name },
-    { label: "Company", value: (row) => row.company.name },
-    { label: "Supplier", value: (row) => row.supplier.name },
-    {
-        label: "Status",
-        value: "status",
-        render: (row) => ({
-            text: humanReadable(row.status),
-            class: getStatusPillClass(row.status),
-        }),
-    },
+    { label: "Email", value: "email" },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },
 ]);
@@ -62,6 +51,7 @@ const columns = ref([
 const mapCustomButtons = (row) => ({
     ...row,
     viewUrl: `/${modelName}/${row.id}`,
+    editUrl: `/${modelName}/${row.id}/edit`,
     deleteUrl: `/api/${modelName}/${row.id}`,
     restoreUrl: row.deleted_at ? `/api/${modelName}/${row.id}/restore` : null,
     customUrls: [],
@@ -116,11 +106,11 @@ onMounted(() => fetchTableData());
 </script>
 
 <template>
-    <AppLayout :title="formatName(modelName)">
+    <AppLayout :title="modelName.charAt(0).toUpperCase() + modelName.slice(1)">
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    {{ formatName(modelName) }}
+                    {{ modelName.charAt(0).toUpperCase() + modelName.slice(1) }}
                 </h2>
                 <HeaderActions :actions="headerActions" />
             </div>

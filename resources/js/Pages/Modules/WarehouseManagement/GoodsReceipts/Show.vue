@@ -91,6 +91,11 @@ const returnForm = ref({
 const bulkManufacturedDate = ref('');
 const bulkExpiryDate = ref('');
 
+const showDeleteSerialModal = ref(false);
+const selectedSerialId = ref(null);
+const selectedDetailId = ref(null);
+const deleteRemarks = ref('');
+
 const loadSupplierProducts = async () => {
     if (!modelData.value?.supplier_id) {
         
@@ -544,13 +549,39 @@ watch(() => modelData.value?.details, (newDetails) => {
     }
 }, { immediate: true });
 
-const deleteSerial = async (serialId) => {
-    if (!confirm('Are you sure you want to delete this serial/batch number?')) return;
+const startDeleteSerial = (serialId, detailId) => {
+    selectedSerialId.value = serialId;
+    selectedDetailId.value = detailId;
+    deleteRemarks.value = '';
+    showDeleteSerialModal.value = true;
+};
+
+const closeDeleteSerialModal = () => {
+    showDeleteSerialModal.value = false;
+    selectedSerialId.value = null;
+    selectedDetailId.value = null;
+    deleteRemarks.value = '';
+};
+
+const handleDeleteSerial = async () => {
+    if (!selectedSerialId.value || !selectedDetailId.value) return;
     
     try {
         isLoading.value = true;
-        await axios.delete(`/api/goods-receipt-serials/${serialId}`);
+
+        // First create the remark
+        await axios.post('/api/goods-receipt-detail-remarks', {
+            goods_receipt_detail_id: selectedDetailId.value,
+            status: 'deleted',
+            remarks: deleteRemarks.value,
+            is_serial: 1
+        });
+
+        // Then delete the serial
+        await axios.delete(`/api/goods-receipt-serials/${selectedSerialId.value}`);
+        
         toast.success('Serial/batch number deleted successfully');
+        closeDeleteSerialModal();
         await loadDetails();
     } catch (error) {
         console.error('Error deleting serial/batch number:', error);
@@ -559,6 +590,9 @@ const deleteSerial = async (serialId) => {
         isLoading.value = false;
     }
 };
+
+// Replace the existing deleteSerial function with startDeleteSerial
+const deleteSerial = startDeleteSerial;
 
 // Add this watch after other watches
 watch(() => receiveForm.value.has_serials, (newValue) => {
@@ -635,7 +669,7 @@ const handleTransfer = async () => {
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-medium text-gray-900">Details</h3>
                             <button
-                                v-if="isFullyReceived && modelData.status != 'in-warehouse'"
+                                v-if="isFullyReceived && modelData.status !== 'in-warehouse'"
                                 @click="handleTransfer"
                                 class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded inline-flex items-center"
                                 :disabled="isLoading"
@@ -687,7 +721,7 @@ const handleTransfer = async () => {
                                         <td class="px-2 py-2 text-right text-sm font-medium" v-if="modelData.status != 'in-warehouse'">
                                             <div class="flex space-x-2">
                                                 <button
-                                                    v-if="detail.received_qty < detail.expected_qty"
+                                                    v-if="detail.expected_qty !== detail.received_qty"
                                                     @click="startReceive(detail)"
                                                     class="text-green-600 hover:text-green-900 p-1 rounded-md hover:bg-green-50"
                                                     :disabled="isLoading"
@@ -759,7 +793,7 @@ const handleTransfer = async () => {
                                                 </td>
                                                 <td class="px-3 py-2 text-right">
                                                     <button 
-                                                        @click="deleteSerial(serial.id)"
+                                                        @click="deleteSerial(serial.id, detail.id)"
                                                         class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
                                                         :disabled="isLoading"
                                                         title="Delete"
@@ -1071,6 +1105,42 @@ const handleTransfer = async () => {
                     :disabled="isLoading"
                 >
                     Return
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Serial Modal -->
+    <div v-if="showDeleteSerialModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Delete Serial/Batch Number</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Remarks (Optional)</label>
+                    <textarea
+                        v-model="deleteRemarks"
+                        rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Enter any remarks about this deletion..."
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button
+                    @click="closeDeleteSerialModal"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    :disabled="isLoading"
+                >
+                    Cancel
+                </button>
+                <button
+                    @click="handleDeleteSerial"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                    :disabled="isLoading"
+                >
+                    Delete
                 </button>
             </div>
         </div>

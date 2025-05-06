@@ -38,5 +38,6 @@ class DatabaseSeeder extends Seeder
         // $this->call(ProductVariationSeeder::class);
         $this->call(BankSeeder::class);
         $this->call(CompanyAccountSeeder::class);
+        $this->call(AccountingModuleSeeder::class);
     }
 }
