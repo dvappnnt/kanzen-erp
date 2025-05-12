@@ -24,6 +24,13 @@ class GoodsReceipt extends Model
         'date' => 'date'
     ];
 
+    protected $appends = ['name'];
+
+    public function getNameAttribute()
+    {
+        return $this->number;
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -89,12 +96,14 @@ class GoodsReceipt extends Model
         $totalExpected = $allDetails->sum('expected_qty');
         $totalReceived = $allDetails->sum('received_qty');
 
-        if ($totalReceived === 0) {
-            $this->status = 'pending';
-        } elseif ($totalReceived < $totalExpected) {
-            $this->status = 'partially-received';
-        } elseif ($totalReceived === $totalExpected) {
-            $this->status = 'fully-received';
+        if ($this->status != 'in-warehouse') {
+            if ($totalReceived === 0) {
+                $this->status = 'pending';
+            } elseif ($totalReceived < $totalExpected) {
+                $this->status = 'partially-received';
+            } elseif ($totalReceived === $totalExpected) {
+                $this->status = 'fully-received';
+            }
         }
 
         if ($this->isDirty('status')) {

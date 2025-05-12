@@ -21,6 +21,11 @@ class ProductController extends Controller
         return $this->modelClass::with(['category'])->latest()->paginate(perPage: 50);
     }
 
+    public function complete()
+    {
+        return $this->modelClass::with(['category'])->latest()->get();
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

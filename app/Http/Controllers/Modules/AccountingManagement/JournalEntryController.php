@@ -27,7 +27,7 @@ class JournalEntryController extends Controller
 
     public function create()
     {
-        $categoryQuery = \App\Models\Category::where('related_model', 'expenses');
+        $categoryQuery = \App\Models\Category::where('related_model', 'expenses')->where('default_account_id', '!=', null);
         $categories = $categoryQuery->orderBy('name', 'asc')->get();
         $suppliersQuery = \App\Models\Supplier::orderBy('name', 'asc');
         $suppliers = $suppliersQuery->get();
@@ -43,7 +43,7 @@ class JournalEntryController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['company'])->findOrFail($id);
+        $model = $this->modelClass::with(['company', 'details', 'details.account'])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,

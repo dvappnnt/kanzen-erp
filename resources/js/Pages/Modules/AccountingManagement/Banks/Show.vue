@@ -36,6 +36,19 @@ const headerActions = ref([
 const profileDetails = [
     { label: "Name", value: "name", class: "text-xl font-bold" },
     { label: "Code", value: "code", class: "text-gray-500" },
+    { label: "Website", value: "website", class: "text-gray-500" },
+];
+
+const companyDetails = [
+    { label: "Name", value: "name", class: "text-gray-500" },
+    { label: "Mobile Number", value: "mobile", class: "text-gray-500" },
+    { label: "Phone Number", value: "phone", class: "text-gray-500" },
+    { label: "Email", value: "email", class: "text-gray-500" },
+    { label: "Address", value: "address", class: "text-gray-500" },
+    { label: "City", value: "city", class: "text-gray-500" },
+    { label: "State", value: "state", class: "text-gray-500" },
+    { label: "Website", value: "website", class: "text-gray-500" },
+    { label: "Zip Code", value: "zip", class: "text-gray-500" },
 ];
 
 const page = usePage();
@@ -60,6 +73,12 @@ const modelData = computed(() => page.props.modelData || {});
                     :modelData="modelData"
                 />
                 <ProfileCard :modelData="modelData" :columns="profileDetails" />
+                <div class="border-t border-gray-200" />
+                <DisplayInformation
+                    title="Company Information"
+                    :modelData="modelData"
+                    :rowDetails="companyDetails"
+                />
             </div>
         </div>
     </AppLayout>

@@ -341,7 +341,7 @@ const deleteDetail = async (detailId) => {
 const loadPurchaseOrderDetails = async () => {
     try {
         const response = await axios.get(
-            `/api/purchase-orders/${modelData.value.id}/details`
+            `/api/purchase-orders/${modelData.value.purchase_order_id}/details`
         );
         purchaseOrderDetails.value = response.data.data || [];
     } catch (error) {

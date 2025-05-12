@@ -19,7 +19,7 @@ class JournalEntryController extends Controller
 
     public function index()
     {
-        return $this->modelClass::with(['company', 'details.companyAccount'])->latest()->paginate(perPage: 10);
+        return $this->modelClass::with(['company', 'details'])->latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
@@ -68,7 +68,7 @@ class JournalEntryController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['company', 'details.companyAccount'])->findOrFail($id);
+        $model = $this->modelClass::with(['company', 'details.companyAccount', 'account', 'createdByUser'])->findOrFail($id);
         return $model;
     }
 

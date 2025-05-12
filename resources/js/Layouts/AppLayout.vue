@@ -108,7 +108,7 @@ const toggleMobileSidebar = () => {
         <Head :title="title" />
 
         <!-- Dynamic Favicon -->
-        <link rel="icon" :href="appIcon" type="image/png" />
+        <Link rel="icon" :href="appIcon" type="image/png" />
 
         <Banner />
 

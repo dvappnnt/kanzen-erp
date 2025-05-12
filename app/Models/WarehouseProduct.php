@@ -54,7 +54,7 @@ class WarehouseProduct extends Model
     protected static function booted()
     {
         static::creating(function ($modelData) {
-            $modelData->slug = self::generateUniqueSlug($modelData->name);
+            $modelData->slug = self::generateUniqueSlug($modelData->supplierProductDetail->product->name);
 
             // Generate a unique token only if it's not set manually
             if (empty($modelData->token)) {
@@ -64,7 +64,7 @@ class WarehouseProduct extends Model
 
         static::updating(function ($modelData) {
             if ($modelData->isDirty('name')) {
-                $modelData->slug = self::generateUniqueSlug($modelData->name);
+                $modelData->slug = self::generateUniqueSlug($modelData->supplierProductDetail->product->name);
             }
         });
     }

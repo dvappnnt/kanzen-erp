@@ -7,6 +7,13 @@ const page = usePage();
 const modelData = computed(() => page.props.modelData || {});
 const purchaseOrderDetails = computed(() => page.props.purchaseOrderDetails || []);
 
+// Add computed property for subtotal
+const subtotal = computed(() => {
+    return purchaseOrderDetails.value.reduce((sum, detail) => {
+        return sum + (Number(detail.total) || 0);
+    }, 0);
+});
+
 const basicInfo = computed(() => ({
     Number: modelData.value.number,
     Company: modelData.value.company?.name || "—",
@@ -146,9 +153,45 @@ onMounted(() => {
             </tbody>
         </table>
 
+        <!-- Totals Section -->
+        <div class="mt-4 flex justify-end">
+            <div class="w-64">
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="text-gray-600 text-right">Subtotal:</div>
+                    <div class="text-right font-medium">
+                        {{ formatNumber(subtotal, { style: "currency", currency: "PHP" }) }}
+                    </div>
+
+                    <div class="text-gray-600 text-right">Tax Rate:</div>
+                    <div class="text-right font-medium">
+                        {{ modelData.tax_rate }}%
+                    </div>
+
+                    <div class="text-gray-600 text-right">Tax Amount:</div>
+                    <div class="text-right font-medium">
+                        {{ formatNumber(modelData.tax_amount || 0, { style: "currency", currency: "PHP" }) }}
+                    </div>
+
+                    <div class="text-gray-600 text-right">Shipping Cost:</div>
+                    <div class="text-right font-medium">
+                        {{ formatNumber(modelData.shipping_cost || 0, { style: "currency", currency: "PHP" }) }}
+                    </div>
+
+                    <div class="col-span-2 border-t border-gray-200 mt-2 pt-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-800 font-semibold">Total Amount:</span>
+                            <span class="font-bold">
+                                {{ formatNumber(modelData.total_amount || 0, { style: "currency", currency: "PHP" }) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer Notes -->
         <div class="mt-10 text-xs text-gray-600 leading-relaxed border-t pt-4 break-inside-avoid">
-            <p><strong>Note:</strong> This purchase order is subject to our company’s terms and conditions. Delivery must occur on or before the expected date. Report any discrepancies within 24 hours of receipt.</p>
+            <p><strong>Note:</strong> This purchase order is subject to our company's terms and conditions. Delivery must occur on or before the expected date. Report any discrepancies within 24 hours of receipt.</p>
             <p class="mt-2">For concerns, contact purchasing at: <strong>{{ modelData.company?.email || 'support@example.com' }}</strong>.</p>
         </div>
 

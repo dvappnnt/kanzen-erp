@@ -23,6 +23,7 @@ return new class extends Migration
             $table->text('description')->nullable(); // Additional notes
             $table->date('expense_date')->nullable(); // When the expense happened
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete(); // Who recorded it
+            $table->string('receipt_attachment')->nullable(); // store path to receipt
             $table->softDeletes();
             $table->timestamps();
         });

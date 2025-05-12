@@ -13,12 +13,12 @@ class CompanySeeder extends Seeder
     {
         // Create a Company
         $company = Company::create([
-            'name' => 'Ed Opina',
-            'email' => 'support@edeesonopina.vercel.app',
+            'name' => 'Neonetwork of Technologies',
+            'email' => 'ceogab@neonetwork.ph',
             'address' => 'Quezon City',
-            'description' => "With 9 years of web development experience, I specialize in creating dynamic, user-friendly applications using Laravel, VueJS, and NuxtJS. My expertise extends across full-stack development, blending backend functionality with responsive, engaging frontend interfaces.",
+            'description' => "Unlock Big Opportunities with Our Unique Niche Business Model",
             'mobile' => '9604704024',
-            'website' => 'https://edeesonopina.vercel.app/',
+            'website' => 'https://neonetwork.ph/',
             'created_by_user_id' => null,  // Temporarily null, will update after user creation
             'country_id' => 177,
             'avatar' => null,
@@ -27,14 +27,14 @@ class CompanySeeder extends Seeder
             'token' => \Illuminate\Support\Str::random(64),
         ]);
 
-        // Create a Company (DataBlitz)
+        // Create a Company (Kanzen)
         $company = Company::create([
-            'name' => 'DataBlitz',
-            'email' => 'support@datablitz.com.ph',
-            'address' => 'Makati City, Metro Manila',
-            'description' => "DataBlitz is a premier retail chain offering the latest in video games, consoles, and accessories. With a strong presence in the tech and gaming community, we deliver quality products and services for Filipino gamers nationwide.",
+            'name' => 'Kanzen',
+            'email' => 'support@dvapp.cloud',
+            'address' => 'Quezon City',
+            'description' => "Kanzen Homes sells smart home appliances and gadgets",
             'mobile' => '09178889999',
-            'website' => 'https://www.datablitz.com.ph/',
+            'website' => 'https://fe-kanzen.dvapp.cloud/',
             'created_by_user_id' => null, // To be updated after user creation if applicable
             'country_id' => 177, // Philippines
             'avatar' => null,
@@ -46,22 +46,22 @@ class CompanySeeder extends Seeder
         // Create Super Admin User after company is created
         $superAdmin = User::factory()->withPersonalTeam()->create([
             'name' => 'Super Admin User',
-            'email' => 'super.admin@test.com',
+            'email' => 'super.admin@neonetwork.ph',
             'password' => bcrypt('123123123'),
             'company_id' => $company->id,
         ]);
         
         // Create Admin User for Datablitz
-        $datablitzAdmin = User::factory()->withPersonalTeam()->create([
+        $kanzenAdmin = User::factory()->withPersonalTeam()->create([
             'name' => 'Admin User',
-            'email' => 'admin@datablitz.com.ph',
+            'email' => 'admin@kanzen.ph',
             'password' => bcrypt('123123123'),
             'company_id' => $company->id,
         ]);
 
         // Assign the super-admin role to the created user
         $superAdmin->assignRole('super-admin');
-        $datablitzAdmin->assignRole('admin');
+        $kanzenAdmin->assignRole('admin');
         
         // Update the company with the created_by_user_id
         $company->update(['created_by_user_id' => $superAdmin->id]);
@@ -78,7 +78,7 @@ class CompanySeeder extends Seeder
         ApprovalLevelSetting::create([
             'type' => 'purchase-order',
             'company_id' => $company->id,
-            'user_id' => $superAdmin->id,
+            'user_id' => $kanzenAdmin->id,
             'level' => 1,
             'label' => 'Approved By:'
         ]);

@@ -86,8 +86,7 @@ class BankController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::with(['parent'])
-            ->where('name', 'like', "%{$searchTerm}%")
+        $models = $this->modelClass::where('name', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
 

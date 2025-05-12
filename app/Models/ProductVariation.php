@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class ProductVariation extends Model
 {
@@ -37,5 +38,30 @@ class ProductVariation extends Model
     public function supplierProductDetails()
     {
         return $this->hasMany(SupplierProductDetail::class, 'product_variation_id');
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($productVariation) {
+            $productName = $productVariation->product->name ?? '';
+            $variationName = $productVariation->name ?? '';
+
+            $productPrefix = substr($productName, 0, 3);
+            $variationPrefix = substr($variationName, 0, 3);
+            $basePrefix = strtoupper($productPrefix . $variationPrefix);
+
+            // Count existing SKUs with this prefix
+            $count = static::where('sku', 'LIKE', $basePrefix . '%')->count() + 1;
+
+            // Pad count to always be 3 digits (e.g., 001, 002)
+            $increment = str_pad($count, 3, '0', STR_PAD_LEFT);
+
+            // Optional: you can still append date if needed
+            // $datetime = now()->format('ymdHi');
+
+            // Generate final SKU
+            $productVariation->sku = $basePrefix . $increment;
+            $productVariation->barcode = Str::random(10);
+        });
     }
 }

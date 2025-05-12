@@ -50,6 +50,9 @@ const columns = ref([
     {
         label: "Warehouse",
         value: (row) => row.purchase_order.warehouse.name,
+        uri: (row) => route("warehouses.show", row.purchase_order.warehouse.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-warehouse",
     },
     {
         label: "Company",

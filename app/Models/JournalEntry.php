@@ -11,6 +11,7 @@ class JournalEntry extends Model
 
     protected $fillable = [
         'company_id',
+        'account_id',
         'reference_number',
         'reference_date',
         'remarks',
@@ -21,6 +22,18 @@ class JournalEntry extends Model
         'reference_date' => 'date',
     ];
 
+    protected $appends = ['total_debit', 'total_credit'];
+
+    public function getTotalDebitAttribute()
+    {
+        return $this->details()->sum('debit');
+    }
+
+    public function getTotalCreditAttribute()
+    {
+        return $this->details()->sum('credit');
+    }
+
     public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
@@ -29,5 +42,15 @@ class JournalEntry extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class);
+    }
+
+    public function details()
+    {
+        return $this->hasMany(JournalEntryDetail::class);
     }
 }

@@ -67,8 +67,8 @@ const navigationTabs = ref([
 // Load available products that are not yet assigned to the supplier
 const loadAvailableProducts = async () => {
     try {
-        const response = await axios.get('/api/products');
-        availableProducts.value = response.data.data || [];
+        const response = await axios.get('/api/complete/products');
+        availableProducts.value = response.data || [];
     } catch (error) {
         console.error('Error loading products:', error);
         toast.error('Failed to load products');

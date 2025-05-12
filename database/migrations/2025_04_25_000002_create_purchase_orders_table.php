@@ -10,12 +10,13 @@ return new class extends Migration
     {
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_account_id')->nullable()->constrained('company_accounts')->nullOnDelete();
             $table->string('number')->unique();
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
             $table->foreignId('purchase_requisition_id')->nullable()->constrained()->onDelete('set null');
-            $table->enum('status', ['draft', 'pending', 'partially-approved', 'approved', 'rejected', 'ordered', 'received', 'cancelled'])->default('draft');
+            $table->enum('status', ['draft', 'pending', 'partially-approved', 'fully-approved', 'rejected', 'ordered', 'received', 'cancelled'])->default('draft');
             $table->date('order_date');
             $table->date('expected_delivery_date')->nullable();
             $table->date('delivery_date')->nullable();
@@ -25,6 +26,7 @@ return new class extends Migration
             $table->decimal('tax_rate', 5, 2)->default(0);
             $table->decimal('tax_amount', 15, 2)->default(0);
             $table->decimal('shipping_cost', 15, 2)->default(0);
+            $table->decimal('subtotal', 15, 2)->default(0);
             $table->decimal('total_amount', 15, 2)->default(0);
             $table->integer('approval_level')->default(1);
             $table->foreignId('created_by_user_id')->constrained('users')->onDelete('cascade');

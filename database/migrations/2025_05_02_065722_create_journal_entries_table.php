@@ -25,15 +25,14 @@ return new class extends Migration
         Schema::create('journal_entry_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('journal_entry_id')->constrained()->onDelete('cascade');
-            $table->foreignId('company_account_id')->constrained()->onDelete('cascade');
-            $table->string('name')->nullable(); // particulars
+            $table->foreignId('account_id')->constrained('accounts')->onDelete('cascade'); // ✅ Use this
+            $table->string('name')->nullable();
             $table->decimal('debit', 15, 2)->default(0);
             $table->decimal('credit', 15, 2)->default(0);
             $table->text('remarks')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });
-
     }
 
     /**

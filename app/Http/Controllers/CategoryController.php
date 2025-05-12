@@ -59,7 +59,7 @@ class CategoryController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['parent'])->findOrFail($id);
+        $model = $this->modelClass::with(['parent', 'defaultAccount'])->findOrFail($id);
 
         return Inertia::render("{$this->modelName}/Show", [
             'modelData' => $model,

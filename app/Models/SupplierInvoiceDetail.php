@@ -17,13 +17,15 @@ class SupplierInvoiceDetail extends Model
         'total',
     ];
 
-    public function invoice()
+    protected $with = ['supplierProduct'];
+
+    public function supplierInvoice()
     {
-        return $this->belongsTo(SupplierInvoice::class, 'supplier_invoice_id');
+        return $this->belongsTo(SupplierInvoice::class);
     }
 
-    public function product()
+    public function supplierProduct()
     {
-        return $this->belongsTo(SupplierProduct::class, 'supplier_product_id');
+        return $this->belongsTo(SupplierProduct::class)->with(['product']);
     }
 }

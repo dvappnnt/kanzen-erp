@@ -90,3 +90,28 @@ export function humanReadable(input) {
         .replace(/-/g, ' ')        // convert kebab-case to space
         .replace(/\b\w/g, (char) => char.toUpperCase()); // capitalize each word
 }
+
+export function stripQuotes(value) {
+    return value && value.startsWith('"') && value.endsWith('"')
+        ? value.slice(1, -1)
+        : value;
+}
+
+export function getAppName(appSettings) {
+    return appSettings.name ? stripQuotes(appSettings.name) : "The EO";
+}
+
+export function getAppIcon(appSettings) {
+    const iconPayload = appSettings.icon ? stripQuotes(appSettings.icon) : null;
+    return iconPayload && iconPayload !== "null"
+        ? `/storage/${iconPayload}`
+        : "/app-settings/app-icon.png";
+}
+
+export function getAppLogo(appSettings) {
+    const logoPayload = appSettings.logo ? stripQuotes(appSettings.logo) : null;
+    return logoPayload && logoPayload !== "null"
+        ? `/storage/${logoPayload}`
+        : "/app-settings/app-logo.png";
+}
+

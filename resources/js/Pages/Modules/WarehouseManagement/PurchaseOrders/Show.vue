@@ -110,6 +110,21 @@ const calculateOrderTotal = computed(() => {
     }, 0) || 0;
 });
 
+// Add computed properties for totals
+const subtotal = computed(() => {
+    return purchaseOrderDetails.value.reduce((sum, detail) => {
+        return sum + (Number(detail.total) || 0);
+    }, 0);
+});
+
+const taxAmount = computed(() => {
+    return (subtotal.value * (modelData.value?.tax_rate || 0)) / 100;
+});
+
+const totalAmount = computed(() => {
+    return subtotal.value + taxAmount.value + (Number(modelData.value?.shipping_cost) || 0);
+});
+
 const loadSupplierProducts = async () => {
     if (!modelData.value?.supplier_id) {
         toast.error("Supplier ID not found");
@@ -354,10 +369,12 @@ const deleteDetail = async (detailId) => {
 
 const loadPurchaseOrderDetails = async () => {
     try {
-        const response = await axios.get(
-            `/api/purchase-orders/${modelData.value.id}/details`
-        );
-        purchaseOrderDetails.value = response.data.data || [];
+        const [detailsResponse, orderResponse] = await Promise.all([
+            axios.get(`/api/purchase-orders/${modelData.value.id}/details`),
+            axios.get(`/api/purchase-orders/${modelData.value.id}`)
+        ]);
+        purchaseOrderDetails.value = detailsResponse.data.data || [];
+        Object.assign(modelData.value, orderResponse.data);
     } catch (error) {
         console.error("Error loading purchase order details:", error);
         toast.error("Failed to load purchase order details");
@@ -587,7 +604,7 @@ onMounted(async () => {
                     </button>
 
                     <button
-                        v-if="modelData.status === 'approved'"
+                        v-if="modelData.status === 'partially-approved'"
                         @click="handleOrder"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -608,6 +625,7 @@ onMounted(async () => {
                     </button>
 
                     <button
+                        v-if="modelData.status === 'partially-approved' || modelData.status === 'received' || modelData.status === 'ordered'"
                         @click="handlePrint"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -1037,10 +1055,36 @@ onMounted(async () => {
                                 
                                 <!-- Total Section -->
                                 <div class="mt-4 flex justify-end px-2">
-                                    <div class="text-right">
-                                        <div class="text-sm text-gray-600">Total Amount</div>
-                                        <div class="text-xl font-bold text-gray-900">
-                                            {{ formatNumber(calculateOrderTotal, { style: "currency", currency: "PHP", minimumFractionDigits: 2 }) }}
+                                    <div class="w-64 space-y-2">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Subtotal:</span>
+                                            <span class="font-medium">
+                                                {{ formatNumber(subtotal, { style: "currency", currency: "PHP" }) }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Tax Rate:</span>
+                                            <span class="font-medium">{{ modelData.tax_rate }}%</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Tax Amount:</span>
+                                            <span class="font-medium">
+                                                {{ formatNumber(taxAmount, { style: "currency", currency: "PHP" }) }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Shipping Cost:</span>
+                                            <span class="font-medium">
+                                                {{ formatNumber(modelData.shipping_cost || 0, { style: "currency", currency: "PHP" }) }}
+                                            </span>
+                                        </div>
+                                        <div class="pt-2 border-t border-gray-200">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-800 font-semibold">Total Amount:</span>
+                                                <span class="text-xl font-bold text-gray-900">
+                                                    {{ formatNumber(totalAmount, { style: "currency", currency: "PHP" }) }}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
