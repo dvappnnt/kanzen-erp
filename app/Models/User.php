@@ -125,17 +125,5 @@ class User extends Authenticatable
         if (App::runningInConsole() && app()->runningUnitTests() === false) {
             return;
         }
-
-        static::created(function ($user) {
-            $user->walletBalances()->firstOrCreate(
-                ['type' => 'subscription'],
-                ['amount' => 0]
-            );
-
-            $user->walletBalances()->firstOrCreate(
-                ['type' => 'top-up'],
-                ['amount' => 5]
-            );
-        });
     }
 }

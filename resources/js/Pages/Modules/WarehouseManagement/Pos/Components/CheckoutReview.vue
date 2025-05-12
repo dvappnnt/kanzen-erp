@@ -20,18 +20,23 @@
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <h3 class="text-lg font-semibold mb-4">Order Items</h3>
                         <div class="space-y-4">
-                            <div v-for="i in 3" :key="i" class="flex items-center justify-between py-3 border-b last:border-0">
+                            <div v-for="item in cartItems" :key="item.id" class="flex items-center justify-between py-3 border-b last:border-0">
                                 <div class="flex items-center gap-4">
                                     <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
                                         <span class="text-2xl">📦</span>
                                     </div>
                                     <div>
-                                        <h4 class="font-medium">Product {{ i }}</h4>
-                                        <p class="text-sm text-gray-500">SKU: PRD-{{ i.toString().padStart(4, '0') }}</p>
-                                        <p class="text-sm text-gray-500">Qty: 2</p>
+                                        <h4 class="font-medium">{{ item.name }}</h4>
+                                        <p class="text-sm text-gray-500">Qty: {{ item.quantity }}</p>
+                                        <p class="text-sm text-gray-500">Price: {{ formatNumber(item.price, { style: 'currency', currency: 'PHP' }) }}</p>
+                                        <p v-if="item.serials && item.serials.length > 0" 
+                                           @click="showSerialListModal(item)"
+                                           class="text-sm text-blue-600 cursor-pointer hover:text-blue-800">
+                                            {{ item.serials.length }} serial/batch number(s)
+                                        </p>
                                     </div>
                                 </div>
-                                <span class="font-medium">₱{{ (Math.random() * 100).toFixed(2) }}</span>
+                                <span class="font-medium">{{ formatNumber(item.price * item.quantity, { style: 'currency', currency: 'PHP' }) }}</span>
                             </div>
                         </div>
                     </div>
@@ -44,17 +49,68 @@
                                 <p class="font-medium">{{ customerInfo.name }}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Mobile</p>
-                                <p class="font-medium">{{ customerInfo.mobile }}</p>
+                                <p class="text-sm text-gray-500">Email</p>
+                                <p class="font-medium">{{ customerInfo.email || '-' }}</p>
                             </div>
-                            <div v-if="customerInfo.landline">
-                                <p class="text-sm text-gray-500">Landline</p>
-                                <p class="font-medium">{{ customerInfo.landline }}</p>
+                            <div>
+                                <p class="text-sm text-gray-500">Phone</p>
+                                <p class="font-medium">{{ customerInfo.phone || '-' }}</p>
                             </div>
-                            <div v-if="customerInfo.address">
+                            <div>
                                 <p class="text-sm text-gray-500">Address</p>
-                                <p class="font-medium">{{ customerInfo.address }}</p>
+                                <p class="font-medium">{{ customerInfo.address || '-' }}</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Information -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4">Payment Information</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Payment Method</p>
+                                <p class="font-medium capitalize">{{ formatPaymentMethod(paymentDetails.payment_method) }}</p>
+                            </div>
+
+                            <!-- GCash Details -->
+                            <template v-if="paymentDetails.payment_method === 'gcash'">
+                                <div>
+                                    <p class="text-sm text-gray-500">Mobile Number</p>
+                                    <p class="font-medium">{{ paymentDetails.payment_details?.account_number }}</p>
+                                </div>
+                            </template>
+
+                            <!-- Credit Card Details -->
+                            <template v-if="paymentDetails.payment_method === 'credit-card'">
+                                <div>
+                                    <p class="text-sm text-gray-500">Account Number</p>
+                                    <p class="font-medium">{{ paymentDetails.payment_details?.account_number }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Account Name</p>
+                                    <p class="font-medium">{{ paymentDetails.payment_details?.account_name }}</p>
+                                </div>
+                            </template>
+
+                            <!-- Bank Transfer Details -->
+                            <template v-if="paymentDetails.payment_method === 'bank-transfer'">
+                                <div>
+                                    <p class="text-sm text-gray-500">Account Number</p>
+                                    <p class="font-medium">{{ paymentDetails.payment_details?.account_number }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Account Name</p>
+                                    <p class="font-medium">{{ paymentDetails.payment_details?.account_name }}</p>
+                                </div>
+                                <div v-if="paymentDetails.payment_details?.bank_id">
+                                    <p class="text-sm text-gray-500">Bank</p>
+                                    <p class="font-medium">{{ paymentDetails.payment_details?.bank?.name }}</p>
+                                </div>
+                                <div v-if="paymentDetails.payment_details?.company_account_id">
+                                    <p class="text-sm text-gray-500">Company Account</p>
+                                    <p class="font-medium">{{ paymentDetails.payment_details?.company_account?.name }}</p>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -66,62 +122,273 @@
                         <div class="space-y-3">
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Subtotal</span>
-                                <span class="font-medium">₱2,450.00</span>
+                                <span class="font-medium">{{ formatNumber(subtotal, { style: 'currency', currency: 'PHP' }) }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">VAT (12%)</span>
-                                <span class="font-medium">₱294.00</span>
+                                <span class="text-gray-600">VAT ({{ taxRate }}%)</span>
+                                <span class="font-medium">{{ formatNumber(taxAmount, { style: 'currency', currency: 'PHP' }) }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Discount</span>
-                                <span class="font-medium text-green-600">-₱100.00</span>
+                                <span class="font-medium text-green-600">-{{ formatNumber(discountAmount, { style: 'currency', currency: 'PHP' }) }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Shipping</span>
-                                <span class="font-medium">₱100.00</span>
+                                <span class="font-medium">{{ formatNumber(shippingAmount, { style: 'currency', currency: 'PHP' }) }}</span>
                             </div>
                             <div class="pt-3 border-t">
                                 <div class="flex justify-between text-lg font-semibold">
                                     <span>Total</span>
-                                    <span>₱2,744.00</span>
+                                    <span>{{ formatNumber(total, { style: 'currency', currency: 'PHP' }) }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <button 
-                            @click="$emit('proceed')"
+                            @click="showConfirmModal = true"
                             class="w-full mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2"
                         >
                             Confirm Order
                             <span>→</span>
                         </button>
                     </div>
-
-                    <div class="bg-white rounded-xl shadow-sm p-6">
-                        <h3 class="text-lg font-semibold mb-4">Payment Details</h3>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Payment Method</span>
-                                <span class="font-medium">Cash</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Payment Status</span>
-                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm">Pending</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Serial List Modal -->
+    <TransitionRoot appear :show="showSerialListModalFlag" as="template">
+        <Dialog as="div" @close="showSerialListModalFlag = false" class="relative z-10">
+            <TransitionChild
+                enter="duration-300 ease-out"
+                enter-from="opacity-0"
+                enter-to="opacity-100"
+                leave="duration-200 ease-in"
+                leave-from="opacity-100"
+                leave-to="opacity-0"
+            >
+                <div class="fixed inset-0 bg-black bg-opacity-25" />
+            </TransitionChild>
+
+            <div class="fixed inset-0 overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <TransitionChild
+                        enter="duration-300 ease-out"
+                        enter-from="opacity-0 scale-95"
+                        enter-to="opacity-100 scale-100"
+                        leave="duration-200 ease-in"
+                        leave-from="opacity-100 scale-100"
+                        leave-to="opacity-0 scale-95"
+                    >
+                        <DialogPanel class="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
+                            <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900 mb-4">
+                                Serial/Batch Numbers for {{ selectedItem?.name }}
+                            </DialogTitle>
+
+                            <div class="space-y-2 max-h-96 overflow-y-auto">
+                                <div v-for="serial in selectedItem?.serials" :key="serial" class="flex items-center py-3 px-4 bg-gray-50 rounded">
+                                    <span class="font-medium">{{ serial }}</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 flex justify-end">
+                                <button
+                                    @click="showSerialListModalFlag = false"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </DialogPanel>
+                    </TransitionChild>
+                </div>
+            </div>
+        </Dialog>
+    </TransitionRoot>
+
+    <!-- Confirmation Modal -->
+    <TransitionRoot appear :show="showConfirmModal" as="template">
+        <Dialog as="div" @close="showConfirmModal = false" class="relative z-10">
+            <TransitionChild
+                enter="duration-300 ease-out"
+                enter-from="opacity-0"
+                enter-to="opacity-100"
+                leave="duration-200 ease-in"
+                leave-from="opacity-100"
+                leave-to="opacity-0"
+            >
+                <div class="fixed inset-0 bg-black bg-opacity-25" />
+            </TransitionChild>
+
+            <div class="fixed inset-0 overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <TransitionChild
+                        enter="duration-300 ease-out"
+                        enter-from="opacity-0 scale-95"
+                        enter-to="opacity-100 scale-100"
+                        leave="duration-200 ease-in"
+                        leave-from="opacity-100 scale-100"
+                        leave-to="opacity-0 scale-95"
+                    >
+                        <DialogPanel class="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
+                            <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900 mb-4">
+                                Confirm Order
+                            </DialogTitle>
+
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Are you sure you want to process this order? This action cannot be undone.
+                                </p>
+                            </div>
+
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button
+                                    @click="showConfirmModal = false"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                                    :disabled="isProcessing"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    @click="handleConfirm"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md flex items-center"
+                                    :disabled="isProcessing"
+                                >
+                                    <span v-if="isProcessing" class="mr-2">
+                                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                    {{ isProcessing ? 'Processing...' : 'Confirm Order' }}
+                                </button>
+                            </div>
+                        </DialogPanel>
+                    </TransitionChild>
+                </div>
+            </div>
+        </Dialog>
+    </TransitionRoot>
 </template>
 
 <script setup>
-defineEmits(['back', 'proceed']);
-defineProps({
+import { formatNumber } from "@/utils/global";
+import { ref } from 'vue';
+import { Dialog, DialogPanel, DialogTitle, TransitionRoot, TransitionChild } from '@headlessui/vue';
+import axios from 'axios';
+
+const emit = defineEmits(['back', 'proceed']);
+
+const props = defineProps({
     customerInfo: {
         type: Object,
         required: true
+    },
+    cartItems: {
+        type: Array,
+        required: true
+    },
+    paymentDetails: {
+        type: Object,
+        required: true
+    },
+    subtotal: {
+        type: Number,
+        required: true
+    },
+    taxRate: {
+        type: Number,
+        required: true
+    },
+    taxAmount: {
+        type: Number,
+        required: true
+    },
+    discountAmount: {
+        type: Number,
+        required: true
+    },
+    discountType: {
+        type: String,
+        required: true
+    },
+    discountValue: {
+        type: Number,
+        required: true
+    },
+    shippingAmount: {
+        type: Number,
+        required: true
+    },
+    total: {
+        type: Number,
+        required: true
     }
 });
+
+// Serial list modal state
+const showSerialListModalFlag = ref(false);
+const selectedItem = ref(null);
+
+const showSerialListModal = (item) => {
+    selectedItem.value = item;
+    showSerialListModalFlag.value = true;
+};
+
+const formatPaymentMethod = (method) => {
+    const methods = {
+        'cash': 'Cash',
+        'gcash': 'GCash',
+        'credit-card': 'Credit Card',
+        'bank-transfer': 'Bank Transfer'
+    };
+    return methods[method] || method;
+};
+
+// Confirmation modal state
+const showConfirmModal = ref(false);
+const isProcessing = ref(false);
+
+const handleConfirm = async () => {
+    try {
+        isProcessing.value = true;
+        
+        const response = await axios.post('/api/invoices', {
+            company_id: props.customerInfo.company_id,
+            customer_id: props.customerInfo.id,
+            warehouse_id: props.cartItems[0].warehouse_id,
+            type: 'pos-invoice',
+            invoice_date: new Date().toISOString().split('T')[0],
+            discount_rate: props.discountType === 'percentage' ? props.discountValue : 0,
+            discount_amount: props.discountAmount,
+            tax_rate: props.taxRate,
+            tax_amount: props.taxAmount,
+            shipping_cost: props.shippingAmount,
+            subtotal: props.subtotal,
+            total_amount: props.total,
+            payment_method: props.paymentDetails.payment_method,
+            payment_details: props.paymentDetails.payment_details,
+            items: props.cartItems.map(item => ({
+                warehouse_product_id: item.id,
+                qty: item.quantity,
+                price: item.price,
+                total: item.price * item.quantity,
+                serials: item.serials || []
+            }))
+        });
+
+        // Close modal first
+        showConfirmModal.value = false;
+        
+        // Then emit the proceed event with the invoice data
+        emit('proceed', response.data.data);
+    } catch (error) {
+        console.error('Error creating invoice:', error);
+        const errorMessage = error.response?.data?.message || 'Error creating invoice';
+        alert(errorMessage);
+    } finally {
+        isProcessing.value = false;
+    }
+};
 </script> 

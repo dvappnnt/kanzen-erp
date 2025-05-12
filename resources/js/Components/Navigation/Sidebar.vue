@@ -29,7 +29,7 @@
                     :href="route('dashboard')"
                     class="flex items-center space-x-3"
                 >
-                    <div class="debug-image-container w-8 h-8">
+                    <div class="debug-image-container w-32 h-32">
                         <img
                             :src="appIcon"
                             class="w-full h-full object-contain"
@@ -37,9 +37,9 @@
                             alt="App Icon"
                         />
                     </div>
-                    <span v-show="!isMinimized" class="text-lg font-semibold">{{
+                    <!-- <span v-show="!isMinimized" class="text-lg font-semibold">{{
                         appName
-                    }}</span>
+                    }}</span> -->
                 </Link>
             </div>
 
@@ -152,6 +152,34 @@
                     >
                         Accounting
                     </div>
+
+                    <Link
+                        v-if="hasPermission('read invoices')"
+                        :href="route('invoices.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('invoices.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('invoices.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-cash-check text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('invoices.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Invoices</span>
+                    </Link>
 
                     <Link
                         v-if="hasPermission('read expenses')"
@@ -318,7 +346,7 @@
                         >
                     </Link>
 
-                    <Link
+                    <!-- <Link
                         :href="route('purchase-requisitions.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
@@ -348,6 +376,39 @@
                         ></span>
                         <span v-show="!isMinimized" class="ml-3"
                             >Purchase Requisitions</span
+                        >
+                    </Link> -->
+
+                    <Link
+                        :href="route('supplier-invoices.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route()
+                                .current()
+                                ?.startsWith('supplier-invoices.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route()
+                                .current()
+                                ?.startsWith('supplier-invoices.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-credit-card-outline text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('supplier-invoices.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Supplier Invoices</span
                         >
                     </Link>
 

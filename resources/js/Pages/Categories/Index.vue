@@ -29,7 +29,7 @@ const headerActions = ref([
         class: "px-4 py-2 rounded",
         style: computed(() => ({
             backgroundColor: buttonPrimaryBgColor.value,
-            color: buttonPrimaryTextColor.value
+            color: buttonPrimaryTextColor.value,
         })),
     },
 ]);
@@ -54,7 +54,14 @@ const columns = ref([
                 )
                 .join(" "),
     },
-    { label: "Parent Category", value: (row) => row.parent?.name || "N/A" },
+    { label: "Parent Category", value: (row) => row.parent?.name || "-" },
+    {
+        label: "Default Account",
+        value: (row) =>
+            row.default_account
+                ? `${row.default_account.name} (${row.default_account.code})`
+                : "-",
+    },
     {
         label: "Created At",
         value: (row) => moment(row.created_at).fromNow(),

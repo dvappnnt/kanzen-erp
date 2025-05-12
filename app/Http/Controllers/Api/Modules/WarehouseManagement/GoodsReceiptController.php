@@ -92,7 +92,7 @@ class GoodsReceiptController extends Controller
         $searchTerm = $request->input('search');
 
         $models = $this->modelClass::with(['company'])
-            ->where('name', 'like', "%{$searchTerm}%")
+            ->where('number', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
 

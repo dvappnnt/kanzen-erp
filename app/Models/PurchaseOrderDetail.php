@@ -48,4 +48,51 @@ class PurchaseOrderDetail extends Model
     {
         return $this->belongsTo(PurchaseRequisitionItem::class);
     }
+
+    protected static function booted()
+    {
+        // Calculate and update total before saving
+        static::saving(function ($detail) {
+            // Calculate total if not set
+            if (empty($detail->total)) {
+                $qty = $detail->qty ?? 0;
+                $price = $detail->price ?? 0;
+                $discount = $detail->discount ?? 0;
+                
+                $total = ($qty * $price) * (1 - ($discount / 100));
+                $detail->total = round($total, 2);
+            }
+        });
+
+        // After creating/updating/deleting a detail, update the purchase order's total
+        static::saved(function ($detail) {
+            static::updatePurchaseOrderTotal($detail->purchase_order_id);
+        });
+
+        static::deleted(function ($detail) {
+            static::updatePurchaseOrderTotal($detail->purchase_order_id);
+        });
+    }
+
+    protected static function updatePurchaseOrderTotal($purchaseOrderId)
+    {
+        $purchaseOrder = PurchaseOrder::find($purchaseOrderId);
+        if ($purchaseOrder) {
+            $subtotal = static::where('purchase_order_id', $purchaseOrderId)
+                ->whereNull('deleted_at')
+                ->sum('total');
+
+            // Calculate tax amount based on subtotal and tax rate
+            $tax_amount = ($subtotal * $purchaseOrder->tax_rate) / 100;
+            
+            // Calculate final total
+            $total_amount = $subtotal + $tax_amount + ($purchaseOrder->shipping_cost ?? 0);
+
+            $purchaseOrder->update([
+                'subtotal' => round($subtotal, 2),
+                'tax_amount' => round($tax_amount, 2),
+                'total_amount' => round($total_amount, 2)
+            ]);
+        }
+    }
 }

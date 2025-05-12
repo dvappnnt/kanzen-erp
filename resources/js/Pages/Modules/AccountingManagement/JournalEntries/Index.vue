@@ -25,15 +25,15 @@ const headerActions = ref([
         url: `/${modelName}/export`,
         class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
     },
-    {
-        text: "Create",
-        url: `/${modelName}/create`,
-        inertia: true,
-        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
-        style: computed(() => ({
-            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
-        })),
-    },
+    // {
+    //     text: "Create",
+    //     url: `/${modelName}/create`,
+    //     inertia: true,
+    //     class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
+    //     style: computed(() => ({
+    //         backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
+    //     })),
+    // },
 ]);
 
 // Define Table Columns
@@ -70,8 +70,6 @@ const columns = ref([
 const mapCustomButtons = (row) => ({
     ...row,
     viewUrl: `/${modelName}/${row.id}`,
-    editUrl: `/${modelName}/${row.id}/edit`,
-    deleteUrl: `/api/${modelName}/${row.id}`,
     restoreUrl: row.deleted_at ? `/api/${modelName}/${row.id}/restore` : null,
     customUrls: [],
 });
@@ -85,6 +83,7 @@ const fetchTableData = async (url = `/api/${modelName}`) => {
             ...response.data,
             data: response.data.data.map(mapCustomButtons),
         };
+        console.log(modelData.value);
     } catch (error) {
         console.error(
             "Error fetching data:",

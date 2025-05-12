@@ -15,6 +15,7 @@ class PurchaseOrder extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'company_account_id',
         'number',
         'company_id',
         'warehouse_id',
@@ -27,6 +28,10 @@ class PurchaseOrder extends Model
         'payment_terms',
         'shipping_terms',
         'notes',
+        'tax_rate',
+        'tax_amount',
+        'shipping_cost',
+        'subtotal',
         'total_amount',
         'created_by_user_id',
         'approved_by',
@@ -44,6 +49,13 @@ class PurchaseOrder extends Model
         'shipping_cost' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];
+
+    protected $appends = ['name'];
+
+    public function getNameAttribute()
+    {
+        return $this->number;
+    }
 
     public function company()
     {

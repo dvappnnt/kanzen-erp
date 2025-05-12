@@ -13,12 +13,19 @@ return new class extends Migration
     {
         Schema::create('supplier_invoices', function (Blueprint $table) {
             $table->id();
-            $table->string('invoice_number')->unique();
-            $table->foreignId('supplier_id')->constrained();
             $table->foreignId('purchase_order_id')->nullable()->constrained(); // link to PO
+            $table->foreignId('company_account_id')->nullable()->constrained(); // link to company account
+            $table->foreignId('company_id')->constrained();
+            $table->foreignId('goods_receipt_id')->nullable()->constrained(); // link to GR
+            $table->foreignId('supplier_id')->constrained();
+            $table->string('invoice_number')->unique();
             $table->date('invoice_date');
             $table->date('due_date')->nullable();
-            $table->decimal('total_amount', 15, 2);
+            $table->decimal('tax_rate', 5, 2)->default(0);
+            $table->decimal('tax_amount', 15, 2)->default(0);
+            $table->decimal('shipping_cost', 15, 2)->default(0);
+            $table->decimal('subtotal', 15, 2)->default(0);
+            $table->decimal('total_amount', 15, 2)->default(0);
             $table->string('status')->default('unpaid'); // unpaid, paid, partially-paid
             $table->text('remarks')->nullable();
             $table->timestamps();

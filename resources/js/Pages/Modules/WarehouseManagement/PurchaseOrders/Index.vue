@@ -9,7 +9,12 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
-import { formatName, formatDate, getStatusPillClass, humanReadable } from "@/utils/global";
+import {
+    formatName,
+    formatDate,
+    getStatusPillClass,
+    humanReadable,
+} from "@/utils/global";
 const modelName = "purchase-orders";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
@@ -44,9 +49,21 @@ const columns = ref([
         class: "text-green-600 hover:underline",
         icon: "mdi-file-document-outline",
     },
-    { label: "Warehouse", value: (row) => row.warehouse.name },
-    { label: "Company", value: (row) => row.company.name },
-    { label: "Supplier", value: (row) => row.supplier.name },
+    {
+        label: "Warehouse",
+        value: (row) => row.warehouse.name,
+        uri: (row) => route("warehouses.show", row.warehouse.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-warehouse",
+    },
+    {
+        label: "Company",
+        value: (row) => row.company.name,
+    },
+    {
+        label: "Supplier",
+        value: (row) => row.supplier.name,
+    },
     {
         label: "Status",
         value: "status",

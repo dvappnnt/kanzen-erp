@@ -20,6 +20,8 @@ use App\Http\Controllers\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Modules\AccountingManagement\CompanyAccountController;
 use App\Http\Controllers\Modules\AccountingManagement\ExpenseController;
 use App\Http\Controllers\Modules\AccountingManagement\JournalEntryController;
+use App\Http\Controllers\Modules\AccountingManagement\InvoiceController;
+use App\Http\Controllers\Modules\AccountingManagement\SupplierInvoiceController;
 
 use App\Http\Controllers\Modules\WarehouseManagement\AttributeController;
 use App\Http\Controllers\Modules\WarehouseManagement\AttributeValueController;
@@ -62,6 +64,8 @@ Route::middleware([
     Route::resource('attributes', AttributeController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('attribute-values', AttributeValueController::class)->only(['index', 'show', 'edit', 'create']);
 
+    Route::resource('invoices', InvoiceController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('supplier-invoices', SupplierInvoiceController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('expenses', ExpenseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('banks', BankController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('company-accounts', CompanyAccountController::class)->only(['index', 'show', 'edit', 'create']);

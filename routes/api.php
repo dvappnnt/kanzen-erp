@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\CompanyAccountController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\ExpenseController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\JournalEntryController;
+use App\Http\Controllers\Api\Modules\AccountingManagement\InvoiceController;
+use App\Http\Controllers\Api\Modules\AccountingManagement\SupplierInvoiceController;
 
 use App\Http\Controllers\Api\Modules\WarehouseManagement\SupplierController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderController;
@@ -57,6 +59,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::put('/users/update-password/{user}', [UserController::class, 'updatePassword'])->name('users.update-password');
 
     Route::apiResource('customers', CustomerController::class);
+    Route::get('complete/customers', [CustomerController::class, 'complete'])->name('customers.complete');
     Route::get('autocomplete/customers', [CustomerController::class, 'autocomplete'])->name('customers.autocomplete');
 
     Route::apiResource('agents', AgentController::class);
@@ -67,6 +70,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('banks', BankController::class);
     Route::get('autocomplete/banks', [BankController::class, 'autocomplete'])->name('banks.autocomplete');
+
+    Route::apiResource('invoices', InvoiceController::class);
+    Route::get('autocomplete/invoices', [InvoiceController::class, 'autocomplete'])->name('invoices.autocomplete');
+
+    Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
+    Route::get('autocomplete/supplier-invoices', [SupplierInvoiceController::class, 'autocomplete'])->name('supplier-invoices.autocomplete');
 
     Route::apiResource('company-accounts', CompanyAccountController::class);
     Route::get('autocomplete/company-accounts', [CompanyAccountController::class, 'autocomplete'])->name('company-accounts.autocomplete');
@@ -95,6 +104,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('autocomplete/attribute-values', [AttributeValueController::class, 'autocomplete'])->name('attribute-values.autocomplete');
 
     Route::apiResource('products', ProductController::class);
+    Route::get('complete/products', [ProductController::class, 'complete'])->name('products.complete');
     Route::get('autocomplete/products', [ProductController::class, 'autocomplete'])->name('products.autocomplete');
 
     Route::apiResource('product-specifications', ProductSpecificationController::class);
@@ -108,11 +118,14 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('autocomplete/product-images', [ProductImageController::class, 'autocomplete'])->name('product-images.autocomplete');
 
     Route::apiResource('warehouses', WarehouseController::class);
+    Route::get('complete/warehouses', [WarehouseController::class, 'complete'])->name('warehouses.complete');
     Route::get('autocomplete/warehouses', [WarehouseController::class, 'autocomplete'])->name('warehouses.autocomplete');
     Route::get('warehouses/{warehouse}/products', [WarehouseController::class, 'products'])->name('warehouses.products');
 
     Route::apiResource('warehouse-products', WarehouseProductController::class);
     Route::get('autocomplete/warehouse-products', [WarehouseProductController::class, 'autocomplete'])->name('warehouse-products.autocomplete');
+    Route::get('search/warehouse-products', [WarehouseProductController::class, 'search'])->name('warehouse-products.search');
+    Route::get('serial-check/warehouse-products', [WarehouseProductController::class, 'serialCheck'])->name('warehouse-products.serial-check');
 
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::post('purchase-orders/{purchaseOrder}/pending', [PurchaseOrderController::class, 'pending'])->name('purchase-orders.pending');

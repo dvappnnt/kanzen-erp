@@ -2,9 +2,9 @@
 import AppLayout from "@/Layouts/AppLayout.vue";
 import HeaderActions from "@/Components/HeaderActions.vue";
 import { router, usePage } from "@inertiajs/vue3";
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useToast } from "vue-toastification";
-import { singularizeAndFormat, formatDate } from "@/utils/global";
+import { singularizeAndFormat, formatDate, formatNumber } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
 import Modal from "@/Components/Modal.vue";
 import Autocomplete from "@/Components/Data/Autocomplete.vue";
@@ -29,6 +29,9 @@ const step2Data = ref({
     payment_terms: "",
     shipping_terms: "",
     notes: "",
+    tax_rate: 0,
+    tax_amount: 0,
+    shipping_cost: 0,
 });
 
 const step3Data = ref({
@@ -242,6 +245,15 @@ const shippingTermsOptions = [
     { value: "ddp", label: "Delivered Duty Paid (DDP)" },
 ];
 
+const calculateTaxAmount = () => {
+    const subtotal = step3Data.value.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    step2Data.value.tax_amount = (subtotal * step2Data.value.tax_rate) / 100;
+};
+
+// Add watchers after the calculateTaxAmount function
+watch(() => step2Data.value.tax_rate, calculateTaxAmount);
+watch(() => step3Data.value.items, calculateTaxAmount, { deep: true });
+
 const finalizePO = async () => {
     if (isSubmitting.value) return;
 
@@ -257,29 +269,21 @@ const finalizePO = async () => {
             payment_terms: step2Data.value.payment_terms,
             shipping_terms: step2Data.value.shipping_terms,
             notes: step2Data.value.notes,
+            tax_rate: step2Data.value.tax_rate,
+            tax_amount: step2Data.value.tax_amount,
+            shipping_cost: step2Data.value.shipping_cost,
         };
 
-        await axios.post("/api/purchase-orders", formData);
+        const response = await axios.post("/api/purchase-orders", formData);
         toast.success("Purchase order created successfully");
 
-        // Use router.visit with replace option to prevent back navigation
-        try {
-            const response = await axios.post("/api/purchase-orders", formData);
-            // toast.success("Purchase order created successfully");
-
-            const modelDataId = response.data.modelData.id;
-            router.get(`/purchase-orders/${modelDataId}`);
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to create purchase order");
-        } finally {
-            isSubmitting.value = false;
-        }
+        // Redirect to the show page using the ID from the response
+        const modelDataId = response.data.modelData.id;
+        router.get(`/purchase-orders/${modelDataId}`);
     } catch (error) {
         console.error("Error creating purchase order:", error);
-        toast.error(
-            error.response?.data?.message || "Failed to create purchase order"
-        );
+        toast.error(error.response?.data?.message || "Failed to create purchase order");
+    } finally {
         isSubmitting.value = false;
     }
 };
@@ -444,6 +448,26 @@ const finalizePO = async () => {
                             {{ warehouses[0]?.name }}
                         </div>
                     </div>
+
+                    <!-- 📌 Clarifying Note -->
+                    <div class="text-xs text-gray-500 mt-4">
+                        <p class="mb-1"><strong>Note:</strong></p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>
+                                <strong>Company</strong> – Choose the
+                                organization responsible for placing the order.
+                            </li>
+                            <li>
+                                <strong>Supplier</strong> – Select the vendor
+                                who will fulfill the order.
+                            </li>
+                            <li>
+                                <strong>Warehouse</strong> – Specify the
+                                destination where the purchased items will be
+                                delivered.
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -514,6 +538,53 @@ const finalizePO = async () => {
                         </select>
                     </div>
 
+                    <!-- Cost Fields Row -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- Tax Rate -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700"
+                                >Tax Rate (%)</label
+                            >
+                            <input
+                                type="number"
+                                v-model="step2Data.tax_rate"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                @input="calculateTaxAmount"
+                            />
+                        </div>
+
+                        <!-- Tax Amount -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700"
+                                >Tax Amount</label
+                            >
+                            <input
+                                type="number"
+                                v-model="step2Data.tax_amount"
+                                readonly
+                                class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                            <p class="mt-1 text-xs text-gray-500">Auto-calculated</p>
+                        </div>
+
+                        <!-- Shipping Cost -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700"
+                                >Shipping Cost</label
+                            >
+                            <input
+                                type="number"
+                                v-model="step2Data.shipping_cost"
+                                min="0"
+                                step="0.01"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700"
                             >Notes</label
@@ -524,6 +595,79 @@ const finalizePO = async () => {
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             placeholder="Enter any additional notes"
                         ></textarea>
+                    </div>
+
+                    <!-- 📌 Clarifying Note for Step 2 -->
+                    <div class="text-xs text-gray-500">
+                        <p class="mb-1 font-semibold">Note:</p>
+
+                        <p class="font-medium text-gray-600 mb-1">
+                            Payment Terms
+                        </p>
+                        <ul class="list-disc list-inside space-y-1 mb-4">
+                            <li>
+                                <strong>Immediate Payment</strong> – Full
+                                payment is required immediately after the order
+                                is placed.
+                            </li>
+                            <li>
+                                <strong>Net 15 Days</strong> – Payment is due
+                                within 15 days from the invoice date.
+                            </li>
+                            <li>
+                                <strong>Net 30 Days</strong> – Payment is due
+                                within 30 days from the invoice date.
+                            </li>
+                            <li>
+                                <strong>Net 45 Days</strong> – Payment is due
+                                within 45 days from the invoice date.
+                            </li>
+                            <li>
+                                <strong>Net 60 Days</strong> – Payment is due
+                                within 60 days from the invoice date.
+                            </li>
+                            <li>
+                                <strong>End of Month (EOM)</strong> – Payment is
+                                due at the end of the current month, regardless
+                                of order date.
+                            </li>
+                            <li>
+                                <strong>Cash on Delivery (COD)</strong> –
+                                Payment must be made when the goods are
+                                delivered.
+                            </li>
+                        </ul>
+
+                        <p class="font-medium text-gray-600 mb-1">
+                            Shipping Terms
+                        </p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>
+                                <strong>EX Works (EXW)</strong> – Buyer bears
+                                all costs and risks from the seller's premises
+                                onward.
+                            </li>
+                            <li>
+                                <strong>Free on Board (FOB)</strong> – Seller
+                                delivers goods to the port; buyer pays for sea
+                                freight and assumes risk afterward.
+                            </li>
+                            <li>
+                                <strong>Cost, Insurance & Freight (CIF)</strong>
+                                – Seller pays for shipping and insurance up to
+                                the destination port.
+                            </li>
+                            <li>
+                                <strong>Delivered at Place (DAP)</strong> –
+                                Seller covers delivery costs to buyer's
+                                location; buyer handles import duties.
+                            </li>
+                            <li>
+                                <strong>Delivered Duty Paid (DDP)</strong> –
+                                Seller is responsible for all costs, including
+                                duties and delivery to buyer's door.
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -634,6 +778,33 @@ const finalizePO = async () => {
                                 <p class="mt-1">
                                     {{ step2Data.notes || "No notes added" }}
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cost Summary -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">
+                            Cost Summary
+                        </h3>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">Tax Rate:</span>
+                                    <span class="text-sm font-medium">{{ step2Data.tax_rate }}%</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">Tax Amount:</span>
+                                    <span class="text-sm font-medium">{{ formatNumber(step2Data.tax_amount, { style: "currency", currency: "PHP" }) }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">Shipping Cost:</span>
+                                    <span class="text-sm font-medium">{{ formatNumber(step2Data.shipping_cost, { style: "currency", currency: "PHP" }) }}</span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t mt-2">
+                                    <span class="text-sm font-medium text-gray-800">Total Amount:</span>
+                                    <span class="text-sm font-bold">{{ formatNumber(step2Data.tax_amount + step2Data.shipping_cost + step3Data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0), { style: "currency", currency: "PHP" }) }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

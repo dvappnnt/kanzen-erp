@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Modules\CustomerRelationshipManagement;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Warehouse;
 
 class CustomerController extends Controller
 {
@@ -20,6 +21,11 @@ class CustomerController extends Controller
     public function index()
     {
         return $this->modelClass::latest()->paginate(perPage: 10);
+    }
+
+    public function complete()
+    {
+        return $this->modelClass::latest()->get();
     }
 
     public function store(Request $request)
@@ -111,23 +117,31 @@ class CustomerController extends Controller
     {
         $request->validate([
             'search' => 'required|string|min:1',
+            'warehouse_id' => 'nullable|exists:warehouses,id'
         ]);
 
-        $searchTerm = $request->input('search');
+        $query = $this->modelClass::query();
 
-        $models = $this->modelClass::where('name', 'like', "%{$searchTerm}%")
-            ->take(10)
-            ->get();
-
-        if ($models->isEmpty()) {
-            return response()->json([
-                'message' => "No {$this->modelName}s found.",
-            ], 404);
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', "%{$request->search}%")
+                  ->orWhere('email', 'like', "%{$request->search}%")
+                  ->orWhere('mobile', 'like', "%{$request->search}%");
+            });
         }
 
+        if ($request->warehouse_id) {
+            $warehouse = Warehouse::findOrFail($request->warehouse_id);
+            $query->where('company_id', $warehouse->company->id);
+        }
+
+        $modelData = $query->take(10)->get();
+
         return response()->json([
-            'data' => $models,
-            'message' => "{$this->modelName}s retrieved successfully."
+            'data' => $modelData,
+            'message' => $modelData->isEmpty() 
+                ? "No {$this->modelName}s found."
+                : "{$this->modelName}s retrieved successfully."
         ], 200);
     }
 }

@@ -26,7 +26,7 @@ class DashboardController extends Controller
         if (!$isSuperAdmin) {
             $receivablesQuery->where('company_id', $companyId);
         }
-        $totalReceivables = $receivablesQuery->where('status', '!=', 'paid')->sum('total');
+        $totalReceivables = $receivablesQuery->where('status', '!=', 'paid')->sum('total_amount');
 
         // Get total payables (expenses)
         $payablesQuery = Expense::query();
@@ -71,7 +71,7 @@ class DashboardController extends Controller
             $inflow = $inflowQuery
                 ->whereYear('invoice_date', $currentYear)
                 ->whereMonth('invoice_date', $month)
-                ->sum('total');
+                ->sum('total_amount');
 
             $outflowQuery = Expense::query();
             if (!$isSuperAdmin) {
