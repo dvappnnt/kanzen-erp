@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use App\Models\SupplierInvoice;
 
 class SupplierInvoiceController extends Controller
 {
@@ -39,6 +40,7 @@ class SupplierInvoiceController extends Controller
             'company',
             'companyAccount',
             'goodsReceipt',
+            'payments',
         ])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
@@ -52,6 +54,23 @@ class SupplierInvoiceController extends Controller
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Edit", [
             'modelData' => $model,
+        ]);
+    }
+
+    public function print(SupplierInvoice $supplierInvoice)
+    {
+        $supplierInvoice->load([
+            'company',
+            'supplier',
+            'companyAccount',
+            'purchaseOrder',
+            'goodsReceipt',
+            'details.supplierProduct.product',
+            'payments'
+        ]);
+
+        return Inertia::render('Modules/AccountingManagement/SupplierInvoices/Print', [
+            'modelData' => $supplierInvoice
         ]);
     }
 }

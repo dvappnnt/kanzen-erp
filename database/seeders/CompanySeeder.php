@@ -29,7 +29,7 @@ class CompanySeeder extends Seeder
 
         // Create a Company (Kanzen)
         $company = Company::create([
-            'name' => 'Kanzen',
+            'name' => 'Kanzen Homes',
             'email' => 'support@dvapp.cloud',
             'address' => 'Quezon City',
             'description' => "Kanzen Homes sells smart home appliances and gadgets",

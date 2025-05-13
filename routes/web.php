@@ -66,10 +66,13 @@ Route::middleware([
 
     Route::resource('invoices', InvoiceController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('supplier-invoices', SupplierInvoiceController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('supplier-invoices/{supplierInvoice}/print', [SupplierInvoiceController::class, 'print'])->name('supplier-invoices.print');
     Route::resource('expenses', ExpenseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('banks', BankController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('company-accounts', CompanyAccountController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('journal-entries', JournalEntryController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('journal-entries/export', [JournalEntryController::class, 'export'])->name('journal-entries.export');
+
     Route::resource('companies', CompanyController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('customers', CustomerController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('categories', CategoryController::class)->only(['index', 'show', 'edit', 'create']);
@@ -78,6 +81,7 @@ Route::middleware([
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show', 'edit', 'create']);
     
     Route::resource('goods-receipts', GoodsReceiptController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('goods-receipts/{goodsReceipt}/print', [GoodsReceiptController::class, 'print'])->name('goods-receipts.print');
 
     Route::resource('purchase-requisitions', PurchaseRequisitionController::class)->only(['index', 'show', 'edit', 'create']);
     Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');

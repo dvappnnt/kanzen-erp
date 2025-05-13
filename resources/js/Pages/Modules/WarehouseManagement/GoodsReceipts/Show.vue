@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
-import HeaderActions from "@/Components/HeaderActions.vue";
+import { Link } from "@inertiajs/vue3";
 import { ref, computed, onMounted, watch } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import moment from "moment";
@@ -12,7 +12,7 @@ import { useColors } from "@/Composables/useColors";
 import QRCode from "qrcode.vue";
 import { router } from "@inertiajs/vue3";
 import { useToast } from "vue-toastification";
-import { formatDate } from "@/utils/global";
+import { formatDate, humanReadable } from "@/utils/global";
 import Autocomplete from "@/Components/Data/Autocomplete.vue";
 
 const modelName = "goods-receipts";
@@ -21,15 +21,6 @@ const modelData = computed(() => page.props.modelData || {});
 const details = ref(modelData.value?.details || []);
 
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
-
-const headerActions = ref([
-    {
-        text: "Go Back",
-        url: `/${modelName}`,
-        inertia: true,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600",
-    }
-]);
 
 const profileDetails = [
     { label: "Number", value: "number", class: "text-xl font-bold" },
@@ -45,7 +36,7 @@ const profileDetails = [
     },
     {
         label: "Status",
-        value: (row) => row.status,
+        value: (row) => humanReadable(row.status),
         class: "text-gray-600",
     },
     {
@@ -95,6 +86,8 @@ const showDeleteSerialModal = ref(false);
 const selectedSerialId = ref(null);
 const selectedDetailId = ref(null);
 const deleteRemarks = ref('');
+const showEditSerialModal = ref(false);
+const editingSerial = ref(null);
 
 const loadSupplierProducts = async () => {
     if (!modelData.value?.supplier_id) {
@@ -352,7 +345,7 @@ const loadPurchaseOrderDetails = async () => {
 
 const handlePrint = () => {
     // Open the print window
-    const printWindow = window.open(`${window.location.origin}/purchase-orders/${modelData.value.id}/print`, '_blank');
+    const printWindow = window.open(`${window.location.origin}/goods-receipts/${modelData.value.id}/print`, '_blank');
     
     // Wait for the window to load and trigger print
     printWindow.onload = function() {
@@ -582,7 +575,7 @@ const handleDeleteSerial = async () => {
         
         toast.success('Serial/batch number deleted successfully');
         closeDeleteSerialModal();
-        await loadDetails();
+        router.get(`/goods-receipts/${modelData.value.id}`);
     } catch (error) {
         console.error('Error deleting serial/batch number:', error);
         toast.error(error.response?.data?.message || 'Failed to delete serial/batch number');
@@ -640,6 +633,35 @@ const handleTransfer = async () => {
         isLoading.value = false;
     }
 };
+
+const startEditSerial = (serial) => {
+    editingSerial.value = {
+        ...serial,
+        manufactured_at: serial.manufactured_at ? moment(serial.manufactured_at).format('YYYY-MM-DD') : '',
+        expired_at: serial.expired_at ? moment(serial.expired_at).format('YYYY-MM-DD') : ''
+    };
+    showEditSerialModal.value = true;
+};
+
+const closeEditSerialModal = () => {
+    showEditSerialModal.value = false;
+    editingSerial.value = null;
+};
+
+const handleEditSerial = async () => {
+    try {
+        isLoading.value = true;
+        const response = await axios.put(`/api/goods-receipt-serials/${editingSerial.value.id}`, editingSerial.value);
+        toast.success('Serial/batch number updated successfully');
+        closeEditSerialModal();
+        router.get(`/goods-receipts/${modelData.value.id}`);
+    } catch (error) {
+        console.error('Error updating serial/batch number:', error);
+        toast.error(error.response?.data?.message || 'Failed to update serial/batch number');
+    } finally {
+        isLoading.value = false;
+    }
+};
 </script>
 
 <template>
@@ -647,9 +669,26 @@ const handleTransfer = async () => {
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    {{ singularizeAndFormat(modelName) }} Details
+                    Supplier Invoice
                 </h2>
-                <HeaderActions :actions="headerActions" />
+                <div class="flex gap-2">
+                    <Link
+                        href="/goods-receipts"
+                        class="border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600"
+                    >
+                        Go Back
+                    </Link>
+                    <button
+                        v-if="modelData.status == 'in-warehouse'"
+                        @click="handlePrint"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                        </svg>
+                        Print
+                    </button>
+                </div>
             </div>
         </template>
 
@@ -732,7 +771,7 @@ const handleTransfer = async () => {
                                                     </svg>
                                                 </button>
                                                 <button
-                                                    v-if="detail.received_qty > 0"
+                                                    v-if="detail.received_qty > 0 && !detail.has_serials"
                                                     @click="startReturn(detail)"
                                                     class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
                                                     :disabled="isLoading"
@@ -770,7 +809,7 @@ const handleTransfer = async () => {
                                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch Number</th>
                                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manufactured Date</th>
                                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
-                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Actions</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20" v-if="modelData.status != 'in-warehouse'">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -791,17 +830,29 @@ const handleTransfer = async () => {
                                                 <td class="px-3 py-2 text-sm text-gray-900">
                                                     {{ serial.expired_at ? moment(serial.expired_at).format('MMM D, YYYY') : '-' }}
                                                 </td>
-                                                <td class="px-3 py-2 text-right">
-                                                    <button 
-                                                        @click="deleteSerial(serial.id, detail.id)"
-                                                        class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
-                                                        :disabled="isLoading"
-                                                        title="Delete"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                                        </svg>
-                                                    </button>
+                                                <td class="px-3 py-2 text-right" v-if="modelData.status != 'in-warehouse'">
+                                                    <div class="flex space-x-2 justify-end">
+                                                        <button 
+                                                            @click="startEditSerial(serial)"
+                                                            class="text-blue-600 hover:text-blue-900 p-1 rounded-md hover:bg-blue-50"
+                                                            :disabled="isLoading"
+                                                            title="Edit"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button 
+                                                            @click="deleteSerial(serial.id, detail.id)"
+                                                            class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
+                                                            :disabled="isLoading"
+                                                            title="Delete"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         </template>
@@ -946,24 +997,17 @@ const handleTransfer = async () => {
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Bulk Manufactured Date</label>
-                                    <div class="mt-1 flex space-x-2">
+                                    <div class="mt-1">
                                         <input 
                                             type="date" 
                                             v-model="bulkManufacturedDate"
                                             class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                         />
-                                        <button 
-                                            @click="applyBulkDates"
-                                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                                            type="button"
-                                        >
-                                            Apply
-                                        </button>
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Bulk Expiry Date</label>
-                                    <div class="mt-1 flex space-x-2">
+                                    <div class="mt-1">
                                         <input 
                                             type="date" 
                                             v-model="bulkExpiryDate"
@@ -971,6 +1015,15 @@ const handleTransfer = async () => {
                                         />
                                     </div>
                                 </div>
+                            </div>
+                            <div class="mt-4">
+                                <button 
+                                    @click="applyBulkDates"
+                                    class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                    type="button"
+                                >
+                                    Apply Bulk Dates
+                                </button>
                             </div>
                         </div>
                         <div class="overflow-x-auto">
@@ -1141,6 +1194,59 @@ const handleTransfer = async () => {
                     :disabled="isLoading"
                 >
                     Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Serial Modal -->
+    <div
+        v-if="showEditSerialModal"
+        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center"
+    >
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                Edit Serial/Batch Number
+            </h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700"
+                        >Manufactured Date</label
+                    >
+                    <input
+                        type="date"
+                        v-model="editingSerial.manufactured_at"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700"
+                        >Expiry Date</label
+                    >
+                    <input
+                        type="date"
+                        v-model="editingSerial.expired_at"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button
+                    @click="closeEditSerialModal"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    :disabled="isLoading"
+                >
+                    Cancel
+                </button>
+                <button
+                    @click="handleEditSerial"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                    :disabled="isLoading"
+                >
+                    Save Changes
                 </button>
             </div>
         </div>

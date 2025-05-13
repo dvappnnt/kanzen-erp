@@ -115,7 +115,7 @@ class Invoice extends Model
     public function registerJournalAfterCommit()
     {
         \DB::afterCommit(function () {
-            $invoice = self::find($this->id)->load('details.warehouseProduct');
+            $invoice = self::find($this->id)->load(['details.warehouseProduct', 'paymentMethodDetails']);
 
             if ($invoice->status !== 'fully-paid') return;
             if (\App\Models\JournalEntry::where('reference_number', $invoice->number)->exists()) return;
@@ -128,20 +128,38 @@ class Invoice extends Model
                 'created_by_user_id' => $invoice->created_by_user_id,
             ]);
 
-            $cashAccount      = \App\Models\Account::where('name', 'Cash')->firstOrFail();
             $revenueAccount   = \App\Models\Account::where('name', 'Sales Revenue')->firstOrFail();
             $taxAccount       = \App\Models\Account::where('name', 'Taxes Payable')->first();
             $cogsAccount      = \App\Models\Account::where('name', 'Cost of Goods Sold (COGS)')->first();
             $inventoryAccount = \App\Models\Account::where('name', 'Inventory')->first();
 
-            \App\Models\JournalEntryDetail::create([
-                'journal_entry_id' => $entry->id,
-                'account_id' => $cashAccount->id,
-                'name' => 'Cash received for invoice ' . $invoice->number,
-                'debit' => $invoice->total_amount,
-                'credit' => 0,
-            ]);
+            // 🔁 Handle each payment method
+            foreach ($invoice->paymentMethodDetails as $methodDetail) {
+                $paymentMethodCode = $methodDetail->payment_method;
+                $amount = $methodDetail->amount ?? 0;
 
+                $paymentMethod = \App\Models\PaymentMethod::where('code', $paymentMethodCode)->first();
+                $paymentAccount = $paymentMethod?->account;
+
+                if (!$paymentAccount) {
+                    \Log::warning('Missing account for invoice payment method:', [
+                        'payment_method' => $paymentMethodCode,
+                        'invoice_id' => $invoice->id,
+                    ]);
+                    continue;
+                }
+
+                // Debit: Cash / Bank / etc.
+                \App\Models\JournalEntryDetail::create([
+                    'journal_entry_id' => $entry->id,
+                    'account_id' => $paymentAccount->id,
+                    'name' => 'Received via ' . $paymentMethod->name . ' for invoice ' . $invoice->number,
+                    'debit' => $amount,
+                    'credit' => 0,
+                ]);
+            }
+
+            // Credit: Revenue
             \App\Models\JournalEntryDetail::create([
                 'journal_entry_id' => $entry->id,
                 'account_id' => $revenueAccount->id,
@@ -150,6 +168,7 @@ class Invoice extends Model
                 'credit' => $invoice->subtotal,
             ]);
 
+            // Credit: VAT
             if ($invoice->tax_amount > 0 && $taxAccount) {
                 \App\Models\JournalEntryDetail::create([
                     'journal_entry_id' => $entry->id,
@@ -160,6 +179,7 @@ class Invoice extends Model
                 ]);
             }
 
+            // Inventory and COGS
             if ($cogsAccount && $inventoryAccount) {
                 $totalCOGS = 0;
 
