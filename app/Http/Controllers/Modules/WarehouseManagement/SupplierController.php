@@ -60,7 +60,7 @@ class SupplierController extends Controller
     {
         $model = $this->modelClass::with('products')->findOrFail($id);
 
-        return Inertia::render("{$this->modulePath}/{$this->modelName}/Products/Index", [
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Products", [
             'modelData' => $model,
             'products' => $model->products,
         ]);

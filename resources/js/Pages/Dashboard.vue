@@ -1,6 +1,11 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
-import Welcome from "@/Components/Welcome.vue";
+import Stats from "@/Components/Stats.vue";
+import { computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+const stats = computed(() => page.props.stats || {});
 </script>
 
 <template>
@@ -11,10 +16,8 @@ import Welcome from "@/Components/Welcome.vue";
             </h2>
         </template>
 
-        <div class="max-w-12xl mx-auto">
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                <Welcome />
-            </div>
+        <div class="max-w-12xl">
+            <Stats :stats="stats" />
         </div>
     </AppLayout>
 </template>

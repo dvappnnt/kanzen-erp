@@ -4,19 +4,24 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Public\QrController;
+
+use App\Http\Controllers\Modules\CustomerRelationshipManagement\CustomerController;
+use App\Http\Controllers\Modules\CustomerRelationshipManagement\AgentController;
 
 use App\Http\Controllers\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Modules\AccountingManagement\CompanyAccountController;
 use App\Http\Controllers\Modules\AccountingManagement\ExpenseController;
 use App\Http\Controllers\Modules\AccountingManagement\JournalEntryController;
+use App\Http\Controllers\Modules\AccountingManagement\InvoiceController;
+use App\Http\Controllers\Modules\AccountingManagement\SupplierInvoiceController;
 
 use App\Http\Controllers\Modules\WarehouseManagement\AttributeController;
 use App\Http\Controllers\Modules\WarehouseManagement\AttributeValueController;
@@ -43,9 +48,7 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/pos', [PosController::class, 'index'])->name('pos');
 
@@ -61,20 +64,28 @@ Route::middleware([
     Route::resource('attributes', AttributeController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('attribute-values', AttributeValueController::class)->only(['index', 'show', 'edit', 'create']);
 
+    Route::resource('invoices', InvoiceController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
+    Route::resource('supplier-invoices', SupplierInvoiceController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('supplier-invoices/{supplierInvoice}/print', [SupplierInvoiceController::class, 'print'])->name('supplier-invoices.print');
     Route::resource('expenses', ExpenseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('banks', BankController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('company-accounts', CompanyAccountController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('journal-entries', JournalEntryController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('journal-entries/export', [JournalEntryController::class, 'export'])->name('journal-entries.export');
+
     Route::resource('companies', CompanyController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('customers', CustomerController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('categories', CategoryController::class)->only(['index', 'show', 'edit', 'create']);
-    
+    Route::resource('agents', AgentController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show', 'edit', 'create']);
+    
     Route::resource('goods-receipts', GoodsReceiptController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('goods-receipts/{goodsReceipt}/print', [GoodsReceiptController::class, 'print'])->name('goods-receipts.print');
+
     Route::resource('purchase-requisitions', PurchaseRequisitionController::class)->only(['index', 'show', 'edit', 'create']);
-    Route::post('purchase-requisitions/{purchaseRequisition}/approve', [PurchaseRequisitionController::class, 'approve'])->name('purchase-requisitions.approve');
-    Route::post('purchase-requisitions/{purchaseRequisition}/reject', [PurchaseRequisitionController::class, 'reject'])->name('purchase-requisitions.reject');
+    Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
 
     Route::resource('suppliers', SupplierController::class)->only(['index', 'show', 'edit', 'create']);
     Route::prefix('suppliers/{supplier}')->group(function () {
@@ -100,10 +111,14 @@ Route::middleware([
 
 Route::group(['prefix' => 'public'], function () {
     Route::group(['prefix' => 'qr'], function () {
+        Route::get('/warehouse-products/{product}', [QrController::class, 'warehouseProducts'])->name('qr.warehouse-products');
         Route::get('/products/{product}', [QrController::class, 'products'])->name('qr.products');
         Route::get('/suppliers/{supplier}', [QrController::class, 'suppliers'])->name('qr.suppliers');
         Route::get('/warehouses/{warehouse}', [QrController::class, 'warehouses'])->name('qr.warehouses');
         Route::get('/companies/{company}', [QrController::class, 'companies'])->name('qr.companies');
+        Route::get('/purchase-orders/{purchaseOrder}', [QrController::class, 'purchaseOrders'])->name('qr.purchase-orders');
+        Route::get('/goods-receipts/{goodsReceipt}', [QrController::class, 'goodsReceipts'])->name('qr.goods-receipts');
+        Route::get('/purchase-requisitions/{purchaseRequisition}', [QrController::class, 'purchaseRequisitions'])->name('qr.purchase-requisitions');
     });
 });
 

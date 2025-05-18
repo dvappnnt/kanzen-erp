@@ -18,6 +18,9 @@ const toast = useToast();
 
 const formData = ref({
     company_id: page.props.auth?.user?.company_id,
+    status: "Active",
+    balance: 0.00,
+    currency: "PHP",
 });
 const errors = ref({}); // Object to hold error messages
 

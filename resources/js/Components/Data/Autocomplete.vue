@@ -11,7 +11,7 @@
 
         <ul
             v-if="showResults && autocompleteResults.length"
-            class="absolute bg-white border mt-1 rounded-md w-full"
+            class="absolute bg-white border mt-1 rounded-md w-full z-50 shadow-lg max-h-60 overflow-y-auto"
         >
             <li
                 v-for="selectedModelData in autocompleteResults"
@@ -25,12 +25,12 @@
 
         <div
             v-if="showResults && !autocompleteResults.length && !isLoading"
-            class="absolute bg-white border mt-1 rounded-md w-full p-2 text-gray-500 text-center"
+            class="absolute bg-white border mt-1 rounded-md w-full p-2 text-gray-500 text-center z-50 shadow-lg"
         >
             No results found
         </div>
 
-        <div v-if="isLoading" class="absolute top-0 right-0 mt-2 mr-4">
+        <div v-if="isLoading" class="absolute top-0 right-0 mt-2 mr-4 z-50">
             <svg
                 class="animate-spin h-5 w-5 text-gray-500"
                 xmlns="http://www.w3.org/2000/svg"

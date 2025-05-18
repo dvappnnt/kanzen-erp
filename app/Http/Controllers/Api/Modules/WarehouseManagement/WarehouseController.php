@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class WarehouseController extends Controller
 {
@@ -19,6 +21,11 @@ class WarehouseController extends Controller
     public function index()
     {
         return $this->modelClass::latest()->paginate(perPage: 10);
+    }
+
+    public function complete()
+    {
+        return $this->modelClass::latest()->get();
     }
 
     public function store(Request $request)
@@ -39,7 +46,7 @@ class WarehouseController extends Controller
             $validated['avatar'] = $avatarPath;
         }
 
-        $validated['created_by_user_id'] = auth()->user()->id;
+        $validated['created_by_user_id'] = Auth::id();
         $company = $this->modelClass::create($validated);
 
         return response()->json([
@@ -70,8 +77,8 @@ class WarehouseController extends Controller
         ]);
 
         if ($request->hasFile('avatar')) {
-            if ($model->avatar && \Storage::disk('public')->exists($model->avatar)) {
-                \Storage::disk('public')->delete($model->avatar);
+            if ($model->avatar && Storage::disk('public')->exists($model->avatar)) {
+                Storage::disk('public')->delete($model->avatar);
             }
 
             $avatarPath = $request->file('avatar')->store('companies/avatars', 'public');
@@ -126,5 +133,69 @@ class WarehouseController extends Controller
             'data' => $models,
             'message' => "{$this->modelName}s retrieved successfully."
         ], 200);
+    }
+
+    public function products($id)
+    {
+        $warehouse = $this->modelClass::findOrFail($id);
+        
+        $query = $warehouse->products()
+            ->withCount('stockAdjustments')
+            ->withCount('stockTransfers')
+            ->with([
+                'supplierProductDetail.product',
+                'supplierProductDetail.variation',
+                'serials',
+                'transfers.originWarehouse',
+                'transfers.destinationWarehouse',
+                'transfers.createdByUser:id,name',
+                'transfers.goodsReceipt:id,number'
+            ]);
+
+        // Apply filters
+        if (request()->has('product')) {
+            $query->whereHas('supplierProductDetail.product', function ($q) {
+                $q->where('name', 'like', '%' . request('product') . '%');
+            });
+        }
+
+        if (request()->has('variation')) {
+            $query->whereHas('supplierProductDetail.variation', function ($q) {
+                $q->where('name', 'like', '%' . request('variation') . '%');
+            });
+        }
+
+        if (request()->has('min_qty')) {
+            $query->where('qty', '>=', request('min_qty'));
+        }
+
+        if (request()->has('max_qty')) {
+            $query->where('qty', '<=', request('max_qty'));
+        }
+
+        if (request()->has('min_price')) {
+            $query->where('price', '>=', request('min_price'));
+        }
+
+        if (request()->has('max_price')) {
+            $query->where('price', '<=', request('max_price'));
+        }
+
+        // Get total count before pagination
+        $total = $query->count();
+
+        // If total results are less than or equal to default per page,
+        // or if we're not filtering, return all results without pagination
+        if ($total <= 10 && !request()->hasAny(['product', 'variation', 'min_qty', 'max_qty', 'min_price', 'max_price'])) {
+            $products = $query->get();
+            return response()->json([
+                'data' => $products,
+                'message' => 'Warehouse products retrieved successfully'
+            ]);
+        }
+
+        // Otherwise, return paginated results
+        $products = $query->paginate(request('per_page', 10));
+        return response()->json($products);
     }
 }

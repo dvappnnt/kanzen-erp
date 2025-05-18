@@ -16,7 +16,9 @@ const page = usePage();
 const isSubmitting = ref(false);
 const toast = useToast();
 
-const formData = ref({});
+const formData = ref({
+    has_variation: true,
+});
 const errors = ref({}); // Object to hold error messages
 
 const categories = computed(() =>
@@ -72,11 +74,10 @@ const fields = ref([
         id: "has_variation",
         label: `${singularizeAndFormat(modelName)} Has Variation`,
         model: "has_variation",
-        type: "checkbox",
-        placeholder: `Enter ${singularizeAndFormat(
-            modelName
-        ).toLowerCase()}`,
-        required: false,
+        type: "toggle",
+        placeholder: `Enter ${singularizeAndFormat(modelName).toLowerCase()}`,
+        required: true,
+        default: true, // <-- Add default true here
     },
     {
         id: "avatar",

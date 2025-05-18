@@ -17,7 +17,8 @@ const page = usePage();
 const toast = useToast();
 
 const formData = ref({
-    company_id: page.props.auth?.user?.company_id
+    company_id: page.props.auth?.user?.company_id,
+    amount: page.props.modelData?.amount || 0.00,
 });
 const errors = ref({}); // Object to hold error messages
 

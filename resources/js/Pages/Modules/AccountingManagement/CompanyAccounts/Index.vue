@@ -8,7 +8,7 @@ import { usePage } from "@inertiajs/vue3";
 import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
-import { formatName, formatDate } from "@/utils/global";
+import { formatName, formatDate, formatNumber } from "@/utils/global";
 
 const modelName = "company-accounts";
 const modelData = ref({ data: [], links: [] });
@@ -46,7 +46,7 @@ const columns = ref([
     },
     { label: "Account Number", value: "number" },
     { label: "Type", value: "type" },
-    { label: "Balance", value: "balance" },
+    { label: "Balance", value: (row) => formatNumber(row.balance, { style: 'currency', currency: 'PHP' }) },
     { label: "Currency", value: "currency" },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },

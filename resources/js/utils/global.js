@@ -51,3 +51,69 @@ export function formatDate(format, dateString) {
 
     return format.split('').map(char => map[char] ?? char).join('');
 }
+
+export function formatNumber(number, { style = 'decimal', currency = 'USD', minimumFractionDigits, maximumFractionDigits } = {}) {
+    const options = { style };
+
+    if (style === 'currency') {
+        options.currency = currency;
+    } else {
+        options.minimumFractionDigits = minimumFractionDigits ?? 0;
+        options.maximumFractionDigits = maximumFractionDigits ?? 2;
+    }
+
+    return new Intl.NumberFormat('en-US', options).format(number);
+}
+
+export function getStatusPillClass(status) {
+    const normalized = String(status).toLowerCase(); // Normalize
+
+    const statusMap = {
+        draft: "bg-gray-100",
+        pending: "bg-yellow-100",
+        'partially-approved': "bg-blue-100",
+        'fully-paid': "bg-green-100",
+        'fully-received': "bg-green-100",
+        approved: "bg-green-100",
+        rejected: "bg-red-100",
+        ordered: "bg-indigo-100",
+        received: "bg-green-100",
+        cancelled: "bg-red-100",
+        'in-warehouse': "bg-green-100"
+    };
+
+    // Simple badge style with just background color and rounded corners
+    return `inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${statusMap[normalized] || "bg-gray-100"}`;
+}
+
+export function humanReadable(input) {
+    return String(input)
+        .replace(/_/g, ' ')        // convert snake_case to space
+        .replace(/-/g, ' ')        // convert kebab-case to space
+        .replace(/\b\w/g, (char) => char.toUpperCase()); // capitalize each word
+}
+
+export function stripQuotes(value) {
+    return value && value.startsWith('"') && value.endsWith('"')
+        ? value.slice(1, -1)
+        : value;
+}
+
+export function getAppName(appSettings) {
+    return appSettings.name ? stripQuotes(appSettings.name) : "The EO";
+}
+
+export function getAppIcon(appSettings) {
+    const iconPayload = appSettings.icon ? stripQuotes(appSettings.icon) : null;
+    return iconPayload && iconPayload !== "null"
+        ? `/storage/${iconPayload}`
+        : "/app-settings/app-icon.png";
+}
+
+export function getAppLogo(appSettings) {
+    const logoPayload = appSettings.logo ? stripQuotes(appSettings.logo) : null;
+    return logoPayload && logoPayload !== "null"
+        ? `/storage/${logoPayload}`
+        : "/app-settings/app-logo.png";
+}
+

@@ -18,7 +18,7 @@ class CategoryController extends Controller
 
     public function index()
     {
-        return $this->modelClass::with(['parent'])->latest()->paginate(perPage: 10);
+        return $this->modelClass::with(['parent', 'defaultAccount'])->latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
@@ -39,7 +39,7 @@ class CategoryController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::findOrFail($id);
+        $model = $this->modelClass::with(['parent', 'defaultAccount'])->findOrFail($id);
         return $model;
     }
 

@@ -1,8 +1,8 @@
 <script setup>
 import FormLabel from "@/Components/Form/Label.vue";
 import Dropzone from "@/Components/Form/Dropzone.vue";
-import { usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
 import { useColors } from "@/Composables/useColors";
 
 const { inputActiveBgColor } = useColors();
@@ -70,9 +70,16 @@ const togglePassword = () => {
 </script>
 
 <template>
-    <div class="col-span-6 sm:col-span-6" :style="{ '--primary-color': inputActiveBgColor }">
+    <div
+        class="col-span-6 sm:col-span-6"
+        :style="{ '--primary-color': inputActiveBgColor }"
+    >
         <!-- Label -->
-        <FormLabel v-if="type !== 'color'" :value="label" :required="required" />
+        <FormLabel
+            v-if="type !== 'color'"
+            :value="label"
+            :required="required"
+        />
 
         <!-- File Input -->
         <template v-if="type === 'file'">
@@ -127,6 +134,30 @@ const togglePassword = () => {
                         {{ option.text }}
                     </label>
                 </div>
+            </div>
+        </template>
+
+        <!-- Toggle Switch -->
+        <template v-else-if="type === 'toggle'">
+            <div class="flex items-center space-x-3">
+                <button
+                    type="button"
+                    :class="[
+                        modelValue
+                            ? 'bg-[var(--primary-color)]'
+                            : 'bg-gray-300',
+                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none',
+                    ]"
+                    @click="emit('update:modelValue', !modelValue)"
+                >
+                    <span
+                        :class="[
+                            modelValue ? 'translate-x-6' : 'translate-x-1',
+                            'inline-block h-4 w-4 transform rounded-full bg-white transition',
+                        ]"
+                    />
+                </button>
+                <span class="text-sm text-gray-700">{{ label }}</span>
             </div>
         </template>
 

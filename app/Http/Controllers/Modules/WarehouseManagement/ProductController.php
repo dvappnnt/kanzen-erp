@@ -74,6 +74,8 @@ class ProductController extends Controller
                 return [
                     'id' => $variation->id,
                     'name' => $variation->name,
+                    'sku' => $variation->sku,
+                    'barcode' => $variation->barcode,
                     'is_default' => $variation->is_default,
                     'attributes' => $variation->attributes->map(function ($attr) {
                         return [

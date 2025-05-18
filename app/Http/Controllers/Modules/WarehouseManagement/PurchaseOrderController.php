@@ -32,7 +32,7 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['company'])->findOrFail($id);
+        $model = $this->modelClass::with(['company', 'warehouse', 'supplier'])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,
@@ -48,12 +48,19 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
-    public function settings($id)
+    public function print($id)
     {
-        $model = $this->modelClass::findOrFail($id);
-
-        return Inertia::render("{$this->modulePath}/{$this->modelName}/Settings", [
-            'modelData' => $model,
+        $purchaseOrder = $this->modelClass::with([
+            'company',
+            'supplier',
+            'warehouse',
+            'details.supplierProductDetail.product',
+            'details.supplierProductDetail.variation',
+        ])->findOrFail($id);
+    
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Print", [
+            'modelData' => $purchaseOrder,
+            'purchaseOrderDetails' => $purchaseOrder->details,
         ]);
     }
 }

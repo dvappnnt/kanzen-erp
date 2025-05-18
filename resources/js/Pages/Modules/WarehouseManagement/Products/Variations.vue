@@ -87,7 +87,9 @@ const attributeValues = ref({}); // Store values for each attribute
 // Add to the data section
 const formData = ref({
     name: "Product Variation",
-    is_default: false
+    is_default: false,
+    sku: "",
+    barcode: "",
 });
 
 // Load available attributes
@@ -122,10 +124,106 @@ const removeRow = (index) => {
     selectedRows.value.splice(index, 1);
 };
 
+// Add new refs for the new attribute/value modals
+const showNewAttributeModal = ref(false);
+const showNewValueModal = ref(false);
+const newAttributeForm = ref({
+    name: "",
+    currentRowIndex: null,
+});
+const newValueForm = ref({
+    value: "",
+    currentRowIndex: null,
+    attributeId: null,
+});
+
+// Add functions to handle new attribute/value creation
+const openNewAttributeModal = (index) => {
+    newAttributeForm.value.currentRowIndex = index;
+    newAttributeForm.value.name = "";
+    showNewAttributeModal.value = true;
+};
+
+const openNewValueModal = (index, attributeId) => {
+    newValueForm.value = {
+        currentRowIndex: index,
+        attributeId: attributeId,
+        value: "",
+    };
+    showNewValueModal.value = true;
+};
+
+const handleNewAttributeSubmit = async () => {
+    try {
+        const { data } = await axios.post("/api/attributes", {
+            name: newAttributeForm.value.name,
+        });
+        
+        // Add to available attributes
+        availableAttributes.value.push(data.modelData);
+        
+        // Select the new attribute
+        const index = newAttributeForm.value.currentRowIndex;
+        selectedRows.value[index].attributeId = data.modelData.id;
+        
+        showNewAttributeModal.value = false;
+        toast.success(data.message || "Attribute created successfully");
+
+        // Load the values for the new attribute
+        await loadAttributeValues(data.modelData.id);
+    } catch (error) {
+        console.error("Error creating attribute:", error);
+        toast.error(
+            error.response?.data?.message || "Failed to create attribute"
+        );
+    }
+};
+
+const handleNewValueSubmit = async () => {
+    try {
+        const { data } = await axios.post("/api/attribute-values", {
+            attribute_id: parseInt(newValueForm.value.attributeId),
+            value: newValueForm.value.value,
+        });
+        
+        // Add to attribute values
+        const attributeId = newValueForm.value.attributeId;
+        if (!attributeValues.value[attributeId]) {
+            attributeValues.value[attributeId] = [];
+        }
+        attributeValues.value[attributeId].push(data.modelData);
+        
+        // Select the new value
+        const index = newValueForm.value.currentRowIndex;
+        selectedRows.value[index].valueId = data.modelData.id;
+        
+        showNewValueModal.value = false;
+        toast.success(data.message || "Value created successfully");
+    } catch (error) {
+        console.error("Error creating value:", error);
+        toast.error(error.response?.data?.message || "Failed to create value");
+    }
+};
+
 const handleAttributeChange = async (index, attributeId) => {
+    if (attributeId === "new") {
+        openNewAttributeModal(index);
+        selectedRows.value[index].attributeId = "";
+        return;
+    }
+    
     selectedRows.value[index].valueId = "";
     if (attributeId && !attributeValues.value[attributeId]) {
         await loadAttributeValues(attributeId);
+    }
+};
+
+const handleValueChange = (index, valueId) => {
+    if (valueId === "new") {
+        const attributeId = selectedRows.value[index].attributeId;
+        openNewValueModal(index, attributeId);
+        selectedRows.value[index].valueId = "";
+        return;
     }
 };
 
@@ -133,14 +231,29 @@ const openModal = (type, variation = null) => {
     modalType.value = type;
     currentVariation.value = variation;
     if (type === "edit" && variation) {
-        selectedRows.value = [];
-        variation.attributes.forEach((attr) => {
-            selectedRows.value.push({
-                attributeId: attr.attribute_id,
-                valueId: attr.value.id,
-            });
+        formData.value = {
+            name: variation.name,
+            is_default: Boolean(variation.is_default),
+            sku: variation.sku || "",
+            barcode: variation.barcode || "",
+        };
+        selectedRows.value = variation.attributes.map((attr) => ({
+            attributeId: attr.attribute_id.toString(),
+            valueId: attr.value.id.toString(),
+        }));
+        // Load attribute values for each selected attribute
+        selectedRows.value.forEach(async (row) => {
+            if (row.attributeId) {
+                await loadAttributeValues(row.attributeId);
+            }
         });
-    } else {
+    } else if (type === "add") {
+        formData.value = {
+            name: "Product Variation",
+            is_default: false,
+            sku: "",
+            barcode: "",
+        };
         selectedRows.value = [{ attributeId: "", valueId: "" }];
     }
     showModal.value = true;
@@ -153,7 +266,9 @@ const closeModal = () => {
     selectedRows.value = [{ attributeId: "", valueId: "" }];
     formData.value = {
         name: "Product Variation",
-        is_default: false
+        is_default: false,
+        sku: "",
+        barcode: "",
     };
 };
 
@@ -163,10 +278,10 @@ const handleSubmit = async () => {
 
         // Validate that all rows have both attribute and value selected
         const invalidRows = selectedRows.value.filter(
-            row => !row.attributeId || !row.valueId
+            (row) => !row.attributeId || !row.valueId
         );
         if (invalidRows.length > 0) {
-            toast.error('Please select both attribute and value for all rows');
+            toast.error("Please select both attribute and value for all rows");
             return;
         }
 
@@ -176,20 +291,24 @@ const handleSubmit = async () => {
             {
                 name: formData.value.name,
                 is_default: formData.value.is_default,
-                attributes: selectedRows.value.map(row => ({
+                sku: formData.value.sku,
+                barcode: formData.value.barcode,
+                attributes: selectedRows.value.map((row) => ({
                     attribute_id: parseInt(row.attributeId),
-                    attribute_value_id: parseInt(row.valueId)
-                }))
+                    attribute_value_id: parseInt(row.valueId),
+                })),
             }
         );
 
-        toast.success('Variation added successfully!');
+        toast.success("Variation added successfully!");
         closeModal();
         // Refresh the page to get updated data
         router.get(`/${modelName}/${modelData.value.id}/variations`);
     } catch (error) {
-        console.error('Error saving variation:', error);
-        toast.error(error.response?.data?.message || 'Failed to save variation');
+        console.error("Error saving variation:", error);
+        toast.error(
+            error.response?.data?.message || "Failed to save variation"
+        );
     } finally {
         isSubmitting.value = false;
     }
@@ -213,8 +332,51 @@ const handleDelete = async () => {
     }
 };
 
+const handleEdit = async () => {
+    try {
+        isSubmitting.value = true;
+
+        // Validate that all rows have both attribute and value selected
+        const invalidRows = selectedRows.value.filter(
+            (row) => !row.attributeId || !row.valueId
+        );
+        if (invalidRows.length > 0) {
+            toast.error("Please select both attribute and value for all rows");
+            return;
+        }
+
+        // Update variation with attributes
+        const { data } = await axios.put(
+            `/api/products/${modelData.value.id}/variations/${currentVariation.value.id}`,
+            {
+                name: formData.value.name,
+                is_default: formData.value.is_default,
+                sku: formData.value.sku,
+                barcode: formData.value.barcode,
+                attributes: selectedRows.value.map((row) => ({
+                    attribute_id: parseInt(row.attributeId),
+                    attribute_value_id: parseInt(row.valueId),
+                })),
+            }
+        );
+
+        toast.success("Variation updated successfully!");
+        closeModal();
+        // Refresh the page to get updated data
+        router.get(`/${modelName}/${modelData.value.id}/variations`);
+    } catch (error) {
+        console.error("Error updating variation:", error);
+        toast.error(
+            error.response?.data?.message || "Failed to update variation"
+        );
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
 const toggleDetails = (variationId) => {
-    showTechnicalDetails.value[variationId] = !showTechnicalDetails.value[variationId];
+    showTechnicalDetails.value[variationId] =
+        !showTechnicalDetails.value[variationId];
 };
 </script>
 
@@ -267,7 +429,9 @@ const toggleDetails = (variationId) => {
                         >
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center">
-                                    <h3 class="text-lg font-semibold">{{ variation.name }}</h3>
+                                    <h3 class="text-lg font-semibold">
+                                        {{ variation.name }}
+                                    </h3>
                                     <span
                                         v-if="variation.is_default"
                                         class="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full"
@@ -275,7 +439,28 @@ const toggleDetails = (variationId) => {
                                         Default
                                     </span>
                                 </div>
-                                <div class="flex items-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div
+                                    class="flex items-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <button
+                                        @click="openModal('edit', variation)"
+                                        class="text-gray-400 hover:text-blue-500 transition-colors"
+                                        title="Edit"
+                                    >
+                                        <svg
+                                            class="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                            />
+                                        </svg>
+                                    </button>
                                     <button
                                         @click="openModal('delete', variation)"
                                         class="text-gray-400 hover:text-red-500 transition-colors"
@@ -304,18 +489,43 @@ const toggleDetails = (variationId) => {
                                         :key="attr.id"
                                         class="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800"
                                     >
-                                        {{ attr.attribute.name }}: {{ attr.value.value }}
+                                        {{ attr.attribute.name }}:
+                                        {{ attr.value.value }}
                                     </span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                    <div>
+                                        <span class="font-medium">SKU:</span>
+                                        <span class="ml-1">{{ variation.sku || '-' }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium">Barcode:</span>
+                                        <span class="ml-1">{{ variation.barcode || '-' }}</span>
+                                    </div>
                                 </div>
                                 <div class="flex items-center">
                                     <button
                                         @click="toggleDetails(variation.id)"
                                         class="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
                                     >
-                                        <span>{{ showTechnicalDetails[variation.id] ? 'Hide' : 'Show' }} Technical Details</span>
+                                        <span
+                                            >{{
+                                                showTechnicalDetails[
+                                                    variation.id
+                                                ]
+                                                    ? "Hide"
+                                                    : "Show"
+                                            }}
+                                            Technical Details</span
+                                        >
                                         <svg
                                             class="w-4 h-4 transition-transform"
-                                            :class="{ 'rotate-180': showTechnicalDetails[variation.id] }"
+                                            :class="{
+                                                'rotate-180':
+                                                    showTechnicalDetails[
+                                                        variation.id
+                                                    ],
+                                            }"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -329,15 +539,65 @@ const toggleDetails = (variationId) => {
                                         </svg>
                                     </button>
                                 </div>
-                                <div v-if="showTechnicalDetails[variation.id]" class="text-xs text-gray-500 space-y-1">
-                                    <div v-for="attr in variation.attributes" :key="attr.id" class="flex flex-col">
-                                        <div class="font-medium">{{ attr.attribute.name }} Details:</div>
-                                        <div class="ml-2">
-                                            <div>ID: {{ attr.id }}</div>
-                                            <div>Attribute ID: {{ attr.attribute_id }}</div>
-                                            <div>Value ID: {{ attr.attribute_value_id }}</div>
-                                            <div>Created: {{ moment(attr.created_at).format('YYYY-MM-DD HH:mm:ss') }}</div>
-                                            <div>Updated: {{ moment(attr.updated_at).format('YYYY-MM-DD HH:mm:ss') }}</div>
+                                <div
+                                    v-if="showTechnicalDetails[variation.id]"
+                                    class="mt-3 bg-gray-50 rounded-md p-4 font-mono text-xs"
+                                >
+                                    <div
+                                        v-for="attr in variation.attributes"
+                                        :key="attr.id"
+                                        class="mb-4 last:mb-0"
+                                    >
+                                        <div
+                                            class="text-blue-600 font-semibold mb-1"
+                                        >
+                                            // {{ attr.attribute.name }} Details
+                                        </div>
+                                        <div class="pl-4 text-gray-700">
+                                            <div
+                                                class="grid grid-cols-[120px_1fr] gap-2"
+                                            >
+                                                <span class="text-purple-600"
+                                                    >id:</span
+                                                >
+                                                <span>{{ attr.id }}</span>
+                                                
+                                                <span class="text-purple-600"
+                                                    >attribute_id:</span
+                                                >
+                                                <span>{{
+                                                    attr.attribute_id
+                                                }}</span>
+                                                
+                                                <span class="text-purple-600"
+                                                    >value_id:</span
+                                                >
+                                                <span>{{
+                                                    attr.attribute_value_id
+                                                }}</span>
+                                                
+                                                <span class="text-purple-600"
+                                                    >created_at:</span
+                                                >
+                                                <span>{{
+                                                    moment(
+                                                        attr.created_at
+                                                    ).format(
+                                                        "YYYY-MM-DD HH:mm:ss"
+                                                    )
+                                                }}</span>
+                                                
+                                                <span class="text-purple-600"
+                                                    >updated_at:</span
+                                                >
+                                                <span>{{
+                                                    moment(
+                                                        attr.updated_at
+                                                    ).format(
+                                                        "YYYY-MM-DD HH:mm:ss"
+                                                    )
+                                                }}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -355,6 +615,8 @@ const toggleDetails = (variationId) => {
                     {{
                         modalType === "add"
                             ? "Add Variation"
+                            : modalType === "edit"
+                            ? "Edit Variation"
                             : "Delete Variation"
                     }}
                 </h2>
@@ -362,7 +624,9 @@ const toggleDetails = (variationId) => {
                 <div v-if="modalType !== 'delete'" class="space-y-4">
                     <div class="flex items-center space-x-4 mb-4">
                         <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700">
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >
                                 Name
                             </label>
                             <input
@@ -372,6 +636,35 @@ const toggleDetails = (variationId) => {
                                 required
                             />
                         </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >
+                                SKU (Optional)
+                            </label>
+                            <input
+                                type="text"
+                                v-model="formData.sku"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >
+                                Barcode (Optional)
+                            </label>
+                            <input
+                                type="text"
+                                v-model="formData.barcode"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                        </div>
+                    </div>
+
                         <div class="flex items-center">
                             <label class="inline-flex items-center">
                                 <input
@@ -379,9 +672,10 @@ const toggleDetails = (variationId) => {
                                     v-model="formData.is_default"
                                     class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 />
-                                <span class="ml-2 text-sm text-gray-600">Set as Default</span>
+                                <span class="ml-2 text-sm text-gray-600"
+                                    >Set as Default</span
+                                >
                             </label>
-                        </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -451,14 +745,29 @@ const toggleDetails = (variationId) => {
                                             >
                                                 {{ attr.name }}
                                             </option>
+                                            <option
+                                                value="new"
+                                                class="font-medium text-indigo-600"
+                                            >
+                                                + Add New Attribute
+                                            </option>
                                         </select>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <select
                                             v-model="row.valueId"
+                                            @change="
+                                                handleValueChange(
+                                                    index,
+                                                    row.valueId
+                                                )
+                                            "
                                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                             required
-                                            :disabled="!row.attributeId"
+                                            :disabled="
+                                                !row.attributeId ||
+                                                row.attributeId === 'new'
+                                            "
                                         >
                                             <option value="">
                                                 Select Value
@@ -471,6 +780,16 @@ const toggleDetails = (variationId) => {
                                                 :value="value.id"
                                             >
                                                 {{ value.value }}
+                                            </option>
+                                            <option
+                                                v-if="
+                                                    row.attributeId &&
+                                                    row.attributeId !== 'new'
+                                                "
+                                                value="new"
+                                                class="font-medium text-indigo-600"
+                                            >
+                                                + Add New Value
                                             </option>
                                         </select>
                                     </td>
@@ -506,6 +825,8 @@ const toggleDetails = (variationId) => {
                         @click="
                             modalType === 'delete'
                                 ? handleDelete()
+                                : modalType === 'edit'
+                                ? handleEdit()
                                 : handleSubmit()
                         "
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md font-semibold text-xs uppercase tracking-widest focus:outline-none focus:ring disabled:opacity-25 transition"
@@ -540,8 +861,89 @@ const toggleDetails = (variationId) => {
                                 ></path>
                             </svg>
                         </span>
-                        {{ modalType === "delete" ? "Delete" : "Save" }}
+                        {{
+                            modalType === "delete"
+                                ? "Delete"
+                                : modalType === "edit"
+                                ? "Update"
+                                : "Save"
+                        }}
                     </button>
+                </div>
+            </div>
+        </Modal>
+
+        <!-- New Attribute Modal -->
+        <Modal
+            :show="showNewAttributeModal"
+            @close="showNewAttributeModal = false"
+        >
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    Add New Attribute
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            Name
+                        </label>
+                        <input
+                            type="text"
+                            v-model="newAttributeForm.name"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            required
+                        />
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button
+                            @click="showNewAttributeModal = false"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs uppercase tracking-widest text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            @click="handleNewAttributeSubmit"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md font-semibold text-xs uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition"
+                        >
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Modal>
+
+        <!-- New Value Modal -->
+        <Modal :show="showNewValueModal" @close="showNewValueModal = false">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    Add New Value
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            Value
+                        </label>
+                        <input
+                            type="text"
+                            v-model="newValueForm.value"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            required
+                        />
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button
+                            @click="showNewValueModal = false"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs uppercase tracking-widest text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            @click="handleNewValueSubmit"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md font-semibold text-xs uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition"
+                        >
+                            Save
+                        </button>
+                    </div>
                 </div>
             </div>
         </Modal>

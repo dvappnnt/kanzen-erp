@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->foreignId('company_id')->nullable()->constrained('companies')->onDelete('cascade');
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('email')->unique()->nullable();
             $table->foreignId('country_id')
                 ->nullable() // Allow nullable for backward compatibility
                 ->constrained('countries') // Set up a foreign key to the `countries` table

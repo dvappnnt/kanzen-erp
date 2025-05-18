@@ -119,7 +119,7 @@ const confirmAction = async () => {
 
 // Get initials for avatar fallback
 const getInitials = (name) => {
-    if (!name) return "N/A";
+    if (!name) return "-";
     return name
         .split(" ")
         .map((n) => n[0]?.toUpperCase())
@@ -236,7 +236,7 @@ const handleCustomAction = async (action, row) => {
                     <td
                         v-for="col in columns"
                         :key="col.label"
-                        class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
                     >
                         <template v-if="col.has_avatar">
                             <div class="flex items-center">
@@ -252,7 +252,7 @@ const handleCustomAction = async (action, row) => {
                                 >
                                     {{ getInitials(row[col.value]) }}
                                 </div>
-                                <span>{{ row[col.value] || "N/A" }}</span>
+                                <span>{{ row[col.value] || "-" }}</span>
                             </div>
                         </template>
                         <template v-else-if="col.label === 'Actions'">
@@ -309,12 +309,48 @@ const handleCustomAction = async (action, row) => {
                                 </template>
                             </div>
                         </template>
+                        <template v-else-if="col.render">
+                            <span :class="[col.render(row).class]">
+                                {{ col.render(row).text }}
+                            </span>
+                        </template>
+
                         <template v-else>
-                            <span>{{
-                                typeof col.value === "function"
-                                    ? col.value(row)
-                                    : row[col.value] || "N/A"
-                            }}</span>
+                            <span :class="col.class">
+                                <template v-if="col.uri">
+                                    <a
+                                        :href="
+                                            typeof col.uri === 'function'
+                                                ? col.uri(row)
+                                                : col.uri
+                                        "
+                                        class="inline-flex items-center space-x-1"
+                                    >
+                                        <i
+                                            v-if="col.icon"
+                                            :class="[
+                                                'mdi',
+                                                col.icon,
+                                                'text-base',
+                                            ]"
+                                        />
+                                        <span>
+                                            {{
+                                                typeof col.value === "function"
+                                                    ? col.value(row)
+                                                    : row[col.value] || "-"
+                                            }}
+                                        </span>
+                                    </a>
+                                </template>
+                                <template v-else>
+                                    {{
+                                        typeof col.value === "function"
+                                            ? col.value(row)
+                                            : row[col.value] || "-"
+                                    }}
+                                </template>
+                            </span>
                         </template>
                     </td>
                 </tr>
@@ -381,7 +417,7 @@ const handleCustomAction = async (action, row) => {
             @close="responseModal.show = false"
         />
     </div>
-    
+
     <!-- Pagination -->
     <div v-if="data.links.length" class="flex justify-center mt-4 space-x-2">
         <button
@@ -399,7 +435,7 @@ const handleCustomAction = async (action, row) => {
                 '--primary-color': buttonPrimaryBgColor,
                 backgroundColor: link.active ? buttonPrimaryBgColor : undefined,
                 color: link.active ? buttonPrimaryTextColor : undefined,
-                '--hover-text-color': buttonPrimaryTextColor
+                '--hover-text-color': buttonPrimaryTextColor,
             }"
             :disabled="!link.url"
             v-html="link.label"

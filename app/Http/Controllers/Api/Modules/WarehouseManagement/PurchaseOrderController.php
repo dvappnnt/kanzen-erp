@@ -4,6 +4,13 @@ namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\PurchaseOrder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use App\Models\GoodsReceipt;
+use App\Models\GoodsReceiptDetail;
+use App\Models\SupplierInvoice;
+use App\Models\SupplierInvoiceDetail;
 
 class PurchaseOrderController extends Controller
 {
@@ -18,34 +25,46 @@ class PurchaseOrderController extends Controller
 
     public function index()
     {
-        return $this->modelClass::with(['parent'])->latest()->paginate(perPage: 10);
+        return $this->modelClass::with(['company', 'warehouse', 'supplier'])->latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'purchase_requisition_id' => 'required|exists:purchase_requisitions,id',
+            'company_id' => 'required|exists:companies,id',
+            'warehouse_id' => 'required|exists:warehouses,id',
             'supplier_id' => 'required|exists:suppliers,id',
-            'order_date' => 'required|date',
+            'order_date' => 'nullable|date',
             'expected_delivery_date' => 'nullable|date',
             'delivery_date' => 'nullable|date',
             'payment_terms' => 'nullable|string|max:255',
             'shipping_terms' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1024',
-            'subtotal' => 'required|numeric|min:0',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'shipping_cost' => 'nullable|numeric|min:0',
+            'subtotal' => 'nullable|numeric|min:0',
+            'total_amount' => 'nullable|numeric|min:0',
         ]);
+
+        // Set default values for nullable fields
+        $validated['tax_rate'] = $validated['tax_rate'] ?? 0;
+        $validated['tax_amount'] = $validated['tax_amount'] ?? 0;
+        $validated['shipping_cost'] = $validated['shipping_cost'] ?? 0;
+        $validated['subtotal'] = $validated['subtotal'] ?? 0;
+        $validated['total_amount'] = $validated['total_amount'] ?? 0;
 
         $model = $this->modelClass::create($validated);
 
         return response()->json([
             'modelData' => $model,
-            'message' => "{$this->modelName} '{$model->name}' created successfully.",
+            'message' => "{$this->modelName} created successfully.",
         ]);
     }
 
     public function show($id)
     {
-        $model = $this->modelClass::findOrFail($id);
+        $model = $this->modelClass::with(['company', 'warehouse', 'supplier'])->findOrFail($id);
         return $model;
     }
 
@@ -54,16 +73,34 @@ class PurchaseOrderController extends Controller
         $model = $this->modelClass::findOrFail($id);
 
         $validated = $request->validate([
-            'product_variation_id' => 'required|exists:product_variations,id',
-            'attribute_id' => 'required|exists:attributes,id',
-            'attribute_value_id' => 'required|exists:attribute_values,id',
+            'company_id' => 'required|exists:companies,id',
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'supplier_id' => 'required|exists:suppliers,id',
+            'order_date' => 'nullable|date',
+            'expected_delivery_date' => 'nullable|date',
+            'delivery_date' => 'nullable|date',
+            'payment_terms' => 'nullable|string|max:255',
+            'shipping_terms' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1024',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'shipping_cost' => 'nullable|numeric|min:0',
+            'subtotal' => 'nullable|numeric|min:0',
+            'total_amount' => 'nullable|numeric|min:0',
         ]);
+
+        // Set default values for nullable fields
+        $validated['tax_rate'] = $validated['tax_rate'] ?? 0;
+        $validated['tax_amount'] = $validated['tax_amount'] ?? 0;
+        $validated['shipping_cost'] = $validated['shipping_cost'] ?? 0;
+        $validated['subtotal'] = $validated['subtotal'] ?? 0;
+        $validated['total_amount'] = $validated['total_amount'] ?? 0;
 
         $model->update($validated);
 
         return response()->json([
             'modelData' => $model,
-            'message' => "{$this->modelName} '{$model->name}' updated successfully.",
+            'message' => "{$this->modelName} updated successfully.",
         ]);
     }
 
@@ -93,8 +130,8 @@ class PurchaseOrderController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::with(['parent'])
-            ->where('name', 'like', "%{$searchTerm}%")
+        $models = $this->modelClass::with(['company', 'warehouse'])
+            ->where('number', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
 
@@ -108,5 +145,177 @@ class PurchaseOrderController extends Controller
             'data' => $models,
             'message' => "{$this->modelName}s retrieved successfully."
         ], 200);
+    }
+
+    public function pending(PurchaseOrder $purchaseOrder)
+    {
+        try {
+            $purchaseOrder->update(['status' => 'pending']);
+            
+            return response()->json([
+                'message' => 'Purchase order marked as pending successfully',
+                'data' => $purchaseOrder
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to mark purchase order as pending',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function cancel(PurchaseOrder $purchaseOrder)
+    {
+        try {
+            $purchaseOrder->update(['status' => 'cancelled']);
+            
+            return response()->json([
+                'message' => 'Purchase order cancelled successfully',
+                'data' => $purchaseOrder
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to cancel purchase order',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function order(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        DB::beginTransaction();
+        try {
+            // First create the goods receipt
+            $goodsReceipt = GoodsReceipt::create([
+                'company_id' => $purchaseOrder->company_id,
+                'purchase_order_id' => $purchaseOrder->id,
+                'date' => now(),
+                'notes' => "Auto-generated from PO: {$purchaseOrder->number}",
+                'created_by_user_id' => $request->user()->id
+            ]);
+
+            // Create goods receipt details for each purchase order detail
+            foreach ($purchaseOrder->details as $poDetail) {
+                GoodsReceiptDetail::create([
+                    'goods_receipt_id' => $goodsReceipt->id,
+                    'purchase_order_detail_id' => $poDetail->id,
+                    'expected_qty' => $poDetail->qty,
+                    'received_qty' => 0,
+                    'notes' => null
+                ]);
+            }
+
+            // Create supplier invoice
+            $supplierInvoice = SupplierInvoice::create([
+                'invoice_number' => 'SUP-INV-' . str_pad(SupplierInvoice::count() + 1, 6, '0', STR_PAD_LEFT),
+                'company_id' => $purchaseOrder->company_id,
+                'goods_receipt_id' => $goodsReceipt->id,
+                'supplier_id' => $purchaseOrder->supplier_id,
+                'purchase_order_id' => $purchaseOrder->id,
+                'invoice_date' => now(),
+                'due_date' => null,
+                'tax_rate' => $purchaseOrder->tax_rate ?? 0,
+                'tax_amount' => $purchaseOrder->tax_amount ?? 0,
+                'shipping_cost' => $purchaseOrder->shipping_cost ?? 0,
+                'subtotal' => $purchaseOrder->subtotal ?? 0,
+                'total_amount' => $purchaseOrder->total_amount ?? 0,
+                'status' => 'unpaid',
+                'remarks' => "Auto-generated from PO: {$purchaseOrder->number}",
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // Create supplier invoice details
+            foreach ($purchaseOrder->details as $poDetail) {
+                // Get the supplier product detail
+                $supplierProductDetail = \App\Models\SupplierProductDetail::findOrFail($poDetail->supplier_product_detail_id);
+                
+                // Get the corresponding supplier product
+                $supplierProduct = \App\Models\SupplierProduct::where('supplier_id', $purchaseOrder->supplier_id)
+                    ->where('product_id', $supplierProductDetail->product_id)
+                    ->firstOrFail();
+                
+                SupplierInvoiceDetail::create([
+                    'supplier_invoice_id' => $supplierInvoice->id,
+                    'supplier_product_id' => $supplierProduct->id,
+                    'quantity' => $poDetail->qty,
+                    'unit_price' => $poDetail->price,
+                    'total' => $poDetail->total,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            // Update purchase order status
+            $purchaseOrder->update(['status' => 'ordered']);
+            
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Purchase order marked as ordered, goods receipt and supplier invoice created successfully',
+                'data' => [
+                    'purchase_order' => $purchaseOrder,
+                    'goods_receipt_id' => $goodsReceipt->id,
+                    'supplier_invoice_id' => $supplierInvoice->id
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to process order',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function receive(PurchaseOrder $purchaseOrder)
+    {
+        try {
+            $purchaseOrder->update(['status' => 'received']);
+            
+            return response()->json([
+                'message' => 'Purchase order marked as received successfully',
+                'data' => $purchaseOrder
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to mark purchase order as received',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function approve(PurchaseOrder $purchaseOrder)
+    {
+        try {
+            $purchaseOrder->update(['status' => 'partially-approved']);
+            
+            return response()->json([
+                'message' => 'Purchase order approved successfully',
+                'data' => $purchaseOrder
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to approve purchase order',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function reject(PurchaseOrder $purchaseOrder)
+    {
+        try {
+            $purchaseOrder->update(['status' => 'rejected']);
+            
+            return response()->json([
+                'message' => 'Purchase order rejected successfully',
+                'data' => $purchaseOrder
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to reject purchase order',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

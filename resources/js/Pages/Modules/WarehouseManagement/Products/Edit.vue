@@ -27,7 +27,7 @@ const categories = computed(() =>
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 const headerActions = ref([
-{
+    {
         text: "Go Back",
         url: `/${modelName}`,
         inertia: true,
@@ -67,6 +67,15 @@ const fields = ref([
             modelName
         ).toLowerCase()} description`,
         required: false,
+    },
+    {
+        id: "has_variation",
+        label: `${singularizeAndFormat(modelName)} Has Variation`,
+        model: "has_variation",
+        type: "toggle",
+        placeholder: `Enter ${singularizeAndFormat(modelName).toLowerCase()}`,
+        required: true,
+        default: true, // <-- Add default true here
     },
     {
         id: "avatar",

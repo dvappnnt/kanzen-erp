@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+use App\Models\WarehouseProduct;
 
 class Warehouse extends Model
 {
@@ -63,20 +64,25 @@ class Warehouse extends Model
         return $this->hasMany(GoodsReceipt::class);
     }
 
+    public function products()
+    {
+        return $this->hasMany(WarehouseProduct::class);
+    }
+
     protected static function booted()
     {
-        static::creating(function ($company) {
-            $company->slug = self::generateUniqueSlug($company->name);
+        static::creating(function ($modelData) {
+            $modelData->slug = self::generateUniqueSlug($modelData->name);
 
             // Generate a unique token only if it's not set manually
-            if (empty($company->token)) {
-                $company->token = Str::random(64);
+            if (empty($modelData->token)) {
+                $modelData->token = Str::random(64);
             }
         });
 
-        static::updating(function ($company) {
-            if ($company->isDirty('name')) {
-                $company->slug = self::generateUniqueSlug($company->name);
+        static::updating(function ($modelData) {
+            if ($modelData->isDirty('name')) {
+                $modelData->slug = self::generateUniqueSlug($modelData->name);
             }
         });
     }

@@ -17,9 +17,15 @@ class CompanyAccountController extends Controller
         $this->modelName = class_basename($this->modelClass);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->modelClass::with(['bank', 'company'])->latest()->paginate(perPage: 10);
+        $query = $this->modelClass::with(['bank', 'company']);
+
+        if ($request->get('name')) {
+            $query = $this->modelClass::where('name', 'like', "%{$request->get('name')}%");
+        }
+
+        return $query->latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)

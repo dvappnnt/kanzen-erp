@@ -29,7 +29,7 @@
                     :href="route('dashboard')"
                     class="flex items-center space-x-3"
                 >
-                    <div class="debug-image-container w-8 h-8">
+                    <div class="debug-image-container w-32 h-32">
                         <img
                             :src="appIcon"
                             class="w-full h-full object-contain"
@@ -37,9 +37,9 @@
                             alt="App Icon"
                         />
                     </div>
-                    <span v-show="!isMinimized" class="text-lg font-semibold">{{
+                    <!-- <span v-show="!isMinimized" class="text-lg font-semibold">{{
                         appName
-                    }}</span>
+                    }}</span> -->
                 </Link>
             </div>
 
@@ -145,13 +145,44 @@
                     <div
                         v-if="
                             hasPermission('read banks') ||
-                            hasPermission('read company accounts')
+                            hasPermission('read company accounts') || 
+                            hasPermission('read invoices') ||
+                            hasPermission('read expenses') ||
+                            hasPermission('read journal entries')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
                     >
                         Accounting
                     </div>
+
+                    <Link
+                        v-if="hasPermission('read invoices')"
+                        :href="route('invoices.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('invoices.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('invoices.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-cash-check text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('invoices.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Invoices</span>
+                    </Link>
 
                     <Link
                         v-if="hasPermission('read expenses')"
@@ -280,7 +311,11 @@
                     <div
                         v-if="
                             hasPermission('read users') ||
-                            hasPermission('read companies')
+                            hasPermission('read companies') ||
+                            hasPermission('read purchase orders') ||
+                            hasPermission('read supplier invoices') ||
+                            hasPermission('read goods receipts') ||
+                            hasPermission('read warehouses')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -318,7 +353,7 @@
                         >
                     </Link>
 
-                    <Link
+                    <!-- <Link
                         :href="route('purchase-requisitions.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
@@ -348,6 +383,39 @@
                         ></span>
                         <span v-show="!isMinimized" class="ml-3"
                             >Purchase Requisitions</span
+                        >
+                    </Link> -->
+
+                    <Link
+                        :href="route('supplier-invoices.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route()
+                                .current()
+                                ?.startsWith('supplier-invoices.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route()
+                                .current()
+                                ?.startsWith('supplier-invoices.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-credit-card-outline text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('supplier-invoices.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Supplier Invoices</span
                         >
                     </Link>
 
@@ -409,8 +477,73 @@
 
                     <div
                         v-if="
+                            hasPermission('read customers') ||
+                            hasPermission('read agents')
+                        "
+                        v-show="!isMinimized"
+                        class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                    >
+                        CRM
+                    </div>
+
+                    <Link
+                        v-if="hasPermission('read customers')"
+                        :href="route('customers.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('customers.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('customers.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-star-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('customers.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Customers</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read agents')"
+                        :href="route('agents.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('agents.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('agents.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-group-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('agents.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Agents</span>
+                    </Link>
+
+                    <div
+                        v-if="
                             hasPermission('read users') ||
-                            hasPermission('read companies')
+                            hasPermission('read companies') || 
+                            hasPermission('read suppliers') ||
+                            hasPermission('read products')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -434,7 +567,7 @@
                         "
                     >
                         <span
-                            class="mdi mdi-account-group text-xl"
+                            class="mdi mdi-account-group-outline text-xl"
                             :style="
                                 route().current()?.startsWith('users.')
                                     ? { color: activeTextColor }
@@ -443,6 +576,8 @@
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Users</span>
                     </Link>
+
+                    
 
                     <Link
                         v-if="hasPermission('read companies')"

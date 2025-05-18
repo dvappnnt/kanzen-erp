@@ -9,8 +9,12 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
-import { formatName, formatDate } from "@/utils/global";
-
+import {
+    formatName,
+    formatDate,
+    getStatusPillClass,
+    humanReadable,
+} from "@/utils/global";
 const modelName = "goods-receipts";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
@@ -25,35 +29,57 @@ const headerActions = ref([
         url: `/${modelName}/export`,
         class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
     },
-    {
-        text: "Create",
-        url: `/${modelName}/create`,
-        inertia: true,
-        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
-        style: computed(() => ({
-            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
-        })),
-    },
 ]);
 
 // Define Table Columns
 const columns = ref([
     {
-        label: "Name",
-        value: "name",
-        has_avatar: true,
-        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
+        label: "Number",
+        value: "number",
+        uri: (row) => route("goods-receipts.show", row.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-truck-fast-outline",
     },
-    { label: "Address", value: "address" },
-    { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
+    {
+        label: "PO No.",
+        value: (row) => row.purchase_order.number,
+        uri: (row) => route("purchase-orders.show", row.purchase_order.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-file-document-outline",
+    },
+    {
+        label: "Warehouse",
+        value: (row) => row.purchase_order.warehouse.name,
+        uri: (row) => route("warehouses.show", row.purchase_order.warehouse.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-warehouse",
+    },
+    {
+        label: "Company",
+        value: (row) => row.purchase_order.company.name,
+    },
+    {
+        label: "Supplier",
+        value: (row) => row.purchase_order.supplier.name,
+    },
+    {
+        label: "Status",
+        value: "status",
+        render: (row) => ({
+            text: humanReadable(row.status),
+            class: getStatusPillClass(row.status),
+        }),
+    },
+    {
+        label: "Created At",
+        value: (row) => moment(row.created_at).fromNow(),
+    },
     { label: "Actions" },
 ]);
 
 const mapCustomButtons = (row) => ({
     ...row,
     viewUrl: `/${modelName}/${row.id}`,
-    editUrl: `/${modelName}/${row.id}/edit`,
-    deleteUrl: `/api/${modelName}/${row.id}`,
     restoreUrl: row.deleted_at ? `/api/${modelName}/${row.id}/restore` : null,
     customUrls: [],
 });

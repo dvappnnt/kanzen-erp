@@ -11,11 +11,18 @@ class InvoiceDetail extends Model
 
     protected $fillable = [
         'invoice_id',
-        'product_id',
+        'warehouse_id',
+        'warehouse_product_id',
         'qty',
-        'unit_price',
-        'total_price',
+        'price',
+        'total',
         'currency',
+        'notes',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'total' => 'decimal:2',
     ];
 
     public function invoice()
@@ -23,8 +30,18 @@ class InvoiceDetail extends Model
         return $this->belongsTo(Invoice::class);
     }
 
-    public function product()
+    public function warehouse()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function warehouseProduct()
+    {
+        return $this->belongsTo(WarehouseProduct::class);
+    }
+
+    public function invoiceSerials()
+    {
+        return $this->hasMany(InvoiceSerial::class);
     }
 }

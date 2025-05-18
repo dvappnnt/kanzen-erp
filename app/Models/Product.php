@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class Product extends Model
 {
@@ -21,11 +22,17 @@ class Product extends Model
         'avatar',
         'unit_of_measure',
         'has_variation',
+        'country_id',
     ];
 
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class);
     }
 
     public function variations()
@@ -60,16 +67,23 @@ class Product extends Model
 
     public function suppliers()
     {
-        return $this->belongsToMany(Supplier::class, 'supplier_product_variations')
-            ->withPivot('price', 'cost', 'lead_time_days')
+        return $this->belongsToMany(Supplier::class, 'supplier_products')
             ->withTimestamps();
+    }
+
+    public function supplierProductDetails()
+    {
+        return $this->hasMany(SupplierProductDetail::class);
     }
 
     protected static function booted()
     {
         static::creating(function ($modelData) {
             $modelData->slug = self::generateUniqueSlug($modelData->name);
-            $modelData->company_id = auth()->user()->company->id;
+            
+            if (Auth::check()) {
+                $modelData->company_id = Auth::user()->company->id;
+            }
 
             // Generate a unique token only if it's not set manually
             if (empty($modelData->token)) {
@@ -78,28 +92,28 @@ class Product extends Model
         });
 
         static::created(function ($modelData) {
-            if ($modelData->has_variation) {
-                $modelData->variations()->create([
-                    'name' => 'Default',
-                    'is_default' => true,
-                ]);
-            } else {
-                $conditionAttributeId = DB::table('attributes')->where('name', 'Condition')->value('id');
+            $defaultVariation = $modelData->variations()->create([
+                'name' => 'Default Product Variation',
+                'is_default' => true,
+            ]);
 
-                foreach (['New', 'Used', 'Refurbished'] as $condition) {
-                    ProductVariation::create([
-                        'product_id' => $modelData->id,
-                        'attribute_id' => $conditionAttributeId,
-                        'attribute_value_id' => DB::table('attribute_values')->where('value', $condition)->value('id'),
-                    ]);
-                }
+            $conditionAttributeId = DB::table('attributes')->where('name', 'Condition')->value('id');
+
+            foreach (['New'] as $condition) {
+                ProductVariationAttribute::create([
+                    'product_variation_id' => $defaultVariation->id,
+                    'attribute_id' => $conditionAttributeId,
+                    'attribute_value_id' => DB::table('attribute_values')->where('value', $condition)->value('id'),
+                ]);
             }
         });
 
         static::updating(function ($modelData) {
             if ($modelData->isDirty('name')) {
                 $modelData->slug = self::generateUniqueSlug($modelData->name);
-                $modelData->company_id = auth()->user()->company->id;
+                if (Auth::check()) {
+                    $modelData->company_id = Auth::user()->company->id;
+                }
             }
         });
     }

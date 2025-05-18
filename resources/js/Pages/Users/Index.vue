@@ -43,7 +43,7 @@ const columns = ref([
         has_avatar: true,
         avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
     },
-    { label: "Role", value: (row) => row.role || "N/A" },
+    { label: "Role", value: (row) => row.role || "-" },
     { label: "Email", value: "email" },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },

@@ -7,7 +7,7 @@ import moment from "moment";
 import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
 import ProfileCard from "@/Components/Sections/ProfileCard.vue";
 import DisplayInformation from "@/Components/Sections/DisplayInformation.vue";
-import { singularizeAndFormat } from "@/utils/global";
+import { singularizeAndFormat, formatNumber } from "@/utils/global";
 
 const modelName = "expenses";
 const formatModelName = (name) => {
@@ -53,7 +53,7 @@ const expenseDetails = ref([
     { label: "Category", value: (row) => row.category?.name || "-" },
     { label: "Payment Method", value: "payment_method" },
     { label: "Currency", value: "currency" },
-    { label: "Amount", value: "amount" },
+    { label: "Amount", value: (row) => formatNumber(row.amount, { style: 'currency', currency: 'PHP' }) },
     { label: "Expense Date", value: "expense_date" },
     { label: "Description", value: "description" },
 ]);

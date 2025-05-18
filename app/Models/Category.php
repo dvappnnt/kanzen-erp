@@ -10,7 +10,7 @@ class Category extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['related_model', 'parent_id', 'name'];
+    protected $fillable = ['related_model', 'parent_id', 'name', 'default_account_id'];
 
     /**
      * Relationship for parent category.
@@ -26,5 +26,10 @@ class Category extends Model
     public function children()
     {
         return $this->hasMany(Category::class, 'parent_id');
+    }
+
+    public function defaultAccount()
+    {
+        return $this->belongsTo(Account::class, 'default_account_id');
     }
 }
