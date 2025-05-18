@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class WarehouseController extends Controller
 {
@@ -44,7 +46,7 @@ class WarehouseController extends Controller
             $validated['avatar'] = $avatarPath;
         }
 
-        $validated['created_by_user_id'] = auth()->user()->id;
+        $validated['created_by_user_id'] = Auth::id();
         $company = $this->modelClass::create($validated);
 
         return response()->json([
@@ -75,8 +77,8 @@ class WarehouseController extends Controller
         ]);
 
         if ($request->hasFile('avatar')) {
-            if ($model->avatar && \Storage::disk('public')->exists($model->avatar)) {
-                \Storage::disk('public')->delete($model->avatar);
+            if ($model->avatar && Storage::disk('public')->exists($model->avatar)) {
+                Storage::disk('public')->delete($model->avatar);
             }
 
             $avatarPath = $request->file('avatar')->store('companies/avatars', 'public');
@@ -138,6 +140,8 @@ class WarehouseController extends Controller
         $warehouse = $this->modelClass::findOrFail($id);
         
         $query = $warehouse->products()
+            ->withCount('stockAdjustments')
+            ->withCount('stockTransfers')
             ->with([
                 'supplierProductDetail.product',
                 'supplierProductDetail.variation',

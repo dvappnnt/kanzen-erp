@@ -92,6 +92,11 @@ class GoodsReceipt extends Model
             return;
         }
 
+        // ❌ Don't touch if it's already in-warehouse
+        if ($this->status === 'in-warehouse') {
+            return;
+        }
+
         $allDetails = $this->details()->get();
         $totalExpected = $allDetails->sum('expected_qty');
         $totalReceived = $allDetails->sum('received_qty');

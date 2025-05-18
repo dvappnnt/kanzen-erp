@@ -45,14 +45,15 @@ class AccountingModuleSeeder extends Seeder
             ['name' => 'Checks Payable',           'code' => '2103', 'type' => 'LI'],
 
             // Equity
-            ['name' => 'Owner’s Equity',           'code' => '3001', 'type' => 'EQ'],
+            ['name' => "Owner's Equity",           'code' => '3001', 'type' => 'EQ'],
             ['name' => 'Retained Earnings',        'code' => '3002', 'type' => 'EQ'],
 
             // Revenue
             ['name' => 'Sales Revenue',            'code' => '4001', 'type' => 'RE'],
             ['name' => 'Service Revenue',          'code' => '4002', 'type' => 'RE'],
+            ['name' => 'Shipping Revenue',         'code' => '4003', 'type' => 'RE'],
 
-            // Expenses
+            // Expenses and Contra Revenue
             ['name' => 'Salaries Expense',         'code' => '5001', 'type' => 'EX'],
             ['name' => 'Rent Expense',             'code' => '5002', 'type' => 'EX'],
             ['name' => 'Cost of Goods Sold (COGS)', 'code' => '5003', 'type' => 'EX'],
@@ -78,6 +79,7 @@ class AccountingModuleSeeder extends Seeder
             ['name' => 'Credit Card',   'code' => 'credit-card'],
             ['name' => 'GCash',         'code' => 'gcash'],
             ['name' => 'Check',         'code' => 'check'],
+            ['name' => 'Credit',        'code' => 'credit'], // 🆕 Added
         ];
 
         $accountMap = [
@@ -86,6 +88,7 @@ class AccountingModuleSeeder extends Seeder
             'credit-card'   => 'Credit Card Payable',
             'gcash'         => 'GCash Wallet',
             'check'         => 'Checks Payable',
+            'credit'        => 'Accounts Receivable', // 🆕 Mapped
         ];
 
         foreach ($methods as $method) {

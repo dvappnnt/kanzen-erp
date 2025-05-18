@@ -65,6 +65,7 @@ Route::middleware([
     Route::resource('attribute-values', AttributeValueController::class)->only(['index', 'show', 'edit', 'create']);
 
     Route::resource('invoices', InvoiceController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::resource('supplier-invoices', SupplierInvoiceController::class)->only(['index', 'show', 'edit', 'create']);
     Route::get('supplier-invoices/{supplierInvoice}/print', [SupplierInvoiceController::class, 'print'])->name('supplier-invoices.print');
     Route::resource('expenses', ExpenseController::class)->only(['index', 'show', 'edit', 'create']);

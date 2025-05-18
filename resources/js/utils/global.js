@@ -72,6 +72,8 @@ export function getStatusPillClass(status) {
         draft: "bg-gray-100",
         pending: "bg-yellow-100",
         'partially-approved': "bg-blue-100",
+        'fully-paid': "bg-green-100",
+        'fully-received': "bg-green-100",
         approved: "bg-green-100",
         rejected: "bg-red-100",
         ordered: "bg-indigo-100",

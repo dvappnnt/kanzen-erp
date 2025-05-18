@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('supplier_invoice_id')->constrained()->onDelete('cascade');
             $table->foreignId('company_account_id')->nullable()->constrained('company_accounts')->nullOnDelete();
-            $table->enum('payment_method', ['cash', 'bank-transfer', 'credit-card', 'gcash', 'check'])->default('cash');
+            $table->enum('payment_method', ['cash', 'bank-transfer', 'credit-card', 'gcash', 'check', 'other'])->default('cash');
             $table->string('reference_number')->nullable();
             $table->string('account_name')->nullable();
             $table->string('account_number')->nullable();

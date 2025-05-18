@@ -16,13 +16,14 @@ return new class extends Migration
             $table->foreignId('company_account_id')->nullable()->constrained('company_accounts')->nullOnDelete();
             $table->foreignId('invoice_id')->constrained()->onDelete('cascade');
             $table->foreignId('bank_id')->nullable()->constrained('banks')->nullOnDelete();
-            $table->enum('payment_method', ['cash', 'bank-transfer', 'credit-card', 'gcash', 'check'])->default('cash');
+            $table->enum('payment_method', ['cash', 'bank-transfer', 'credit-card', 'gcash', 'check', 'other'])->default('cash');
             $table->string('reference_number')->nullable();
             $table->string('account_name')->nullable();
             $table->string('account_number')->nullable();
-            $table->enum('status', ['unpaid', 'partially-paid', 'fully-paid'])->default('unpaid');
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->date('payment_date')->nullable();
             $table->decimal('amount', 15, 2);
+            $table->text('receipt_attachment')->nullable(); // store path to receipt
             $table->softDeletes();
             $table->timestamps();
         });

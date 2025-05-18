@@ -8,6 +8,7 @@ import { Link } from "@inertiajs/vue3";
 import axios from "@/axios";
 import { useToast } from "vue-toastification";
 import Dropzone from "@/Components/Form/Dropzone.vue";
+import { humanReadable } from "@/utils/global";
 
 const page = usePage();
 const modelData = computed(() => page.props.modelData || {});
@@ -241,8 +242,6 @@ watch(() => modelData.value.payments, (newPayments) => {
         });
     }
 }, { deep: true });
-
-console.log(modelData.value);
 </script>
 
 <template>
@@ -291,7 +290,7 @@ console.log(modelData.value);
                                 <p class="text-gray-600">Invoice #: <span class="font-semibold">{{ modelData.invoice_number }}</span></p>
                                 <p class="text-gray-600">Date: <span class="font-semibold">{{ formatDate(modelData.invoice_date) }}</span></p>
                                 <p class="text-gray-600">Due Date: <span class="font-semibold">{{ formatDate(modelData.due_date) }}</span></p>
-                                <p class="text-gray-600">Status: <span class="font-semibold capitalize">{{ modelData.status }}</span></p>
+                                <p class="text-gray-600">Status: <span class="font-semibold capitalize">{{ humanReadable(modelData.status) }}</span></p>
                             </div>
                         </div>
                     </div>
@@ -406,7 +405,7 @@ console.log(modelData.value);
                                     <tr v-for="payment in modelData.payments" :key="payment.id">
                                         <td class="px-2 py-2">
                                             <div class="font-medium text-gray-900 capitalize">
-                                                {{ payment.payment_method }}
+                                                {{ humanReadable(payment.payment_method) }}
                                             </div>
                                         </td>
                                         <td class="px-2 py-2">

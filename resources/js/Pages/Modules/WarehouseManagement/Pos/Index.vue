@@ -131,21 +131,26 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button
-                                    @click="updateQuantity(item, -1)"
-                                    class="text-gray-500 hover:text-gray-700"
-                                >
-                                    <span class="text-xl">-</span>
-                                </button>
-                                <span class="w-8 text-center">{{
-                                    item.quantity
-                                }}</span>
-                                <button
-                                    @click="updateQuantity(item, 1)"
-                                    class="text-gray-500 hover:text-gray-700"
-                                >
-                                    <span class="text-xl">+</span>
-                                </button>
+                                <template v-if="!item.serials || item.serials.length === 0">
+                                    <button
+                                        @click="updateQuantity(item, -1)"
+                                        class="text-gray-500 hover:text-gray-700"
+                                    >
+                                        <span class="text-xl">-</span>
+                                    </button>
+                                    <span class="w-8 text-center">{{
+                                        item.quantity
+                                    }}</span>
+                                    <button
+                                        @click="updateQuantity(item, 1)"
+                                        class="text-gray-500 hover:text-gray-700"
+                                    >
+                                        <span class="text-xl">+</span>
+                                    </button>
+                                </template>
+                                <template v-else>
+                                    <span class="w-8 text-center">{{ item.serials.length }}</span>
+                                </template>
                                 <button
                                     @click="removeFromCart(item)"
                                     class="text-red-500 hover:text-red-700 ml-2"
@@ -412,10 +417,10 @@
                                             </option>
                                             <option value="cash">Cash</option>
                                             <option value="gcash">GCash</option>
-                                            <option value="credit-card">Card</option>
+                                            <!-- <option value="credit-card">Card</option>
                                             <option value="bank-transfer">
                                                 Bank Transfer
-                                            </option>
+                                            </option> -->
                                         </select>
                                     </div>
 
@@ -425,21 +430,35 @@
                                         class="space-y-4"
                                     >
                                         <div>
-                                            <label
-                                                class="block text-sm font-medium text-gray-700 mb-1"
-                                            >
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
                                                 Mobile Number
-                                                <span class="text-red-500"
-                                                    >*</span
-                                                >
+                                                <span class="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
-                                                v-model="
-                                                    paymentDetails.account_number
-                                                "
+                                                v-model="paymentDetails.account_number"
                                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                                 placeholder="Enter GCash mobile number"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Reference Number
+                                                <span class="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                v-model="paymentDetails.reference_number"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                                placeholder="Enter GCash reference number"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Receipt Attachment</label>
+                                            <Dropzone
+                                                id="receipt-attachment"
+                                                label="Upload Receipt (Optional)"
+                                                v-model="paymentDetails.receipt_attachment"
                                             />
                                         </div>
                                     </div>
@@ -1110,6 +1129,7 @@ import {
 } from "@headlessui/vue";
 import debounce from "lodash/debounce";
 import { formatNumber } from "@/utils/global";
+import Dropzone from "@/Components/Form/Dropzone.vue";
 
 // Step Management
 const currentStep = ref(1);
@@ -1147,6 +1167,8 @@ const paymentDetails = ref({
     account_name: "",
     bank_id: null,
     company_account_id: null,
+    reference_number: null,
+    receipt_attachment: null
 });
 
 // Bank search
@@ -1268,6 +1290,10 @@ const addToCart = (product) => {
 };
 
 const updateQuantity = (item, change) => {
+    if (item.serials && item.serials.length > 0) {
+        return; // Don't allow quantity changes for serialized items
+    }
+
     const newQuantity = item.quantity + change;
     if (newQuantity > 0) {
         item.quantity = newQuantity;
@@ -1389,6 +1415,8 @@ watch(paymentMethod, () => {
         account_name: "",
         bank_id: null,
         company_account_id: null,
+        reference_number: null,
+        receipt_attachment: null
     };
     bankSearch.value = "";
     companyAccountSearch.value = "";
@@ -1430,7 +1458,23 @@ const proceedToReview = () => {
         return;
     }
 
-    // Prepare payment details object for backend
+    // Generate reference number for cash payments if not provided
+    let referenceNumber = null;
+    if (paymentMethod.value === 'cash') {
+        referenceNumber = `SI-CASH-${Date.now()}`;
+    } else if (paymentMethod.value === 'gcash') {
+        if (!paymentDetails.value.account_number) {
+            alert("Please enter the GCash mobile number");
+            return;
+        }
+        referenceNumber = paymentDetails.value.reference_number;
+        if (!referenceNumber) {
+            alert("Please enter the GCash reference number");
+            return;
+        }
+    }
+
+    // Prepare payment details
     const paymentMethodDetails = {
         payment_method: paymentMethod.value,
         payment_details: {
@@ -1438,41 +1482,15 @@ const proceedToReview = () => {
             account_name: paymentDetails.value.account_name || null,
             bank_id: selectedBank.value?.id || null,
             company_account_id: selectedCompanyAccount.value?.id || null,
-            reference_number: null,
-            status: 'fully-paid',
+            reference_number: referenceNumber,
+            status: 'approved',
             payment_date: new Date().toISOString().split('T')[0],
             amount: total.value
         }
     };
 
-    // Validate fields based on payment method
-    if (paymentMethod.value === "gcash") {
-        if (!paymentMethodDetails.payment_details.account_number) {
-            alert("Please enter the GCash mobile number");
-            return;
-        }
-    } else if (paymentMethod.value === "credit-card") {
-        if (
-            !paymentMethodDetails.payment_details.account_number ||
-            !paymentMethodDetails.payment_details.account_name
-        ) {
-            alert("Please fill in all card details");
-            return;
-        }
-    } else if (paymentMethod.value === "bank-transfer") {
-        if (
-            !paymentMethodDetails.payment_details.account_number ||
-            !paymentMethodDetails.payment_details.account_name ||
-            !paymentMethodDetails.payment_details.bank_id ||
-            !paymentMethodDetails.payment_details.company_account_id
-        ) {
-            alert("Please fill in all bank transfer details");
-            return;
-        }
-    }
-
     // Prepare invoice data
-    reviewData.value = {
+    const invoiceData = {
         company_id: customerInfo.value?.company_id,
         customer_id: customerInfo.value?.id,
         warehouse_id: selectedWarehouseId.value,
@@ -1487,7 +1505,8 @@ const proceedToReview = () => {
         total_amount: total.value,
         currency: 'PHP',
         status: 'fully-paid',
-        ...paymentMethodDetails,
+        payment_method: paymentMethod.value,
+        payment_details: paymentMethodDetails.payment_details,
         items: cartItems.value.map(item => ({
             warehouse_product_id: item.id,
             qty: item.quantity,
@@ -1496,6 +1515,32 @@ const proceedToReview = () => {
             serials: item.serials || []
         }))
     };
+
+    // If there's a receipt attachment, prepare FormData
+    if (paymentDetails.value.receipt_attachment) {
+        const formData = new FormData();
+        
+        // Add all invoice data
+        Object.entries(invoiceData).forEach(([key, value]) => {
+            if (typeof value === 'object') {
+                formData.append(key, JSON.stringify(value));
+            } else {
+                formData.append(key, value);
+            }
+        });
+
+        // Add the file
+        formData.append('receipt_attachment', paymentDetails.value.receipt_attachment);
+        
+        // Store both the FormData and the original file for the review component
+        reviewData.value = {
+            formData,
+            originalFile: paymentDetails.value.receipt_attachment,
+            invoiceData
+        };
+    } else {
+        reviewData.value = invoiceData;
+    }
 
     showCheckoutModal.value = false;
     currentStep.value = 3;

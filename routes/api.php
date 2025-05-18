@@ -45,6 +45,8 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductSpecificationController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductVariationController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductImageController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockAdjustmentController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -133,6 +135,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('autocomplete/warehouse-products', [WarehouseProductController::class, 'autocomplete'])->name('warehouse-products.autocomplete');
     Route::get('search/warehouse-products', [WarehouseProductController::class, 'search'])->name('warehouse-products.search');
     Route::get('serial-check/warehouse-products', [WarehouseProductController::class, 'serialCheck'])->name('warehouse-products.serial-check');
+
+    Route::apiResource('warehouse-stock-adjustments', WarehouseStockAdjustmentController::class);
+    Route::get('autocomplete/warehouse-stock-adjustments', [WarehouseStockAdjustmentController::class, 'autocomplete'])->name('warehouse-stock-adjustments.autocomplete');
+
+    Route::apiResource('warehouse-stock-transfers', WarehouseStockTransferController::class);
+    Route::get('autocomplete/warehouse-stock-transfers', [WarehouseStockTransferController::class, 'autocomplete'])->name('warehouse-stock-transfers.autocomplete');
 
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::post('purchase-orders/{purchaseOrder}/pending', [PurchaseOrderController::class, 'pending'])->name('purchase-orders.pending');
