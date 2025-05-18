@@ -8,7 +8,8 @@ import { usePage } from "@inertiajs/vue3";
 import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
-import { formatDate, formatNumber } from "@/utils/global";
+import { formatDate, formatNumber, humanReadable, getStatusPillClass } from "@/utils/global";
+import { useColors } from "@/Composables/useColors";
 
 const modelName = "invoices";
 const modelData = ref({ data: [], links: [] });
@@ -16,7 +17,7 @@ const isLoading = ref(false);
 
 // Access appSettings from Inertia.js page props
 const { appSettings } = usePage().props;
-const primaryColor = computed(() => appSettings?.primary_color || "#3B82F6");
+const { buttonPrimaryBgColor } = useColors();
 
 // Define Header Actions
 const headerActions = ref([
@@ -25,20 +26,65 @@ const headerActions = ref([
         url: `/${modelName}/export`,
         class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
     },
+    {
+        text: "Create",
+        url: `/${modelName}/create`,
+        inertia: true,
+        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
+        style: computed(() => ({
+            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
+        })),
+    },
 ]);
 
 // Define Table Columns
 const columns = ref([
-    { label: "SI No.", value: "number" },
+    {
+        label: "Invoice No.",
+        value: "number",
+        uri: (row) => route("invoices.show", row.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-file-document-outline",
+    },
     { label: "Customer", value: (row) => row.customer.name },
     { label: "Company", value: (row) => row.company.name },
     { label: "Warehouse", value: (row) => row.warehouse.name },
-    { label: "Type", value: "type" },
-    { label: "Status", value: "status" },
-    { label: "Payment Method", value: (row) => row.payment_method_details[0].payment_method },
+    {
+        label: "Type",
+        value: "type",
+        render: (row) => ({
+            text: humanReadable(row.type),
+            class: getStatusPillClass(row.type),
+        }),
+    },
+    {
+        label: "Status",
+        value: "status",
+        render: (row) => ({
+            text: humanReadable(row.status),
+            class: getStatusPillClass(row.status),
+        }),
+    },
+    {
+    label: "Payment Method",
+    value: (row) =>
+        row.payment_method_details?.[0]?.payment_method
+            ? humanReadable(row.payment_method_details[0].payment_method)
+            : "-",
+    },
     { label: "Currency", value: "currency" },
-    { label: "Total Amount", value: (row) => formatNumber(row.total_amount, { style: "currency", currency: "PHP" }) },
-    { label: "Created At", value: (row) => formatDate("M d Y", row.created_at) },
+    {
+        label: "Total Amount",
+        value: (row) =>
+            formatNumber(row.total_amount, {
+                style: "currency",
+                currency: "PHP",
+            }),
+    },
+    {
+        label: "Created At",
+        value: (row) => formatDate("M d Y", row.created_at),
+    },
     { label: "Actions" },
 ]);
 

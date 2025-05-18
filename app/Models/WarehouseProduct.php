@@ -82,4 +82,15 @@ class WarehouseProduct extends Model
 
         return $slug;
     }
+
+    public function stockAdjustments()
+    {
+        return $this->hasMany(WarehouseStockAdjustment::class);
+    }
+
+    public function stockTransfers()
+    {
+        return $this->hasMany(WarehouseStockTransfer::class, 'origin_warehouse_product_id')
+            ->orWhere('destination_warehouse_product_id', $this->id);
+    }
 }

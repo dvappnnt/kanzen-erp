@@ -83,6 +83,8 @@ const print = () => {
     printWindow.document.close();
     printWindow.print();
 };
+
+console.log(props.invoice);
 </script> 
 
 <template>
@@ -132,20 +134,22 @@ const print = () => {
                         </div>
                         <div class="text-right">
                             <p class="text-sm text-gray-500">Payment Method</p>
-                            <p class="font-medium capitalize">{{ formatPaymentMethod(invoice.payment_method_details?.payment_method) }}</p>
+                            <p class="font-medium capitalize">{{ formatPaymentMethod(paymentDetails.method) }}</p>
                             
                             <!-- Cash payment - only show method -->
-                            <template v-if="invoice.payment_method_details?.payment_method === 'cash'">
+                            <template v-if="paymentDetails.method === 'cash'">
                                 <p class="text-sm text-gray-500 mt-1">Amount Paid</p>
-                                <p class="font-medium">{{ formatNumber(invoice.payment_method_details.amount, { style: 'currency', currency: 'PHP' }) }}</p>
+                                <p class="font-medium">{{ formatNumber(invoice.total_amount, { style: 'currency', currency: 'PHP' }) }}</p>
                             </template>
 
                             <!-- GCash payment -->
-                            <template v-if="invoice.payment_method_details?.payment_method === 'gcash'">
+                            <template v-if="paymentDetails.method === 'gcash'">
                                 <p class="text-sm text-gray-500 mt-1">Mobile Number</p>
-                                <p class="font-medium">{{ invoice.payment_method_details.account_number }}</p>
+                                <p class="font-medium">{{ paymentDetails.account_number }}</p>
+                                <p class="text-sm text-gray-500 mt-1">Reference Number</p>
+                                <p class="font-medium">{{ paymentDetails.reference_number }}</p>
                                 <p class="text-sm text-gray-500 mt-1">Amount Paid</p>
-                                <p class="font-medium">{{ formatNumber(invoice.payment_method_details.amount, { style: 'currency', currency: 'PHP' }) }}</p>
+                                <p class="font-medium">{{ formatNumber(invoice.total_amount, { style: 'currency', currency: 'PHP' }) }}</p>
                             </template>
 
                             <!-- Credit Card payment -->
@@ -194,7 +198,18 @@ const print = () => {
                         </thead>
                         <tbody>
                             <tr v-for="detail in invoice.details" :key="detail.id" class="border-b border-gray-100">
-                                <td class="py-2">{{ detail.warehouse_product?.supplier_product_detail?.product?.name }}</td>
+                                <td class="py-2">
+                                    <div class="font-medium text-gray-800">
+                                        {{ detail.warehouse_product?.supplier_product_detail?.product?.name || detail.warehouse_product?.slug || 'Unknown Product' }}
+                                    </div>
+                                    <!-- Show serials if they exist -->
+                                    <div v-if="detail.invoice_serials?.length" class="text-xs text-gray-500 mt-1 pl-4 border-l-2 border-gray-200">
+                                        Serial Numbers: 
+                                        <span v-for="(serial, index) in detail.invoice_serials" :key="serial.id">
+                                            {{ serial.warehouse_product_serial?.serial_number }}{{ index < detail.invoice_serials.length - 1 ? ', ' : '' }}
+                                        </span>
+                                    </div>
+                                </td>
                                 <td class="py-2 text-right">{{ detail.qty }}</td>
                                 <td class="py-2 text-right">{{ formatNumber(detail.price, { style: 'currency', currency: 'PHP' }) }}</td>
                                 <td class="py-2 text-right">{{ formatNumber(detail.total, { style: 'currency', currency: 'PHP' }) }}</td>

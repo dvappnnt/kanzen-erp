@@ -60,43 +60,41 @@ class Expense extends Model
 
     public function registerJournalAfterCommit()
     {
-        DB::afterCommit(function () {
-            $expense = self::find($this->id)->load('category');
+        \DB::afterCommit(function () {
+            $expense = self::find($this->id)->load(['category', 'company']);
 
             // Skip if already journaled
-            if (JournalEntry::where('reference_number', $expense->reference_number)->exists()) {
+            if (\App\Models\JournalEntry::where('reference_number', $expense->reference_number)->exists()) {
                 return;
             }
 
-            // Resolve debit account from category
+            // Get debit account from category
             $debitAccountId = $expense->category?->default_account_id;
             if (! $debitAccountId) return;
 
-            // Fallback: determine credit account by keyword in payment method
-            $paymentMethod = strtolower($expense->payment_method);
-            $creditAccountName = 'Cash';
-            if (str_contains($paymentMethod, 'bank')) {
-                $creditAccountName = 'Bank Account';
-            } elseif (str_contains($paymentMethod, 'online')) {
-                $creditAccountName = 'Bank Account';
-            } elseif (str_contains($paymentMethod, 'cheque')) {
-                $creditAccountName = 'Cash'; // You can change this if needed
+            // Get payment method account from payment_methods table
+            $paymentMethod = \App\Models\PaymentMethod::where('code', $expense->payment_method)->first();
+            $creditAccount = $paymentMethod?->account;
+
+            if (! $creditAccount) {
+                \Log::warning('Expense journal skipped - Missing credit account for payment method', [
+                    'payment_method' => $expense->payment_method,
+                    'expense_id' => $expense->id,
+                ]);
+                return;
             }
 
-            $creditAccount = Account::where('name', $creditAccountName)->first();
-            if (! $creditAccount) return;
-
             // Create journal entry
-            $entry = JournalEntry::create([
+            $entry = \App\Models\JournalEntry::create([
                 'company_id' => $expense->company_id,
                 'reference_number' => $expense->reference_number,
                 'reference_date' => $expense->expense_date ?? now(),
                 'remarks' => 'Expense: ' . ($expense->description ?? 'No description'),
-                'created_by_user_id' => auth()->user()->id,
+                'created_by_user_id' => auth()->id(),
             ]);
 
             // 1. Debit: Expense Category Account
-            JournalEntryDetail::create([
+            \App\Models\JournalEntryDetail::create([
                 'journal_entry_id' => $entry->id,
                 'account_id' => $debitAccountId,
                 'name' => 'Expense - ' . ($expense->description ?? 'Unknown'),
@@ -104,11 +102,11 @@ class Expense extends Model
                 'credit' => 0,
             ]);
 
-            // 2. Credit: Payment Method Account (Cash/Bank)
-            JournalEntryDetail::create([
+            // 2. Credit: Payment Account (Cash, Bank, etc.)
+            \App\Models\JournalEntryDetail::create([
                 'journal_entry_id' => $entry->id,
                 'account_id' => $creditAccount->id,
-                'name' => 'Payment via ' . $expense->payment_method,
+                'name' => 'Paid via ' . $paymentMethod->name,
                 'debit' => 0,
                 'credit' => $expense->amount,
             ]);

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SupplierInvoice extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'invoice_number',
@@ -57,5 +58,17 @@ class SupplierInvoice extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(SupplierInvoicePayment::class);
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function ($model) {
+            $model->payments()->delete();
+        });
     }
 }

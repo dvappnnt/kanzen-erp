@@ -30,6 +30,7 @@ class Invoice extends Model
         'status',
         'notes',
         'created_by_user_id',
+        'is_credit',
     ];
 
     protected $casts = [
@@ -115,10 +116,14 @@ class Invoice extends Model
     public function registerJournalAfterCommit()
     {
         \DB::afterCommit(function () {
-            $invoice = self::find($this->id)->load('details.warehouseProduct');
+            $invoice = self::find($this->id)->load(['details.warehouseProduct', 'paymentMethodDetails']);
 
             if ($invoice->status !== 'fully-paid') return;
             if (\App\Models\JournalEntry::where('reference_number', $invoice->number)->exists()) return;
+
+            // Check if any payment method detail is approved
+            $hasApprovedPayment = $invoice->paymentMethodDetails->contains('status', 'approved');
+            if (!$hasApprovedPayment) return;
 
             $entry = \App\Models\JournalEntry::create([
                 'company_id' => $invoice->company_id,
@@ -128,20 +133,44 @@ class Invoice extends Model
                 'created_by_user_id' => $invoice->created_by_user_id,
             ]);
 
-            $cashAccount      = \App\Models\Account::where('name', 'Cash')->firstOrFail();
-            $revenueAccount   = \App\Models\Account::where('name', 'Sales Revenue')->firstOrFail();
-            $taxAccount       = \App\Models\Account::where('name', 'Taxes Payable')->first();
-            $cogsAccount      = \App\Models\Account::where('name', 'Cost of Goods Sold (COGS)')->first();
+            $revenueAccount = \App\Models\Account::where('name', 'Sales Revenue')->firstOrFail();
+            $taxAccount = \App\Models\Account::where('name', 'Taxes Payable')->first();
+            $cogsAccount = \App\Models\Account::where('name', 'Cost of Goods Sold (COGS)')->first();
             $inventoryAccount = \App\Models\Account::where('name', 'Inventory')->first();
+            $shippingRevenueAccount = \App\Models\Account::where('name', 'Shipping Revenue')->first();
+            $salesDiscountAccount = \App\Models\Account::where('name', 'Sales Discounts')->first();
 
-            \App\Models\JournalEntryDetail::create([
-                'journal_entry_id' => $entry->id,
-                'account_id' => $cashAccount->id,
-                'name' => 'Cash received for invoice ' . $invoice->number,
-                'debit' => $invoice->total_amount,
-                'credit' => 0,
-            ]);
+            // 🔁 Handle each approved payment method detail (DEBIT Cash/Bank)
+            $totalPaid = 0;
+            foreach ($invoice->paymentMethodDetails as $methodDetail) {
+                // Skip if not approved
+                if ($methodDetail->status !== 'approved') continue;
 
+                $paymentMethodCode = $methodDetail->payment_method;
+                $amount = $methodDetail->amount ?? 0;
+                $totalPaid += $amount;
+
+                $paymentMethod = \App\Models\PaymentMethod::where('code', $paymentMethodCode)->first();
+                $paymentAccount = $paymentMethod?->account;
+
+                if (!$paymentAccount) {
+                    \Log::warning('Missing account for invoice payment method:', [
+                        'payment_method' => $paymentMethodCode,
+                        'invoice_id' => $invoice->id,
+                    ]);
+                    continue;
+                }
+
+                \App\Models\JournalEntryDetail::create([
+                    'journal_entry_id' => $entry->id,
+                    'account_id' => $paymentAccount->id,
+                    'name' => 'Received via ' . $paymentMethod->name . ' for invoice ' . $invoice->number,
+                    'debit' => $amount,
+                    'credit' => 0,
+                ]);
+            }
+
+            // Credit: Sales Revenue (subtotal before tax and shipping)
             \App\Models\JournalEntryDetail::create([
                 'journal_entry_id' => $entry->id,
                 'account_id' => $revenueAccount->id,
@@ -150,6 +179,29 @@ class Invoice extends Model
                 'credit' => $invoice->subtotal,
             ]);
 
+            // Debit: Sales Discount (if there's a discount)
+            if ($invoice->discount_amount > 0 && $salesDiscountAccount) {
+                \App\Models\JournalEntryDetail::create([
+                    'journal_entry_id' => $entry->id,
+                    'account_id' => $salesDiscountAccount->id,
+                    'name' => 'Sales discount for invoice ' . $invoice->number,
+                    'debit' => $invoice->discount_amount,
+                    'credit' => 0,
+                ]);
+            }
+
+            // Credit: Shipping Revenue (if there's shipping cost)
+            if ($invoice->shipping_cost > 0 && $shippingRevenueAccount) {
+                \App\Models\JournalEntryDetail::create([
+                    'journal_entry_id' => $entry->id,
+                    'account_id' => $shippingRevenueAccount->id,
+                    'name' => 'Shipping revenue for invoice ' . $invoice->number,
+                    'debit' => 0,
+                    'credit' => $invoice->shipping_cost,
+                ]);
+            }
+
+            // Credit: VAT/Tax
             if ($invoice->tax_amount > 0 && $taxAccount) {
                 \App\Models\JournalEntryDetail::create([
                     'journal_entry_id' => $entry->id,
@@ -160,6 +212,7 @@ class Invoice extends Model
                 ]);
             }
 
+            // Handle COGS and Inventory
             if ($cogsAccount && $inventoryAccount) {
                 $totalCOGS = 0;
 
@@ -168,19 +221,8 @@ class Invoice extends Model
                     $totalCOGS += $cost * $detail->qty;
                 }
 
-                \Log::info('COGS Debug', [
-                    'invoice_id' => $invoice->id,
-                    'total_cogs' => $totalCOGS,
-                    'details' => $invoice->details->map(function ($d) {
-                        return [
-                            'warehouse_product_id' => $d->warehouse_product_id,
-                            'qty' => $d->qty,
-                            'last_cost' => optional($d->warehouseProduct)->last_cost,
-                        ];
-                    })->toArray()
-                ]);
-
                 if ($totalCOGS > 0) {
+                    // Debit: COGS
                     \App\Models\JournalEntryDetail::create([
                         'journal_entry_id' => $entry->id,
                         'account_id' => $cogsAccount->id,
@@ -189,6 +231,7 @@ class Invoice extends Model
                         'credit' => 0,
                     ]);
 
+                    // Credit: Inventory
                     \App\Models\JournalEntryDetail::create([
                         'journal_entry_id' => $entry->id,
                         'account_id' => $inventoryAccount->id,

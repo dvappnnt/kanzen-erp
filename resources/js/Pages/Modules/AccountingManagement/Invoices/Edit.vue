@@ -11,7 +11,7 @@ import { useToast } from "vue-toastification";
 import { useColors } from "@/Composables/useColors";
 import { singularizeAndFormat } from "@/utils/global";
 
-const modelName = "banks";
+const modelName = "invoices";
 const isSubmitting = ref(false);
 const page = usePage();
 const toast = useToast();

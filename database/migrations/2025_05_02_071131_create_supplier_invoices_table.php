@@ -26,8 +26,9 @@ return new class extends Migration
             $table->decimal('shipping_cost', 15, 2)->default(0);
             $table->decimal('subtotal', 15, 2)->default(0);
             $table->decimal('total_amount', 15, 2)->default(0);
-            $table->string('status')->default('unpaid'); // unpaid, paid, partially-paid
+            $table->enum('status', ['unpaid', 'paid', 'partially-paid', 'fully-paid', 'cancelled'])->default('unpaid');
             $table->text('remarks')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

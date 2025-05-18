@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use App\Models\GoodsReceipt;
 
 class GoodsReceiptController extends Controller
 {
@@ -65,6 +66,21 @@ class GoodsReceiptController extends Controller
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Settings", [
             'modelData' => $model,
+        ]);
+    }
+
+    public function print(GoodsReceipt $goodsReceipt)
+    {
+        $goodsReceipt->load([
+            'company',
+            'purchaseOrder',
+            'details.purchaseOrderDetail.supplierProductDetail.product',
+            'details.purchaseOrderDetail.supplierProductDetail.variation',
+            'details.serials'
+        ]);
+
+        return Inertia::render('Modules/WarehouseManagement/GoodsReceipts/Print', [
+            'modelData' => $goodsReceipt
         ]);
     }
 }

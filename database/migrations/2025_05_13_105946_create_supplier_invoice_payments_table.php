@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('invoice_payment_method_details', function (Blueprint $table) {
+        Schema::create('supplier_invoice_payments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('supplier_invoice_id')->constrained()->onDelete('cascade');
             $table->foreignId('company_account_id')->nullable()->constrained('company_accounts')->nullOnDelete();
-            $table->foreignId('invoice_id')->constrained()->onDelete('cascade');
-            $table->foreignId('bank_id')->nullable()->constrained('banks')->nullOnDelete();
             $table->enum('payment_method', ['cash', 'bank-transfer', 'credit-card', 'gcash', 'check', 'other'])->default('cash');
             $table->string('reference_number')->nullable();
             $table->string('account_name')->nullable();
@@ -23,7 +22,8 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->date('payment_date')->nullable();
             $table->decimal('amount', 15, 2);
-            $table->text('receipt_attachment')->nullable(); // store path to receipt
+            $table->string('remarks')->nullable();
+            $table->text('file_path')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });
@@ -34,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('invoice_payment_method_details');
+        Schema::dropIfExists('supplier_invoice_payments');
     }
 };

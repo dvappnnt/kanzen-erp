@@ -199,7 +199,7 @@ const chartOptions = {
                     </button>
                 </div>
                 <div class="space-y-3">
-                    <button
+                    <!-- <button
                         class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-lg flex items-center space-x-3"
                     >
                         <span class="text-gray-600">Balance Sheet</span>
@@ -213,7 +213,28 @@ const chartOptions = {
                         class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-lg flex items-center space-x-3"
                     >
                         <span class="text-gray-600">Cash Flow</span>
-                    </button>
+                    </button> -->
+
+                    <Link
+                        :href="route('expenses.index')"
+                        class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-lg flex items-center space-x-3"
+                    >
+                        <span class="text-gray-600">Expenses</span>
+                    </Link>
+
+                    <Link
+                        :href="route('invoices.index')"
+                        class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-lg flex items-center space-x-3"
+                    >
+                        <span class="text-gray-600">Invoices</span>
+                    </Link>
+
+                    <Link
+                        :href="route('journal-entries.index')"
+                        class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-lg flex items-center space-x-3"
+                    >
+                        <span class="text-gray-600">Journal Entries</span>
+                    </Link>
                 </div>
             </div>
         </div>

@@ -20,6 +20,7 @@ class InvoicePaymentMethodDetail extends Model
         'status',
         'payment_date',
         'amount',
+        'receipt_attachment',
     ];
 
     public function invoice()

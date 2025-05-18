@@ -145,7 +145,10 @@
                     <div
                         v-if="
                             hasPermission('read banks') ||
-                            hasPermission('read company accounts')
+                            hasPermission('read company accounts') || 
+                            hasPermission('read invoices') ||
+                            hasPermission('read expenses') ||
+                            hasPermission('read journal entries')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -308,7 +311,11 @@
                     <div
                         v-if="
                             hasPermission('read users') ||
-                            hasPermission('read companies')
+                            hasPermission('read companies') ||
+                            hasPermission('read purchase orders') ||
+                            hasPermission('read supplier invoices') ||
+                            hasPermission('read goods receipts') ||
+                            hasPermission('read warehouses')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -470,8 +477,8 @@
 
                     <div
                         v-if="
-                            hasPermission('read banks') ||
-                            hasPermission('read company accounts')
+                            hasPermission('read customers') ||
+                            hasPermission('read agents')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -534,7 +541,9 @@
                     <div
                         v-if="
                             hasPermission('read users') ||
-                            hasPermission('read companies')
+                            hasPermission('read companies') || 
+                            hasPermission('read suppliers') ||
+                            hasPermission('read products')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"

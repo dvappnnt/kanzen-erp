@@ -25,6 +25,11 @@ class JournalEntryController extends Controller
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Index");
     }
 
+    public function export()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Export");
+    }
+
     public function create()
     {
         $categoryQuery = \App\Models\Category::where('related_model', 'expenses')->where('default_account_id', '!=', null);

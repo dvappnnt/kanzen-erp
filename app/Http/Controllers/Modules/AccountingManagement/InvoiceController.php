@@ -56,4 +56,22 @@ class InvoiceController extends Controller
             'modelData' => $model,
         ]);
     }
+
+    public function print($id)
+    {
+        $model = $this->modelClass::with([
+            'customer',
+            'company',
+            'warehouse',
+            'details.warehouseProduct.supplierProductDetail.product',
+            'details.invoiceSerials.warehouseProductSerial',
+            'paymentMethodDetails.companyAccount',
+            'paymentMethodDetails.bank',
+            'createdByUser',
+        ])->findOrFail($id);
+
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Print", [
+            'modelData' => $model,
+        ]);
+    }
 }

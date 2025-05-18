@@ -79,7 +79,6 @@ const columns = ref([
 const mapCustomButtons = (row) => ({
     ...row,
     viewUrl: `/${modelName}/${row.id}`,
-    deleteUrl: `/api/${modelName}/${row.id}`,
     restoreUrl: row.deleted_at ? `/api/${modelName}/${row.id}/restore` : null,
     customUrls: [],
 });

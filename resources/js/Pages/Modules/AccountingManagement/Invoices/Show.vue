@@ -1,26 +1,12 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { ref, computed } from "vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, Link } from "@inertiajs/vue3";
 import moment from "moment";
-import { formatNumber } from "@/utils/global";
+import { formatNumber, humanReadable } from "@/utils/global";
 
 const page = usePage();
 const modelData = computed(() => page.props.modelData || {});
-
-const headerActions = ref([
-    {
-        text: "Go Back",
-        url: "/invoices",
-        inertia: true,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600",
-    },
-    {
-        text: "Print Invoice",
-        click: () => printInvoice(),
-        class: "bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white",
-    },
-]);
 
 const formatDate = (date) => {
     return moment(date).format('MMMM D, YYYY');
@@ -37,7 +23,54 @@ const formatPaymentMethod = (method) => {
 };
 
 const printInvoice = () => {
-    window.print();
+    // Open the print window
+    const printWindow = window.open(`${window.location.origin}/invoices/${modelData.value.id}/print`, '_blank');
+    
+    // Wait for the window to load and trigger print
+    printWindow.onload = function() {
+        printWindow.print();
+    };
+};
+
+const downloadReceipt = (path) => {
+    window.open(`/storage/${path}`, '_blank');
+};
+
+// Helper function to chunk array into groups
+const chunkArray = (array, size) => {
+    const chunked = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunked.push(array.slice(i, i + size));
+    }
+    return chunked;
+};
+
+// Format serial numbers in a more compact way
+const formatSerialNumbers = (serials) => {
+    return serials.map(serial => {
+        const productSerial = serial.warehouse_product_serial;
+        const parts = [];
+        
+        // Add serial/batch number
+        parts.push(productSerial.serial_number);
+        if (productSerial.batch_number) {
+            parts.push(`Batch: ${productSerial.batch_number}`);
+        }
+        
+        // Add dates if present
+        const dates = [];
+        if (productSerial.manufactured_at) {
+            dates.push(`Mfg: ${formatDate(productSerial.manufactured_at)}`);
+        }
+        if (productSerial.expired_at) {
+            dates.push(`Exp: ${formatDate(productSerial.expired_at)}`);
+        }
+        
+        return {
+            main: parts.join(' | '),
+            dates: dates.join(' | ')
+        };
+    });
 };
 
 console.log(modelData.value);
@@ -48,16 +81,23 @@ console.log(modelData.value);
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Sales Invoice
+                    Invoice
                 </h2>
-                <div class="flex gap-2 print:hidden">
-                    <button
-                        v-for="action in headerActions"
-                        :key="action.text"
-                        @click="action.click ? action.click() : null"
-                        :class="action.class"
+                <div class="flex gap-2">
+                    <Link
+                        href="/invoices"
+                        class="border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600"
                     >
-                        {{ action.text }}
+                        Go Back
+                    </Link>
+                    <button
+                        @click="printInvoice"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                        </svg>
+                        Print
                     </button>
                 </div>
             </div>
@@ -120,16 +160,12 @@ console.log(modelData.value);
                                         <p class="font-medium text-gray-800">
                                             {{ detail.warehouse_product?.supplier_product_detail?.product?.name }}
                                         </p>
-                                        <p v-if="detail.invoice_serials?.length" class="text-sm text-gray-500 mt-1">
-                                            Serial/Batch Numbers: {{ detail.invoice_serials.map(serial => {
-                                                const productSerial = serial.warehouse_product_serial;
-                                                return `${productSerial.serial_number}${productSerial.batch_number ? ` (Batch: ${productSerial.batch_number})` : ''}${
-                                                    productSerial.manufactured_at ? ` | Manufactured: ${formatDate(productSerial.manufactured_at)}` : ''
-                                                }${
-                                                    productSerial.expired_at ? ` | Expires: ${formatDate(productSerial.expired_at)}` : ''
-                                                }`;
-                                            }).join(', ') }}
-                                        </p>
+                                        <div v-if="detail.invoice_serials?.length" class="text-sm text-gray-500 mt-2 space-y-1">
+                                            <div v-for="(serial, index) in formatSerialNumbers(detail.invoice_serials)" :key="index" class="pl-4 border-l-2 border-gray-200">
+                                                <p class="font-medium">{{ serial.main }}</p>
+                                                <p class="text-xs text-gray-400">{{ serial.dates }}</p>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="py-4 text-right">{{ detail.warehouse_product?.supplier_product_detail?.product?.unit_of_measure }}</td>
                                     <td class="py-4 text-right">{{ detail.qty }}</td>
@@ -154,9 +190,28 @@ console.log(modelData.value);
                                         Account: <span class="font-medium">{{ modelData.payment_method_details[0].account_number }}</span>
                                     </p>
                                 </template>
+                                <template v-if="modelData.payment_method_details?.[0]?.reference_number">
+                                    <p class="text-gray-600">
+                                        Reference: <span class="font-medium">{{ modelData.payment_method_details[0].reference_number }}</span>
+                                    </p>
+                                </template>
                                 <p class="text-gray-600">
-                                    Status: <span class="font-medium capitalize">{{ modelData.status }}</span>
+                                    Status: <span class="font-medium capitalize">{{ humanReadable(modelData.status) }}</span>
                                 </p>
+                                <template v-if="modelData.payment_method_details?.[0]?.receipt_attachment">
+                                    <p class="text-gray-600">
+                                        Receipt: 
+                                        <button 
+                                            @click="downloadReceipt(modelData.payment_method_details[0].receipt_attachment)"
+                                            class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                            Download
+                                        </button>
+                                    </p>
+                                </template>
                             </div>
                         </div>
 

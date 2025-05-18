@@ -52,11 +52,18 @@ class GoodsReceiptDetailController extends Controller
 
         DB::beginTransaction();
         try {
-            // Update received quantity
-            $goodsReceiptDetail->received_qty += $request->received_qty;
+            // For items with serials, we'll set the received quantity based on successful serial entries
+            if (!$request->has_serials) {
+                $goodsReceiptDetail->received_qty += $request->received_qty;
+            }
             
             if ($goodsReceiptDetail->received_qty > $goodsReceiptDetail->expected_qty) {
                 throw new \Exception('Received quantity cannot exceed expected quantity');
+            }
+
+            // Set has_serials to 1 if we're receiving with serials
+            if ($request->has_serials) {
+                $goodsReceiptDetail->has_serials = true;
             }
 
             $goodsReceiptDetail->save();
@@ -64,6 +71,7 @@ class GoodsReceiptDetailController extends Controller
             // Create serial/batch records if needed
             $errors = [];
             $success = [];
+            $successfulQty = 0;
             
             if ($request->has_serials && !empty($request->serials)) {
                 foreach ($request->serials as $index => $serial) {
@@ -101,12 +109,28 @@ class GoodsReceiptDetailController extends Controller
                             'index' => $index,
                             'data' => $serialRecord
                         ];
+                        $successfulQty++;
                     } catch (\Exception $e) {
                         $errors[] = [
                             'index' => $index,
                             'message' => $e->getMessage()
                         ];
                     }
+                }
+
+                // Update received quantity to match successful serials
+                if ($request->has_serials) {
+                    // Get current count of serials
+                    $currentSerialCount = $goodsReceiptDetail->serials()->count();
+                    
+                    // Set received_qty to match total number of serials
+                    $goodsReceiptDetail->received_qty = $currentSerialCount;
+                    
+                    if ($goodsReceiptDetail->received_qty > $goodsReceiptDetail->expected_qty) {
+                        throw new \Exception('Total serial numbers cannot exceed expected quantity');
+                    }
+                    
+                    $goodsReceiptDetail->save();
                 }
             }
 
@@ -131,6 +155,13 @@ class GoodsReceiptDetailController extends Controller
 
     public function return(Request $request, GoodsReceiptDetail $goodsReceiptDetail)
     {
+        // Check if the item has serials
+        if ($goodsReceiptDetail->has_serials) {
+            return response()->json([
+                'message' => 'Items with serial/batch numbers cannot be returned. Please delete the serial/batch numbers first.'
+            ], 422);
+        }
+
         $request->validate([
             'return_qty' => 'required|numeric|min:1|max:' . $goodsReceiptDetail->received_qty,
             'notes' => 'nullable|string'
@@ -147,7 +178,7 @@ class GoodsReceiptDetailController extends Controller
 
             return response()->json([
                 'message' => 'Items returned successfully',
-                'data' => $goodsReceiptDetail
+                'data' => $goodsReceiptDetail->load('serials')
             ]);
 
         } catch (\Exception $e) {
@@ -261,6 +292,59 @@ class GoodsReceiptDetailController extends Controller
             return response()->json([
                 'message' => 'Serial/batch number deleted successfully'
             ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    public function updateSerial(Request $request, $serialId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $serial = GoodsReceiptSerial::findOrFail($serialId);
+
+            $request->validate([
+                'serial_number' => 'nullable|string',
+                'batch_number' => 'nullable|string',
+                'manufactured_at' => 'nullable|date',
+                'expired_at' => 'nullable|date',
+                'notes' => 'nullable|string'
+            ]);
+
+            // Additional validation for dates
+            if ($request->filled('manufactured_at') && $request->filled('expired_at')) {
+                $manufacturedDate = new \DateTime($request->manufactured_at);
+                $expiryDate = new \DateTime($request->expired_at);
+                
+                if ($expiryDate <= $manufacturedDate) {
+                    throw new \Exception('Expiry date must be after manufactured date');
+                }
+            }
+
+            // Check for duplicate serial numbers
+            if ($request->filled('serial_number')) {
+                $exists = GoodsReceiptSerial::where('serial_number', $request->serial_number)
+                    ->where('id', '!=', $serialId)
+                    ->exists();
+                    
+                if ($exists) {
+                    throw new \Exception('Serial number already exists');
+                }
+            }
+
+            $serial->update($request->all());
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Serial/batch number updated successfully',
+                'data' => $serial->goodsReceiptDetail->load('serials')
+            ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

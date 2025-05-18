@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CompanyController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Api\Modules\AccountingManagement\ExpenseController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\JournalEntryController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\InvoiceController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\SupplierInvoiceController;
+use App\Http\Controllers\Api\Modules\AccountingManagement\SupplierInvoicePaymentController;
 
 use App\Http\Controllers\Api\Modules\WarehouseManagement\SupplierController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\PurchaseOrderController;
@@ -43,6 +45,8 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductSpecificationController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductVariationController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductImageController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockAdjustmentController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -76,6 +80,11 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
     Route::get('autocomplete/supplier-invoices', [SupplierInvoiceController::class, 'autocomplete'])->name('supplier-invoices.autocomplete');
+
+    Route::apiResource('supplier-invoice-payments', SupplierInvoicePaymentController::class);
+    Route::get('autocomplete/supplier-invoice-payments', [SupplierInvoicePaymentController::class, 'autocomplete'])->name('supplier-invoice-payments.autocomplete');
+    Route::post('supplier-invoice-payments/{supplierInvoicePayment}/approve', [SupplierInvoicePaymentController::class, 'approve'])->name('supplier-invoice-payments.approve');
+    Route::post('supplier-invoice-payments/{supplierInvoicePayment}/reject', [SupplierInvoicePaymentController::class, 'reject'])->name('supplier-invoice-payments.reject');
 
     Route::apiResource('company-accounts', CompanyAccountController::class);
     Route::get('autocomplete/company-accounts', [CompanyAccountController::class, 'autocomplete'])->name('company-accounts.autocomplete');
@@ -127,6 +136,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('search/warehouse-products', [WarehouseProductController::class, 'search'])->name('warehouse-products.search');
     Route::get('serial-check/warehouse-products', [WarehouseProductController::class, 'serialCheck'])->name('warehouse-products.serial-check');
 
+    Route::apiResource('warehouse-stock-adjustments', WarehouseStockAdjustmentController::class);
+    Route::get('autocomplete/warehouse-stock-adjustments', [WarehouseStockAdjustmentController::class, 'autocomplete'])->name('warehouse-stock-adjustments.autocomplete');
+
+    Route::apiResource('warehouse-stock-transfers', WarehouseStockTransferController::class);
+    Route::get('autocomplete/warehouse-stock-transfers', [WarehouseStockTransferController::class, 'autocomplete'])->name('warehouse-stock-transfers.autocomplete');
+
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::post('purchase-orders/{purchaseOrder}/pending', [PurchaseOrderController::class, 'pending'])->name('purchase-orders.pending');
     Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
@@ -157,14 +172,17 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::post('goods-receipt-details/{goodsReceiptDetail}/receive', [GoodsReceiptDetailController::class, 'receive'])->name('goods-receipt-details.receive');
     Route::post('goods-receipt-details/{goodsReceiptDetail}/return', [GoodsReceiptDetailController::class, 'return'])->name('goods-receipt-details.return');
 
+    // Add route for updating serials
+    Route::put('goods-receipt-serials/{serial}', [GoodsReceiptDetailController::class, 'updateSerial'])->name('goods-receipt-serials.update');
+
+    // Add route for deleting serials
+    Route::delete('goods-receipt-serials/{serial}', [GoodsReceiptDetailController::class, 'deleteSerial'])->name('goods-receipt-serials.delete');
+
     Route::apiResource('warehouse-product-serials', WarehouseProductSerialController::class);
     Route::get('autocomplete/warehouse-product-serials', [WarehouseProductSerialController::class, 'autocomplete'])->name('warehouse-product-serials.autocomplete');
 
     Route::apiResource('warehouse-transfers', WarehouseTransferController::class);
     Route::get('autocomplete/warehouse-transfers', [WarehouseTransferController::class, 'autocomplete'])->name('warehouse-transfers.autocomplete');
-
-    // Add route for deleting serials
-    Route::delete('goods-receipt-serials/{serial}', [GoodsReceiptDetailController::class, 'deleteSerial'])->name('goods-receipt-serials.delete');
 
     Route::apiResource('roles', RoleController::class);
     Route::get('autocomplete/roles', [RoleController::class, 'autocomplete'])->name('roles.autocomplete');
@@ -182,11 +200,11 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('activity-logs', ActivityLogController::class);
 
     Route::get('/api/notifications', function () {
-        return auth()->user()->unreadNotifications;
+        return Auth::user()->unreadNotifications;
     });
 
     Route::get('/notifications', function () {
-        $user = auth()->user();
+        $user = Auth::user();
         return response()->json([
             'notifications' => $user->notifications,
             'unread_count' => $user->unreadNotifications->count(),
@@ -194,7 +212,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/notifications/{id}/read', function ($id) {
-        $notification = auth()->user()->notifications()->find($id);
+        $notification = Auth::user()->notifications()->find($id);
         if ($notification) {
             $notification->markAsRead();
         }
@@ -202,7 +220,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/notifications/mark-all-read', function () {
-        auth()->user()->unreadNotifications->markAsRead();
+        Auth::user()->unreadNotifications->markAsRead();
         return response()->json(['success' => true]);
     });
 

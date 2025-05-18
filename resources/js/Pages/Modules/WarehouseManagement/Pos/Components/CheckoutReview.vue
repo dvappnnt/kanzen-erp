@@ -353,29 +353,43 @@ const isProcessing = ref(false);
 const handleConfirm = async () => {
     try {
         isProcessing.value = true;
+
+        // Check if we have FormData from parent (has file upload)
+        if (props.paymentDetails.formData instanceof FormData) {
+            // Create a new FormData instance
+            const formData = new FormData();
+            
+            // Add all the invoice data
+            const invoiceData = props.paymentDetails.invoiceData;
+            Object.entries(invoiceData).forEach(([key, value]) => {
+                if (key === 'is_credit') {
+                    formData.append(key, '0'); // Always false for POS
+                } else if (typeof value === 'object') {
+                    formData.append(key, JSON.stringify(value));
+                } else {
+                    formData.append(key, value);
+                }
+            });
+
+            // Add the file
+            if (props.paymentDetails.originalFile) {
+                formData.append('receipt_attachment', props.paymentDetails.originalFile);
+            }
+
+            const response = await axios.post('/api/invoices', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            showConfirmModal.value = false;
+            emit('proceed', response.data.data);
+            return;
+        }
         
+        // Regular JSON submission
         const response = await axios.post('/api/invoices', {
-            company_id: props.customerInfo.company_id,
-            customer_id: props.customerInfo.id,
-            warehouse_id: props.cartItems[0].warehouse_id,
-            type: 'pos-invoice',
-            invoice_date: new Date().toISOString().split('T')[0],
-            discount_rate: props.discountType === 'percentage' ? props.discountValue : 0,
-            discount_amount: props.discountAmount,
-            tax_rate: props.taxRate,
-            tax_amount: props.taxAmount,
-            shipping_cost: props.shippingAmount,
-            subtotal: props.subtotal,
-            total_amount: props.total,
-            payment_method: props.paymentDetails.payment_method,
-            payment_details: props.paymentDetails.payment_details,
-            items: props.cartItems.map(item => ({
-                warehouse_product_id: item.id,
-                qty: item.quantity,
-                price: item.price,
-                total: item.price * item.quantity,
-                serials: item.serials || []
-            }))
+            ...props.paymentDetails,
+            is_credit: false // Always false for POS
         });
 
         // Close modal first
