@@ -11,6 +11,7 @@ use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptDetail;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierInvoiceDetail;
+use Carbon\Carbon;
 
 class PurchaseOrderController extends Controller
 {
@@ -38,6 +39,8 @@ class PurchaseOrderController extends Controller
             'expected_delivery_date' => 'nullable|date',
             'delivery_date' => 'nullable|date',
             'payment_terms' => 'nullable|string|max:255',
+            'custom_payment_value' => 'nullable|integer|min:1',
+            'custom_payment_unit' => 'nullable|in:days,months',
             'shipping_terms' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1024',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
@@ -47,12 +50,24 @@ class PurchaseOrderController extends Controller
             'total_amount' => 'nullable|numeric|min:0',
         ]);
 
+        // Format custom payment terms
+        if ($validated['payment_terms'] === 'custom' && $validated['custom_payment_value'] && $validated['custom_payment_unit']) {
+            $validated['payment_terms'] = sprintf('custom_%d_%s', 
+                $validated['custom_payment_value'], 
+                $validated['custom_payment_unit']
+            );
+        }
+
         // Set default values for nullable fields
         $validated['tax_rate'] = $validated['tax_rate'] ?? 0;
         $validated['tax_amount'] = $validated['tax_amount'] ?? 0;
         $validated['shipping_cost'] = $validated['shipping_cost'] ?? 0;
         $validated['subtotal'] = $validated['subtotal'] ?? 0;
         $validated['total_amount'] = $validated['total_amount'] ?? 0;
+
+        // Remove custom payment fields as they're not in the table
+        unset($validated['custom_payment_value']);
+        unset($validated['custom_payment_unit']);
 
         $model = $this->modelClass::create($validated);
 
@@ -205,6 +220,15 @@ class PurchaseOrderController extends Controller
                 ]);
             }
 
+            // Calculate due date based on payment terms
+            $dueDate = $this->calculateDueDate(
+                $purchaseOrder->payment_terms,
+                null, // customValue is now encoded in payment_terms
+                null, // customUnit is now encoded in payment_terms
+                now(),
+                $purchaseOrder->expected_delivery_date
+            );
+
             // Create supplier invoice
             $supplierInvoice = SupplierInvoice::create([
                 'invoice_number' => 'SUP-INV-' . str_pad(SupplierInvoice::count() + 1, 6, '0', STR_PAD_LEFT),
@@ -213,7 +237,7 @@ class PurchaseOrderController extends Controller
                 'supplier_id' => $purchaseOrder->supplier_id,
                 'purchase_order_id' => $purchaseOrder->id,
                 'invoice_date' => now(),
-                'due_date' => null,
+                'due_date' => $dueDate,
                 'tax_rate' => $purchaseOrder->tax_rate ?? 0,
                 'tax_amount' => $purchaseOrder->tax_amount ?? 0,
                 'shipping_cost' => $purchaseOrder->shipping_cost ?? 0,
@@ -316,6 +340,47 @@ class PurchaseOrderController extends Controller
                 'message' => 'Failed to reject purchase order',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    // Add this helper method to calculate due date based on payment terms
+    private function calculateDueDate($paymentTerms, $customValue = null, $customUnit = null, $baseDate = null, $expectedDeliveryDate = null)
+    {
+        $baseDate = $baseDate ?? now();
+
+        // Parse custom payment terms if stored in the format "custom_X_unit"
+        if (strpos($paymentTerms, 'custom_') === 0) {
+            $parts = explode('_', $paymentTerms);
+            if (count($parts) === 3) {
+                $customValue = (int)$parts[1];
+                $customUnit = $parts[2];
+            }
+        }
+        
+        switch ($paymentTerms) {
+            case 'immediate':
+                return $baseDate; // Due immediately (today)
+            case 'net_15':
+                return $baseDate->copy()->addDays(15);
+            case 'net_30':
+                return $baseDate->copy()->addDays(30);
+            case 'net_45':
+                return $baseDate->copy()->addDays(45);
+            case 'net_60':
+                return $baseDate->copy()->addDays(60);
+            case 'eom':
+                return $baseDate->copy()->endOfMonth();
+            case 'cod':
+                // If COD and expected delivery date is set, use that, otherwise null
+                return $expectedDeliveryDate ? Carbon::parse($expectedDeliveryDate) : null;
+            default:
+                // Handle custom payment terms
+                if (strpos($paymentTerms, 'custom_') === 0 && $customValue) {
+                    return $customUnit === 'days' 
+                        ? $baseDate->copy()->addDays($customValue)
+                        : $baseDate->copy()->addMonths($customValue);
+                }
+                return null;
         }
     }
 }
