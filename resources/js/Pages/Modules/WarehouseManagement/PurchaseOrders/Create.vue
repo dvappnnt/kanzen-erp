@@ -27,6 +27,8 @@ const step2Data = ref({
     order_date: new Date().toISOString().split("T")[0],
     expected_delivery_date: "",
     payment_terms: "",
+    custom_payment_value: null,
+    custom_payment_unit: null,
     shipping_terms: "",
     notes: "",
     tax_rate: 0,
@@ -235,6 +237,7 @@ const paymentTermsOptions = [
     { value: "net_60", label: "Net 60 Days" },
     { value: "eom", label: "End of Month" },
     { value: "cod", label: "Cash on Delivery" },
+    { value: "custom", label: "Custom" }
 ];
 
 const shippingTermsOptions = [
@@ -254,6 +257,18 @@ const calculateTaxAmount = () => {
 watch(() => step2Data.value.tax_rate, calculateTaxAmount);
 watch(() => step3Data.value.items, calculateTaxAmount, { deep: true });
 
+// Add these refs for custom payment terms
+const customPaymentValue = ref(0);
+const customPaymentUnit = ref('days');
+
+// Add this before the template
+const getPaymentTermsLabel = (value) => {
+    if (value === 'custom') {
+        return `Custom: ${step2Data.value.custom_payment_value} ${step2Data.value.custom_payment_unit}`;
+    }
+    return paymentTermsOptions.find(opt => opt.value === value)?.label || "Not specified";
+};
+
 const finalizePO = async () => {
     if (isSubmitting.value) return;
 
@@ -267,6 +282,8 @@ const finalizePO = async () => {
             order_date: step2Data.value.order_date,
             expected_delivery_date: step2Data.value.expected_delivery_date,
             payment_terms: step2Data.value.payment_terms,
+            custom_payment_value: step2Data.value.payment_terms === 'custom' ? step2Data.value.custom_payment_value : null,
+            custom_payment_unit: step2Data.value.payment_terms === 'custom' ? step2Data.value.custom_payment_unit : null,
             shipping_terms: step2Data.value.shipping_terms,
             notes: step2Data.value.notes,
             tax_rate: step2Data.value.tax_rate,
@@ -517,6 +534,28 @@ const finalizePO = async () => {
                                 {{ option.label }}
                             </option>
                         </select>
+
+                        <!-- Custom Payment Terms Fields -->
+                        <div v-if="step2Data.payment_terms === 'custom'" class="mt-3 grid grid-cols-2 gap-2">
+                            <div>
+                                <input
+                                    type="number"
+                                    v-model="step2Data.custom_payment_value"
+                                    min="1"
+                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    placeholder="Enter value"
+                                />
+                            </div>
+                            <div>
+                                <select
+                                    v-model="step2Data.custom_payment_unit"
+                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                >
+                                    <option value="days">Days</option>
+                                    <option value="months">Months</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
@@ -748,13 +787,7 @@ const finalizePO = async () => {
                                     Payment Terms
                                 </p>
                                 <p class="mt-1">
-                                    {{
-                                        paymentTermsOptions.find(
-                                            (opt) =>
-                                                opt.value ===
-                                                step2Data.payment_terms
-                                        )?.label || "Not specified"
-                                    }}
+                                    {{ getPaymentTermsLabel(step2Data.payment_terms) }}
                                 </p>
                             </div>
                             <div>
