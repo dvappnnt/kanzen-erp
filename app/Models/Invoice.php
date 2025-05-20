@@ -249,6 +249,21 @@ class Invoice extends Model
         return $this->hasMany(InvoicePaymentMethodDetail::class);
     }
 
+    public function approvedPayments()
+    {
+        return $this->paymentMethodDetails()->where('status', 'approved');
+    }
+
+    public function getTotalPaidAttribute()
+    {
+        return $this->approvedPayments()->sum('amount');
+    }
+
+    public function getRemainingBalanceAttribute()
+    {
+        return $this->total_amount - $this->total_paid;
+    }
+
     public function invoiceSerials()
     {
         return $this->hasMany(InvoiceSerial::class);

@@ -39,5 +39,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CompanyAccountSeeder::class);
         $this->call(AccountingModuleSeeder::class);
         $this->call(ExpenseCategorySeeder::class);
+
+        $this->call(ProjectModuleSeeder::class);
     }
 }

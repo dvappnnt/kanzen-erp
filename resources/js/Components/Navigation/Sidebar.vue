@@ -157,6 +157,33 @@
                     </div>
 
                     <Link
+                        :href="route('chart-of-accounts.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('chart-of-accounts.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('chart-of-accounts.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-bank-outline text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('chart-of-accounts.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Chart of Accounts</span>
+                    </Link>
+
+                    <Link
                         v-if="hasPermission('read invoices')"
                         :href="route('invoices.index')"
                         :class="[
@@ -537,6 +564,74 @@
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Agents</span>
                     </Link>
+
+                    <!-- <div
+                        v-if="
+                            hasPermission('read projects') ||
+                            hasPermission('read project tasks') ||
+                            hasPermission('read project members')
+                        "
+                        v-show="!isMinimized"
+                        class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                    >
+                        Project Management
+                    </div>
+
+                    <Link
+                        v-if="hasPermission('read projects')"
+                        :href="route('projects.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('projects.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('projects.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-bulletin-board text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('projects.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Projects</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read project tasks')"
+                        :href="route('tasks.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('tasks.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('tasks.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-clipboard-list-outline text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('tasks.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Tasks</span>
+                    </Link> -->
 
                     <div
                         v-if="

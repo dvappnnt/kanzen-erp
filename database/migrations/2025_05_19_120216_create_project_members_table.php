@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('account_types', function (Blueprint $table) {
+        Schema::create('project_members', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Asset, Liability, etc.
-            $table->string('code')->unique(); // Optional: AS, LI, EQ, RE, EX
+            $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete();
+            $table->foreignId('project_task_id')->nullable()->constrained('project_tasks')->nullOnDelete();
+            $table->foreignId('user_id')->constrained('users');
             $table->softDeletes();
             $table->timestamps();
         });
@@ -25,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('account_types');
+        Schema::dropIfExists('project_members');
     }
 };

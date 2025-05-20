@@ -58,6 +58,15 @@ class AccountingModuleSeeder extends Seeder
             ['name' => 'Rent Expense',             'code' => '5002', 'type' => 'EX'],
             ['name' => 'Cost of Goods Sold (COGS)', 'code' => '5003', 'type' => 'EX'],
             ['name' => 'Sales Discounts',          'code' => '5004', 'type' => 'EX'],
+            ['name' => 'Utilities Expense', 'code' => '5005', 'type' => 'EX'],
+            ['name' => 'Transportation Expense', 'code' => '5006', 'type' => 'EX'],
+            ['name' => 'Repairs and Maintenance Expense', 'code' => '5007', 'type' => 'EX'],
+            ['name' => 'Office Expense', 'code' => '5008', 'type' => 'EX'],
+            ['name' => 'Professional Fees', 'code' => '5009', 'type' => 'EX'],
+            ['name' => 'Taxes and Licenses', 'code' => '5010', 'type' => 'EX'],
+            ['name' => 'Insurance Expense', 'code' => '5011', 'type' => 'EX'],
+            ['name' => 'Advertising and Marketing', 'code' => '5012', 'type' => 'EX'],
+            ['name' => 'Miscellaneous Expense', 'code' => '5013', 'type' => 'EX'],
         ];
 
         foreach ($accounts as $account) {
