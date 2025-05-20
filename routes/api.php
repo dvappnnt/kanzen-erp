@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Notifications\DatabaseNotification;
 
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CompanyController;
@@ -12,6 +13,10 @@ use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\CountryController;
 use App\Http\Controllers\Api\CategoryController;
 
+use App\Http\Controllers\Api\Modules\ProjectManagement\ProjectController;
+use App\Http\Controllers\Api\Modules\ProjectManagement\ProjectTaskController;
+use App\Http\Controllers\Api\Modules\ProjectManagement\ProjectColumnController;
+
 use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\CustomerController;
 use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\AgentController;
 
@@ -20,6 +25,7 @@ use App\Http\Controllers\Api\Modules\AccountingManagement\CompanyAccountControll
 use App\Http\Controllers\Api\Modules\AccountingManagement\ExpenseController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\JournalEntryController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\InvoiceController;
+use App\Http\Controllers\Api\Modules\AccountingManagement\InvoicePaymentMethodDetailController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\SupplierInvoiceController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\SupplierInvoicePaymentController;
 
@@ -47,6 +53,9 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductVariationControl
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductImageController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockAdjustmentController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferController;
+
+use App\Http\Controllers\Api\Modules\AccountingManagement\AccountController;
+use App\Http\Controllers\Api\Modules\AccountingManagement\AccountTypeController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -77,6 +86,13 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('invoices', InvoiceController::class);
     Route::get('autocomplete/invoices', [InvoiceController::class, 'autocomplete'])->name('invoices.autocomplete');
+
+    // Add new routes for invoice payments
+    Route::post('invoices/{invoice}/payments', [InvoicePaymentMethodDetailController::class, 'store'])->name('invoice-payments.store');
+    Route::put('invoices/{invoice}/payments/{payment}', [InvoicePaymentMethodDetailController::class, 'update'])->name('invoice-payments.update');
+    Route::delete('invoices/{invoice}/payments/{payment}', [InvoicePaymentMethodDetailController::class, 'destroy'])->name('invoice-payments.destroy');
+    Route::post('invoices/{invoice}/payments/{payment}/approve', [InvoicePaymentMethodDetailController::class, 'approve'])->name('invoice-payments.approve');
+    Route::post('invoices/{invoice}/payments/{payment}/reject', [InvoicePaymentMethodDetailController::class, 'reject'])->name('invoice-payments.reject');
 
     Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
     Route::get('autocomplete/supplier-invoices', [SupplierInvoiceController::class, 'autocomplete'])->name('supplier-invoices.autocomplete');
@@ -190,6 +206,15 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::get('autocomplete/categories', [CategoryController::class, 'autocomplete'])->name('categories.autocomplete');
 
+    Route::apiResource('projects-columns', ProjectColumnController::class);
+    Route::get('autocomplete/projects-columns', [ProjectColumnController::class, 'autocomplete'])->name('projects-columns.autocomplete');
+
+    Route::apiResource('projects', ProjectController::class);
+    Route::get('autocomplete/projects', [ProjectController::class, 'autocomplete'])->name('projects.autocomplete');
+
+    Route::apiResource('project-tasks', ProjectTaskController::class);
+    Route::get('autocomplete/project-tasks', [ProjectTaskController::class, 'autocomplete'])->name('project-tasks.autocomplete');
+
     Route::post('app-settings/schedule', [SettingController::class, 'updateSchedule']);
     Route::get('app-settings/export-database', [SettingController::class, 'exportDatabase']);
     Route::post('app-settings/import-database', [SettingController::class, 'importDatabase']);
@@ -199,28 +224,32 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('activity-logs', ActivityLogController::class);
 
-    Route::get('/api/notifications', function () {
-        return Auth::user()->unreadNotifications;
-    });
-
     Route::get('/notifications', function () {
         $user = Auth::user();
         return response()->json([
-            'notifications' => $user->notifications,
-            'unread_count' => $user->unreadNotifications->count(),
+            'notifications' => DatabaseNotification::where('notifiable_id', $user->id)
+                ->where('notifiable_type', get_class($user))
+                ->get(),
+            'unread_count' => DatabaseNotification::where('notifiable_id', $user->id)
+                ->where('notifiable_type', get_class($user))
+                ->whereNull('read_at')
+                ->count(),
         ]);
     });
 
     Route::post('/notifications/{id}/read', function ($id) {
-        $notification = Auth::user()->notifications()->find($id);
-        if ($notification) {
+        $notification = DatabaseNotification::find($id);
+        if ($notification && $notification->notifiable_id === Auth::id()) {
             $notification->markAsRead();
         }
         return response()->json(['success' => true]);
     });
 
     Route::post('/notifications/mark-all-read', function () {
-        Auth::user()->unreadNotifications->markAsRead();
+        DatabaseNotification::where('notifiable_id', Auth::id())
+            ->where('notifiable_type', get_class(Auth::user()))
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
         return response()->json(['success' => true]);
     });
 
@@ -229,4 +258,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('product-variation-attributes', ProductVariationAttributeController::class);
     Route::post('product-variation-attributes/{id}/restore', [ProductVariationAttributeController::class, 'restore'])->name('product-variation-attributes.restore');
+
+    Route::apiResource('accounts', AccountController::class);
+    Route::get('autocomplete/accounts', [AccountController::class, 'autocomplete'])->name('accounts.autocomplete');
+    Route::post('accounts/{account}/restore', [AccountController::class, 'restore'])->name('accounts.restore');
+
+    Route::apiResource('account-types', AccountTypeController::class);
+    Route::get('autocomplete/account-types', [AccountTypeController::class, 'autocomplete'])->name('account-types.autocomplete');
+    Route::post('account-types/{accountType}/restore', [AccountTypeController::class, 'restore'])->name('account-types.restore');
 });

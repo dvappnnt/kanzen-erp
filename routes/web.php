@@ -13,9 +13,13 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Public\QrController;
 
+use App\Http\Controllers\Modules\ProjectManagement\ProjectController;
+use App\Http\Controllers\Modules\ProjectManagement\ProjectTaskController;
+
 use App\Http\Controllers\Modules\CustomerRelationshipManagement\CustomerController;
 use App\Http\Controllers\Modules\CustomerRelationshipManagement\AgentController;
 
+use App\Http\Controllers\Modules\AccountingManagement\ChartOfAccountController;
 use App\Http\Controllers\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Modules\AccountingManagement\CompanyAccountController;
 use App\Http\Controllers\Modules\AccountingManagement\ExpenseController;
@@ -65,6 +69,12 @@ Route::middleware([
     Route::resource('attributes', AttributeController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('attribute-values', AttributeValueController::class)->only(['index', 'show', 'edit', 'create']);
 
+    Route::group(['prefix' => 'chart-of-accounts'], function () {
+        Route::get('/', [ChartOfAccountController::class, 'index'])->name('chart-of-accounts.index');
+        Route::get('/create', [ChartOfAccountController::class, 'create'])->name('chart-of-accounts.create');
+        Route::get('/{account}/edit', [ChartOfAccountController::class, 'edit'])->name('chart-of-accounts.edit');
+    });
+
     Route::resource('invoices', InvoiceController::class)->only(['index', 'show', 'edit', 'create']);
     Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::resource('supplier-invoices', SupplierInvoiceController::class)->only(['index', 'show', 'edit', 'create']);
@@ -82,6 +92,9 @@ Route::middleware([
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show', 'edit', 'create']);
     
+    Route::resource('projects', ProjectController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('tasks', ProjectTaskController::class)->only(['index', 'show', 'edit', 'create']);
+
     Route::resource('goods-receipts', GoodsReceiptController::class)->only(['index', 'show', 'edit', 'create']);
     Route::get('goods-receipts/{goodsReceipt}/print', [GoodsReceiptController::class, 'print'])->name('goods-receipts.print');
 

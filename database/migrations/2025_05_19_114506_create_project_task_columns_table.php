@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('account_types', function (Blueprint $table) {
+        Schema::create('project_task_columns', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Asset, Liability, etc.
-            $table->string('code')->unique(); // Optional: AS, LI, EQ, RE, EX
+            $table->string('name'); // e.g., 'To Do', 'In Progress'
+            $table->unsignedInteger('position')->default(0);
             $table->softDeletes();
             $table->timestamps();
         });
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('account_types');
+        Schema::dropIfExists('project_task_columns');
     }
 };

@@ -418,7 +418,7 @@ const submitForm = async () => {
             shipping_cost: formData.value.shipping_cost,
             subtotal: formData.value.subtotal,
             total_amount: formData.value.total_amount,
-            status: 'fully-paid',
+            status: formData.value.is_credit ? 'unpaid' : 'fully-paid',
             is_credit: formData.value.type === 'sales-invoice' ? formData.value.is_credit : false,
             payment_method: formData.value.payment_method,
             items: formData.value.items.map(item => ({

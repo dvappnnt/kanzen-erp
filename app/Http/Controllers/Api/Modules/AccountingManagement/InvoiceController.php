@@ -45,7 +45,16 @@ class InvoiceController extends Controller
             'shipping_cost' => 'required|numeric|min:0',
             'subtotal' => 'required|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
-            'status' => 'required|string|in:draft,fully-paid',
+            'status' => [
+                'required',
+                'string',
+                'in:draft,fully-paid,unpaid',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->is_credit && $value === 'fully-paid') {
+                        $fail('Credit invoices must be created with status "unpaid". They cannot be marked as fully paid during creation.');
+                    }
+                },
+            ],
             'is_credit' => [
                 'required',
                 'boolean',
@@ -57,19 +66,21 @@ class InvoiceController extends Controller
             ],
             'payment_method' => [
                 Rule::requiredIf(function () use ($request) {
-                    return !$request->is_credit && $request->type === 'sales-invoice';
+                    return !$request->is_credit && $request->type === 'pos-invoice';
                 }),
+                'nullable',
                 Rule::in(['cash', 'bank-transfer', 'credit-card', 'gcash']),
             ],
             'payment_details' => [
                 Rule::requiredIf(function () use ($request) {
-                    return !$request->is_credit && $request->type === 'sales-invoice';
+                    return !$request->is_credit && $request->type === 'pos-invoice';
                 }),
+                'nullable',
                 'array',
             ],
             'payment_details.reference_number' => [
                 Rule::requiredIf(function () use ($request) {
-                    return !$request->is_credit && $request->type === 'sales-invoice' && $request->payment_method !== 'cash';
+                    return !$request->is_credit && $request->type === 'pos-invoice' && $request->payment_method !== 'cash';
                 }),
                 'nullable',
                 'string',
@@ -78,6 +89,29 @@ class InvoiceController extends Controller
             'payment_details.account_name' => 'nullable|string',
             'payment_details.bank_id' => 'nullable|exists:banks,id',
             'payment_details.company_account_id' => 'nullable|exists:company_accounts,id',
+            'payment_details.status' => [
+                Rule::requiredIf(function () use ($request) {
+                    return !$request->is_credit && $request->type === 'pos-invoice';
+                }),
+                'nullable',
+                'string',
+                'in:pending,approved,rejected'
+            ],
+            'payment_details.payment_date' => [
+                Rule::requiredIf(function () use ($request) {
+                    return !$request->is_credit && $request->type === 'pos-invoice';
+                }),
+                'nullable',
+                'date'
+            ],
+            'payment_details.amount' => [
+                Rule::requiredIf(function () use ($request) {
+                    return !$request->is_credit && $request->type === 'pos-invoice';
+                }),
+                'nullable',
+                'numeric',
+                'min:0'
+            ],
             'receipt_attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048', // 2MB max
             'items' => 'required|array',
             'items.*.warehouse_product_id' => 'required|exists:warehouse_products,id',
@@ -97,7 +131,7 @@ class InvoiceController extends Controller
                 'warehouse_id' => $validated['warehouse_id'],
                 'type' => $validated['type'],
                 'invoice_date' => $validated['invoice_date'],
-                'payment_date' => $validated['type'] === 'pos-invoice' ? Carbon::now() : ($validated['status'] === 'fully-paid' ? Carbon::now() : null),
+                'payment_date' => $validated['type'] === 'pos-invoice' ? Carbon::now() : ($validated['status'] === 'fully-paid' && !$validated['is_credit'] ? Carbon::now() : null),
                 'discount_rate' => $validated['discount_rate'],
                 'discount_amount' => $validated['discount_amount'],
                 'tax_rate' => $validated['tax_rate'],
@@ -106,13 +140,13 @@ class InvoiceController extends Controller
                 'subtotal' => $validated['subtotal'],
                 'total_amount' => $validated['total_amount'],
                 'currency' => 'PHP',
-                'status' => $validated['status'],
+                'status' => $validated['is_credit'] ? 'draft' : $validated['status'],
                 'is_credit' => $validated['type'] === 'sales-invoice' ? $validated['is_credit'] : false,
                 'created_by_user_id' => Auth::id()
             ]);
 
             // Handle payment details for both POS and non-credit sales invoices
-            if (($validated['type'] === 'pos-invoice' || !$validated['is_credit']) && isset($validated['payment_method'])) {
+            if (($validated['type'] === 'pos-invoice' || !$validated['is_credit']) && isset($validated['payment_method']) && $validated['payment_method']) {
                 $paymentDetails = $request->input('payment_details');
                 
                 // Handle file upload if exists

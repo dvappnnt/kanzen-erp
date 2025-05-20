@@ -1,49 +1,49 @@
 <?php
 
-namespace App\Http\Controllers\Api\Modules\AccountingManagement;
+namespace App\Http\Controllers\Api\Modules\ProjectManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Account;
 
-class AccountController extends Controller
+class ProjectTaskController extends Controller
 {
     protected $modelClass;
     protected $modelName;
 
     public function __construct()
     {
-        $this->modelClass = Account::class;
+        $this->modelClass = \App\Models\ProjectTask::class;
         $this->modelName = class_basename($this->modelClass);
     }
 
     public function index()
     {
-        return $this->modelClass::with('type')
-            ->orderBy('code', 'asc')
-            ->paginate(perPage: 10);
+        return $this->modelClass::latest()->paginate(perPage: 10);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:255|unique:accounts,code',
-            'account_type_id' => 'required|exists:account_types,id',
-            'is_active' => 'required|boolean',
+            'description' => 'nullable|string|max:255',
+            'status' => 'required|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'customer_id' => 'nullable|exists:customers,id',
+            'created_by_user_id' => 'nullable|exists:users,id',
         ]);
 
         $model = $this->modelClass::create($validated);
 
         return response()->json([
-            'modelData' => $model->load('type'),
+            'modelData' => $model,
             'message' => "{$this->modelName} '{$model->name}' created successfully.",
         ]);
     }
 
     public function show($id)
     {
-        $model = $this->modelClass::with('type')->findOrFail($id);
+        $model = $this->modelClass::findOrFail($id);
         return $model;
     }
 
@@ -53,15 +53,18 @@ class AccountController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:255|unique:accounts,code,' . $model->id,
-            'account_type_id' => 'required|exists:account_types,id',
-            'is_active' => 'required|boolean',
+            'description' => 'nullable|string|max:255',
+            'status' => 'required|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'customer_id' => 'nullable|exists:customers,id',
+            'created_by_user_id' => 'nullable|exists:users,id',
         ]);
 
         $model->update($validated);
 
         return response()->json([
-            'modelData' => $model->load('type'),
+            'modelData' => $model,
             'message' => "{$this->modelName} '{$model->name}' updated successfully.",
         ]);
     }
@@ -92,12 +95,7 @@ class AccountController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::with('type')
-            ->where(function($query) use ($searchTerm) {
-                $query->where('name', 'like', "%{$searchTerm}%")
-                    ->orWhere('code', 'like', "%{$searchTerm}%");
-            })
-            ->orderBy('code', 'asc')
+        $models = $this->modelClass::where('name', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
 

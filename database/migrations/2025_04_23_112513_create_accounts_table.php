@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('code')->unique(); // e.g., 1001, 4001
             $table->foreignId('account_type_id')->constrained()->onDelete('cascade');
             $table->boolean('is_active')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
     }
