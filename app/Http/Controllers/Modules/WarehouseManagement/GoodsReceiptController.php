@@ -69,6 +69,11 @@ class GoodsReceiptController extends Controller
         ]);
     }
 
+    public function export()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Export");
+    }
+
     public function print(GoodsReceipt $goodsReceipt)
     {
         $goodsReceipt->load([

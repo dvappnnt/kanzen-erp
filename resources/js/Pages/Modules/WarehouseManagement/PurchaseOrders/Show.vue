@@ -7,7 +7,11 @@ import moment from "moment";
 import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
 import DetailedProfileCard from "@/Components/Sections/DetailedProfileCard.vue";
 import DisplayInformation from "@/Components/Sections/DisplayInformation.vue";
-import { singularizeAndFormat, getStatusPillClass, humanReadable } from "@/utils/global";
+import {
+    singularizeAndFormat,
+    getStatusPillClass,
+    humanReadable,
+} from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
 import QRCode from "qrcode.vue";
 import { router } from "@inertiajs/vue3";
@@ -80,6 +84,27 @@ const profileDetails = [
         value: (row) => row.notes,
         class: "text-gray-600 font-semibold",
     },
+    {
+        label: "Remarks",
+        value: (row) => {
+            const remarks = approvalRemarks.value.filter(
+                (r) => r.purchase_order_id === row.id
+            );
+            return remarks.length > 0 ? `${remarks.length} remark(s)` : "—";
+        },
+        class: "text-gray-600 font-semibold cursor-pointer hover:text-indigo-600",
+        clickable: true,
+        onClick: (row) => {
+            console.log("Remarks clicked for row:", row); // Debug log
+            const remarks = approvalRemarks.value.filter(
+                (r) => r.purchase_order_id === row.id
+            );
+            console.log("Opening modal with remarks:", remarks); // Debug log
+            if (remarks.length > 0) {
+                openRemarksViewModal(remarks);
+            }
+        },
+    },
 ];
 
 const modelData = computed(() => page.props.modelData || {});
@@ -96,18 +121,27 @@ const purchaseOrderDetails = ref([]);
 const showEditModal = ref(false);
 const editingDetail = ref(null);
 const showRemarksModal = ref(false);
-const actionType = ref('');
-const remarks = ref('');
+const showActionRemarksModal = ref(false);
+const actionType = ref("");
+const remarks = ref("");
+const showConfirmModal = ref(false);
+const confirmAction = ref("");
+const confirmMessage = ref("");
+const approvalLevels = ref([]);
+const approvalRemarks = ref([]);
+const selectedRemarks = ref([]);
 
 const hasDetails = computed(() => {
     return purchaseOrderDetails.value.length > 0;
 });
 
 const calculateOrderTotal = computed(() => {
-    return purchaseOrderDetails.value?.reduce((sum, detail) => {
-        const total = Number(detail.total) || 0;
-        return sum + total;
-    }, 0) || 0;
+    return (
+        purchaseOrderDetails.value?.reduce((sum, detail) => {
+            const total = Number(detail.total) || 0;
+            return sum + total;
+        }, 0) || 0
+    );
 });
 
 // Add computed properties for totals
@@ -122,7 +156,11 @@ const taxAmount = computed(() => {
 });
 
 const totalAmount = computed(() => {
-    return subtotal.value + taxAmount.value + (Number(modelData.value?.shipping_cost) || 0);
+    return (
+        subtotal.value +
+        taxAmount.value +
+        (Number(modelData.value?.shipping_cost) || 0)
+    );
 });
 
 const loadSupplierProducts = async () => {
@@ -137,7 +175,7 @@ const loadSupplierProducts = async () => {
             `/api/suppliers/${modelData.value.supplier_id}/products`
         );
         const productsData = response.data || [];
-        
+
         if (Array.isArray(productsData) && productsData.length > 0) {
             supplierProducts.value = productsData;
             hasLoadedProducts.value = true;
@@ -204,12 +242,12 @@ const addNewRow = async () => {
     if (!hasLoadedProducts.value) {
         await loadSupplierProducts();
     }
-    
+
     if (supplierProducts.value.length === 0) {
         toast.error("No products available for this supplier");
         return;
     }
-    
+
     items.value.push({
         id: Date.now(),
         product_id: "",
@@ -371,7 +409,7 @@ const loadPurchaseOrderDetails = async () => {
     try {
         const [detailsResponse, orderResponse] = await Promise.all([
             axios.get(`/api/purchase-orders/${modelData.value.id}/details`),
-            axios.get(`/api/purchase-orders/${modelData.value.id}`)
+            axios.get(`/api/purchase-orders/${modelData.value.id}`),
         ]);
         purchaseOrderDetails.value = detailsResponse.data.data || [];
         Object.assign(modelData.value, orderResponse.data);
@@ -400,15 +438,19 @@ const handlePending = async () => {
 const handleOrder = async () => {
     try {
         isLoading.value = true;
-        
+
         // Call the order endpoint which will handle GR creation
-        const response = await axios.post(`/api/purchase-orders/${modelData.value.id}/order`);
-        
+        const response = await axios.post(
+            `/api/purchase-orders/${modelData.value.id}/order`
+        );
+
         toast.success("Order processed successfully");
 
         // Redirect to the newly created goods receipt if available
         if (response.data?.data?.goods_receipt_id) {
-            router.visit(`/goods-receipts/${response.data.data.goods_receipt_id}`);
+            router.visit(
+                `/goods-receipts/${response.data.data.goods_receipt_id}`
+            );
         } else {
             window.location.reload();
         }
@@ -422,51 +464,61 @@ const handleOrder = async () => {
 
 const handlePrint = () => {
     // Open the print window
-    const printWindow = window.open(`${window.location.origin}/purchase-orders/${modelData.value.id}/print`, '_blank');
-    
+    const printWindow = window.open(
+        `${window.location.origin}/purchase-orders/${modelData.value.id}/print`,
+        "_blank"
+    );
+
     // Wait for the window to load and trigger print
-    printWindow.onload = function() {
+    printWindow.onload = function () {
         printWindow.print();
     };
 };
 
-const openRemarksModal = (type) => {
-    actionType.value = type;
-    remarks.value = '';
+const openRemarksViewModal = (remarks) => {
+    console.log("openRemarksViewModal called with:", remarks); // Debug log
+    selectedRemarks.value = remarks;
     showRemarksModal.value = true;
+    console.log("Modal state after opening:", showRemarksModal.value); // Debug log
 };
 
-const closeRemarksModal = () => {
-    showRemarksModal.value = false;
-    actionType.value = '';
-    remarks.value = '';
+const openActionRemarksModal = (type) => {
+    actionType.value = type;
+    remarks.value = "";
+    showActionRemarksModal.value = true;
+};
+
+const closeActionRemarksModal = () => {
+    showActionRemarksModal.value = false;
+    actionType.value = "";
+    remarks.value = "";
 };
 
 const handleAction = async () => {
     try {
         isLoading.value = true;
-        let endpoint = '';
-        let successMessage = '';
-        
+        let endpoint = "";
+        let successMessage = "";
+
         switch (actionType.value) {
-            case 'approve':
-                endpoint = 'approve';
-                successMessage = 'Purchase order approved successfully';
+            case "approve":
+                endpoint = "approve";
+                successMessage = "Purchase order approved successfully";
                 break;
-            case 'reject':
-                endpoint = 'reject';
-                successMessage = 'Purchase order rejected successfully';
+            case "reject":
+                endpoint = "reject";
+                successMessage = "Purchase order rejected successfully";
                 break;
-            case 'cancel':
-                endpoint = 'cancel';
-                successMessage = 'Purchase order cancelled successfully';
+            case "cancel":
+                endpoint = "cancel";
+                successMessage = "Purchase order cancelled successfully";
                 break;
         }
 
         // First, create the approval remark if remarks exist
         if (remarks.value.trim()) {
-            await axios.post('/api/approval-remarks', {
-                model_type: 'PurchaseOrder',
+            await axios.post("/api/approval-remarks", {
+                model_type: "PurchaseOrder",
                 model_id: modelData.value.id,
                 purchase_order_id: modelData.value.id,
                 status: actionType.value,
@@ -475,27 +527,102 @@ const handleAction = async () => {
         }
 
         // Then update the purchase order status
-        await axios.post(`/api/purchase-orders/${modelData.value.id}/${endpoint}`);
-        
+        await axios.post(
+            `/api/purchase-orders/${modelData.value.id}/${endpoint}`
+        );
+
         toast.success(successMessage);
-        closeRemarksModal();
+        closeActionRemarksModal();
         window.location.reload();
     } catch (error) {
         console.error(`Error ${actionType.value}ing purchase order:`, error);
-        toast.error(error.response?.data?.message || `Failed to ${actionType.value} purchase order`);
+        toast.error(
+            error.response?.data?.message ||
+                `Failed to ${actionType.value} purchase order`
+        );
     } finally {
         isLoading.value = false;
     }
 };
 
-// Replace the existing button click handlers
-const handleApprove = () => openRemarksModal('approve');
-const handleReject = () => openRemarksModal('reject');
-const handleCancel = () => openRemarksModal('cancel');
+// Update the button click handlers
+const handleApprove = () => openActionRemarksModal("approve");
+const handleReject = () => openActionRemarksModal("reject");
+const handleCancel = () => openActionRemarksModal("cancel");
+
+const loadApprovalLevels = async () => {
+    try {
+        const response = await axios.get(
+            `/api/purchase-orders/${modelData.value.id}/approval-levels`
+        );
+        approvalLevels.value = response.data.data || [];
+    } catch (error) {
+        console.error("Error loading approval levels:", error);
+        toast.error("Failed to load approval levels");
+    }
+};
+
+const openConfirmModal = (action) => {
+    confirmAction.value = action;
+    switch (action) {
+        case "submit":
+            confirmMessage.value =
+                "Are you sure you want to submit this purchase order for approval?";
+            break;
+        case "process":
+            confirmMessage.value =
+                "Are you sure you want to process this order? This will create a goods receipt and supplier invoice.";
+            break;
+    }
+    showConfirmModal.value = true;
+};
+
+const handleConfirmAction = async () => {
+    try {
+        isLoading.value = true;
+        switch (confirmAction.value) {
+            case "submit":
+                await handlePending();
+                break;
+            case "process":
+                await handleOrder();
+                break;
+        }
+        showConfirmModal.value = false;
+    } catch (error) {
+        console.error(`Error in ${confirmAction.value}:`, error);
+        toast.error(
+            error.response?.data?.message || `Failed to ${confirmAction.value}`
+        );
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Update the existing button click handlers
+const handleSubmitForApproval = () => openConfirmModal("submit");
+const handleProcessOrder = () => openConfirmModal("process");
+
+const loadApprovalRemarks = async () => {
+    try {
+        const response = await axios.get(
+            `/api/purchase-orders/${modelData.value.id}/approval-remarks`
+        );
+        console.log("Approval remarks response:", response.data); // Debug log
+        approvalRemarks.value = Array.isArray(response.data)
+            ? response.data
+            : response.data.data || [];
+    } catch (error) {
+        console.error("Error loading approval remarks:", error);
+        toast.error("Failed to load approval remarks");
+    }
+};
 
 onMounted(async () => {
     await loadSupplierProducts();
     await loadPurchaseOrderDetails();
+    await loadApprovalLevels();
+    await loadApprovalRemarks();
 });
 </script>
 
@@ -521,7 +648,7 @@ onMounted(async () => {
                 <div class="px-6 py-4 flex justify-end space-x-3">
                     <button
                         v-if="modelData.status === 'draft' && hasDetails"
-                        @click="handlePending"
+                        @click="handleSubmitForApproval"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
@@ -604,8 +731,8 @@ onMounted(async () => {
                     </button>
 
                     <button
-                        v-if="modelData.status === 'partially-approved'"
-                        @click="handleOrder"
+                        v-if="modelData.status === 'fully-approved'"
+                        @click="handleProcessOrder"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
@@ -625,7 +752,11 @@ onMounted(async () => {
                     </button>
 
                     <button
-                        v-if="modelData.status === 'partially-approved' || modelData.status === 'received' || modelData.status === 'ordered'"
+                        v-if="
+                            modelData.status === 'partially-approved' ||
+                            modelData.status === 'received' ||
+                            modelData.status === 'ordered'
+                        "
                         @click="handlePrint"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -658,14 +789,14 @@ onMounted(async () => {
                             <h3 class="text-lg font-medium text-gray-900 mb-4">
                                 Purchase Order Items
                             </h3>
-                        
-                        <!-- Items Table -->
-                        <div class="overflow-x-auto">
+
+                            <!-- Items Table -->
+                            <div class="overflow-x-auto">
                                 <table
                                     class="min-w-full divide-y divide-gray-200"
                                 >
-                                <thead>
-                                    <tr>
+                                    <thead>
+                                        <tr>
                                             <th
                                                 class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5"
                                             >
@@ -701,8 +832,8 @@ onMounted(async () => {
                                             >
                                                 Actions
                                             </th>
-                                    </tr>
-                                </thead>
+                                        </tr>
+                                    </thead>
                                     <tbody
                                         class="bg-white divide-y divide-gray-200"
                                     >
@@ -710,10 +841,10 @@ onMounted(async () => {
                                             v-for="(item, index) in items"
                                             :key="item.id"
                                         >
-                                        <td class="px-2 py-2">
-                                            <select 
-                                                v-model="item.product_id"
-                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                            <td class="px-2 py-2">
+                                                <select
+                                                    v-model="item.product_id"
+                                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                                     @change="
                                                         handleProductSelect(
                                                             item
@@ -734,14 +865,14 @@ onMounted(async () => {
                                                         :key="product.id"
                                                         :value="product.id"
                                                     >
-                                                    {{ product.name }}
-                                                </option>
-                                            </select>
-                                        </td>
-                                        <td class="px-2 py-2">
-                                            <select 
-                                                v-model="item.variation_id"
-                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                        {{ product.name }}
+                                                    </option>
+                                                </select>
+                                            </td>
+                                            <td class="px-2 py-2">
+                                                <select
+                                                    v-model="item.variation_id"
+                                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                                     @change="
                                                         handleVariationSelect(
                                                             item
@@ -762,55 +893,55 @@ onMounted(async () => {
                                                         v-for="variation in getProductVariations(
                                                             item.product_id
                                                         )"
-                                                        :key="variation.id" 
+                                                        :key="variation.id"
                                                         :value="variation.id"
                                                     >
-                                                    {{ variation.name }}
-                                                </option>
-                                            </select>
-                                        </td>
-                                        <td class="px-2 py-2">
-                                            <input 
-                                                type="number" 
-                                                v-model="item.qty"
-                                                min="1"
-                                                @input="updateTotal(item)"
+                                                        {{ variation.name }}
+                                                    </option>
+                                                </select>
+                                            </td>
+                                            <td class="px-2 py-2">
+                                                <input
+                                                    type="number"
+                                                    v-model="item.qty"
+                                                    min="1"
+                                                    @input="updateTotal(item)"
                                                     @keydown="
                                                         handleKeyDown(
                                                             $event,
                                                             item
                                                         )
                                                     "
-                                                class="block w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                    class="block w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                                 />
-                                        </td>
-                                        <td class="px-2 py-2">
-                                            <input 
-                                                type="number" 
-                                                v-model="item.free_qty"
-                                                min="0"
+                                            </td>
+                                            <td class="px-2 py-2">
+                                                <input
+                                                    type="number"
+                                                    v-model="item.free_qty"
+                                                    min="0"
                                                     @keydown="
                                                         handleKeyDown(
                                                             $event,
                                                             item
                                                         )
                                                     "
-                                                class="block w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                    class="block w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                                 />
-                                        </td>
-                                        <td class="px-2 py-2">
-                                            <input 
-                                                type="number" 
-                                                v-model="item.price"
-                                                step="0.01"
-                                                @input="updateTotal(item)"
+                                            </td>
+                                            <td class="px-2 py-2">
+                                                <input
+                                                    type="number"
+                                                    v-model="item.price"
+                                                    step="0.01"
+                                                    @input="updateTotal(item)"
                                                     @keydown="
                                                         handleKeyDown(
                                                             $event,
                                                             item
                                                         )
                                                     "
-                                                class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                    class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                                 />
                                             </td>
                                             <td class="px-2 py-2 text-gray-500">
@@ -841,14 +972,14 @@ onMounted(async () => {
                                                             />
                                                         </svg>
                                                     </button>
-                                            <button 
+                                                    <button
                                                         @click="
                                                             removeRow(index)
                                                         "
-                                                class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
-                                                :disabled="isLoading"
-                                                title="Remove"
-                                            >
+                                                        class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
+                                                        :disabled="isLoading"
+                                                        title="Remove"
+                                                    >
                                                         <svg
                                                             xmlns="http://www.w3.org/2000/svg"
                                                             class="h-5 w-5"
@@ -860,26 +991,26 @@ onMounted(async () => {
                                                                 d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
                                                                 clip-rule="evenodd"
                                                             />
-                                                </svg>
-                                            </button>
+                                                        </svg>
+                                                    </button>
                                                 </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Add Row Button -->
-                                    <tr>
-                                        <td colspan="7" class="px-2 py-2">
-                                            <button 
-                                                @click="addNewRow"
-                                                class="text-sm text-indigo-600 hover:text-indigo-900 flex items-center"
-                                                :disabled="isLoading"
-                                            >
+                                            </td>
+                                        </tr>
+                                        <!-- Add Row Button -->
+                                        <tr>
+                                            <td colspan="7" class="px-2 py-2">
+                                                <button
+                                                    @click="addNewRow"
+                                                    class="text-sm text-indigo-600 hover:text-indigo-900 flex items-center"
+                                                    :disabled="isLoading"
+                                                >
                                                     <span class="mr-1">+</span>
                                                     Add Row
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </span>
 
@@ -928,7 +1059,13 @@ onMounted(async () => {
                                             >
                                                 Total
                                             </th>
-                                            <th v-if="modelData.status === 'draft' || modelData.status === 'rejected'"
+                                            <th
+                                                v-if="
+                                                    modelData.status ===
+                                                        'draft' ||
+                                                    modelData.status ===
+                                                        'rejected'
+                                                "
                                                 class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
                                             >
                                                 Actions
@@ -988,7 +1125,13 @@ onMounted(async () => {
                                                     })
                                                 }}
                                             </td>
-                                            <td v-if="modelData.status === 'draft' || modelData.status === 'rejected'"
+                                            <td
+                                                v-if="
+                                                    modelData.status ===
+                                                        'draft' ||
+                                                    modelData.status ===
+                                                        'rejected'
+                                                "
                                                 class="px-2 py-2 text-right text-sm font-medium"
                                             >
                                                 <div class="flex space-x-2">
@@ -1052,37 +1195,89 @@ onMounted(async () => {
                                         </tr>
                                     </tbody>
                                 </table>
-                                
+
                                 <!-- Total Section -->
                                 <div class="mt-4 flex justify-end px-2">
                                     <div class="w-64 space-y-2">
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-gray-600">Subtotal:</span>
+                                        <div
+                                            class="flex justify-between text-sm"
+                                        >
+                                            <span class="text-gray-600"
+                                                >Subtotal:</span
+                                            >
                                             <span class="font-medium">
-                                                {{ formatNumber(subtotal, { style: "currency", currency: "PHP" }) }}
+                                                {{
+                                                    formatNumber(subtotal, {
+                                                        style: "currency",
+                                                        currency: "PHP",
+                                                    })
+                                                }}
                                             </span>
                                         </div>
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-gray-600">Tax Rate:</span>
-                                            <span class="font-medium">{{ modelData.tax_rate }}%</span>
+                                        <div
+                                            class="flex justify-between text-sm"
+                                        >
+                                            <span class="text-gray-600"
+                                                >Tax Rate:</span
+                                            >
+                                            <span class="font-medium"
+                                                >{{ modelData.tax_rate }}%</span
+                                            >
                                         </div>
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-gray-600">Tax Amount:</span>
+                                        <div
+                                            class="flex justify-between text-sm"
+                                        >
+                                            <span class="text-gray-600"
+                                                >Tax Amount:</span
+                                            >
                                             <span class="font-medium">
-                                                {{ formatNumber(taxAmount, { style: "currency", currency: "PHP" }) }}
+                                                {{
+                                                    formatNumber(taxAmount, {
+                                                        style: "currency",
+                                                        currency: "PHP",
+                                                    })
+                                                }}
                                             </span>
                                         </div>
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-gray-600">Shipping Cost:</span>
+                                        <div
+                                            class="flex justify-between text-sm"
+                                        >
+                                            <span class="text-gray-600"
+                                                >Shipping Cost:</span
+                                            >
                                             <span class="font-medium">
-                                                {{ formatNumber(modelData.shipping_cost || 0, { style: "currency", currency: "PHP" }) }}
+                                                {{
+                                                    formatNumber(
+                                                        modelData.shipping_cost ||
+                                                            0,
+                                                        {
+                                                            style: "currency",
+                                                            currency: "PHP",
+                                                        }
+                                                    )
+                                                }}
                                             </span>
                                         </div>
-                                        <div class="pt-2 border-t border-gray-200">
+                                        <div
+                                            class="pt-2 border-t border-gray-200"
+                                        >
                                             <div class="flex justify-between">
-                                                <span class="text-gray-800 font-semibold">Total Amount:</span>
-                                                <span class="text-xl font-bold text-gray-900">
-                                                    {{ formatNumber(totalAmount, { style: "currency", currency: "PHP" }) }}
+                                                <span
+                                                    class="text-gray-800 font-semibold"
+                                                    >Total Amount:</span
+                                                >
+                                                <span
+                                                    class="text-xl font-bold text-gray-900"
+                                                >
+                                                    {{
+                                                        formatNumber(
+                                                            totalAmount,
+                                                            {
+                                                                style: "currency",
+                                                                currency: "PHP",
+                                                            }
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
                                         </div>
@@ -1177,16 +1372,114 @@ onMounted(async () => {
         </div>
     </div>
 
-    <!-- Remarks Modal -->
-    <div v-if="showRemarksModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+    <!-- Remarks View Modal -->
+    <div
+        v-if="showRemarksModal"
+        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
+    >
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">
+                    Approval Remarks
+                </h3>
+                <button
+                    @click="showRemarksModal = false"
+                    class="text-gray-400 hover:text-gray-500"
+                >
+                    <svg
+                        class="h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-4 max-h-96 overflow-y-auto">
+                <div
+                    v-for="remark in selectedRemarks"
+                    :key="remark.id"
+                    class="bg-gray-50 p-4 rounded-lg"
+                >
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center space-x-3">
+                            <img
+                                v-if="
+                                    remark.user && remark.user.profile_photo_url
+                                "
+                                :src="remark.user.profile_photo_url"
+                                :alt="remark.user.name"
+                                class="w-7 h-7 rounded-full object-cover border border-gray-200"
+                            />
+                            <span
+                                v-if="remark.user"
+                                class="text-sm font-semibold text-gray-700"
+                            >
+                                {{ remark.user.name }}
+                            </span>
+                            <span class="ml-2 text-sm text-gray-500">
+                                {{ formatDate("M d Y", remark.created_at) }}
+                            </span>
+                        </div>
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-4"
+                            :class="{
+                                'bg-green-100 text-green-800':
+                                    remark.status === 'approve',
+                                'bg-red-100 text-red-800':
+                                    remark.status === 'reject',
+                                'bg-yellow-100 text-yellow-800':
+                                    remark.status === 'cancel',
+                            }"
+                        >
+                            {{
+                                remark.status.charAt(0).toUpperCase() +
+                                remark.status.slice(1)
+                            }}
+                        </span>
+                    </div>
+                    <p class="pl-2 pt-2 text-gray-900 font-semibold text-base whitespace-pre-wrap">
+                        {{ remark.remarks }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button
+                    @click="showRemarksModal = false"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Remarks Modal -->
+    <div
+        v-if="showActionRemarksModal"
+        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
+    >
         <div class="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 class="text-lg font-medium text-gray-900 mb-4">
-                {{ actionType.charAt(0).toUpperCase() + actionType.slice(1) }} Purchase Order
+                {{
+                    actionType.charAt(0).toUpperCase() + actionType.slice(1)
+                }}
+                Purchase Order
             </h3>
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Remarks (Optional)</label>
+                    <label class="block text-sm font-medium text-gray-700"
+                        >Remarks (Optional)</label
+                    >
                     <textarea
                         v-model="remarks"
                         rows="3"
@@ -1198,7 +1491,7 @@ onMounted(async () => {
 
             <div class="mt-6 flex justify-end space-x-3">
                 <button
-                    @click="closeRemarksModal"
+                    @click="closeActionRemarksModal"
                     class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                     :disabled="isLoading"
                 >
@@ -1208,8 +1501,49 @@ onMounted(async () => {
                     @click="handleAction"
                     class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white"
                     :class="{
-                        'bg-green-600 hover:bg-green-700': actionType === 'approve',
-                        'bg-red-600 hover:bg-red-700': actionType === 'reject' || actionType === 'cancel'
+                        'bg-green-600 hover:bg-green-700':
+                            actionType === 'approve',
+                        'bg-red-600 hover:bg-red-700':
+                            actionType === 'reject' || actionType === 'cancel',
+                    }"
+                    :disabled="isLoading"
+                >
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add the confirmation modal -->
+    <div
+        v-if="showConfirmModal"
+        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center"
+    >
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                Confirm Action
+            </h3>
+
+            <div class="space-y-4">
+                <p class="text-gray-600">{{ confirmMessage }}</p>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button
+                    @click="showConfirmModal = false"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    :disabled="isLoading"
+                >
+                    Cancel
+                </button>
+                <button
+                    @click="handleConfirmAction"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white"
+                    :class="{
+                        'bg-blue-600 hover:bg-blue-700':
+                            confirmAction === 'submit',
+                        'bg-indigo-600 hover:bg-indigo-700':
+                            confirmAction === 'process',
                     }"
                     :disabled="isLoading"
                 >

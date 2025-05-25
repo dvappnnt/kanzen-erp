@@ -57,6 +57,11 @@ class SupplierInvoiceController extends Controller
         ]);
     }
 
+    public function export()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Export");
+    }
+
     public function print(SupplierInvoice $supplierInvoice)
     {
         $supplierInvoice->load([

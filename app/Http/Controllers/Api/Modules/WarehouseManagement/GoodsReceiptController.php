@@ -167,10 +167,13 @@ class GoodsReceiptController extends Controller
                 }
             }
 
-            // Update goods receipt status - this will trigger the model events
-            // that will update the purchase order status
+            // Update goods receipt status to in-warehouse
             $goodsReceipt->status = 'in-warehouse';
             $goodsReceipt->save();
+
+            // Update purchase order status to received
+            $goodsReceipt->purchaseOrder->status = 'received';
+            $goodsReceipt->purchaseOrder->save();
 
             DB::commit();
 
@@ -184,5 +187,28 @@ class GoodsReceiptController extends Controller
                 'message' => $e->getMessage()
             ], 422);
         }
+    }
+
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'from_date' => 'required|date|filled',
+            'to_date' => 'required|date|after_or_equal:from_date|filled',
+            'status' => 'required|string|filled',
+        ]);
+
+        $fromDate = $validated['from_date'];
+        $toDate = $validated['to_date'] ?? now()->toDateString(); // fallback to today if not provided
+        $status = $validated['status'] ?? '*'; // fallback to all statuses
+
+        $export = new \App\Exports\GoodsReceiptExport(
+            $fromDate,
+            $toDate,
+            $status
+        );
+
+        $fileName = 'goods_receipts_' . now()->format('Y-m-d_His') . '.xlsx';
+        
+        return \Maatwebsite\Excel\Facades\Excel::download($export, $fileName);
     }
 }

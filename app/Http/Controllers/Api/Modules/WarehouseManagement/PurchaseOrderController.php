@@ -11,6 +11,8 @@ use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptDetail;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierInvoiceDetail;
+use App\Models\ApprovalLevel;
+use App\Models\ApprovalRemark;
 use Carbon\Carbon;
 
 class PurchaseOrderController extends Controller
@@ -214,7 +216,7 @@ class PurchaseOrderController extends Controller
                 GoodsReceiptDetail::create([
                     'goods_receipt_id' => $goodsReceipt->id,
                     'purchase_order_detail_id' => $poDetail->id,
-                    'expected_qty' => $poDetail->qty,
+                    'expected_qty' => $poDetail->qty + $poDetail->free_qty,
                     'received_qty' => 0,
                     'notes' => null
                 ]);
@@ -311,14 +313,44 @@ class PurchaseOrderController extends Controller
 
     public function approve(PurchaseOrder $purchaseOrder)
     {
+        DB::beginTransaction();
         try {
-            $purchaseOrder->update(['status' => 'partially-approved']);
+            // Get all approval levels for this purchase order
+            $approvalLevels = \App\Models\ApprovalLevel::where('purchase_order_id', $purchaseOrder->id)
+                ->orderBy('level', 'desc')
+                ->get();
+
+            if ($approvalLevels->isEmpty()) {
+                throw new \Exception('No approval levels found for this purchase order');
+            }
+
+            // Get the highest level
+            $highestLevel = $approvalLevels->max('level');
             
+            // Increment the current approval level
+            $newLevel = $purchaseOrder->approval_level + 1;
+            
+            // Determine the new status
+            $newStatus = 'partially-approved';
+            if ($newLevel >= $highestLevel) {
+                $newStatus = 'fully-approved';
+            }
+
+            // Update purchase order
+            $purchaseOrder->update([
+                'status' => $newStatus,
+                'approval_level' => $newLevel,
+                'approved_at' => now()
+            ]);
+            
+            DB::commit();
+
             return response()->json([
                 'message' => 'Purchase order approved successfully',
                 'data' => $purchaseOrder
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'message' => 'Failed to approve purchase order',
                 'error' => $e->getMessage()
@@ -328,14 +360,23 @@ class PurchaseOrderController extends Controller
 
     public function reject(PurchaseOrder $purchaseOrder)
     {
+        DB::beginTransaction();
         try {
-            $purchaseOrder->update(['status' => 'rejected']);
+            // Reset approval level to 0 when rejected
+            $purchaseOrder->update([
+                'status' => 'rejected',
+                'approval_level' => 0,
+                'approved_at' => null
+            ]);
             
+            DB::commit();
+
             return response()->json([
                 'message' => 'Purchase order rejected successfully',
                 'data' => $purchaseOrder
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'message' => 'Failed to reject purchase order',
                 'error' => $e->getMessage()
@@ -382,5 +423,38 @@ class PurchaseOrderController extends Controller
                 }
                 return null;
         }
+    }
+
+    public function approvalLevels($purchaseOrder)
+    {
+        return ApprovalLevel::with(['user'])->where('purchase_order_id', $purchaseOrder)->get();
+    }
+
+    public function approvalRemarks($purchaseOrder)
+    {
+        return ApprovalRemark::with(['user'])->where('purchase_order_id', $purchaseOrder)->get();
+    }
+
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'from_date' => 'required|date|filled',
+            'to_date' => 'required|date|after_or_equal:from_date|filled',
+            'status' => 'required|string|filled',
+        ]);
+
+        $fromDate = $validated['from_date'];
+        $toDate = $validated['to_date'] ?? now()->toDateString(); // fallback to today if not provided
+        $status = $validated['status'] ?? '*'; // fallback to all statuses
+
+        $export = new \App\Exports\PurchaseOrderExport(
+            $fromDate,
+            $toDate,
+            $status
+        );
+
+        $fileName = 'purchase_orders_' . now()->format('Y-m-d_His') . '.xlsx';
+        
+        return \Maatwebsite\Excel\Facades\Excel::download($export, $fileName);
     }
 }

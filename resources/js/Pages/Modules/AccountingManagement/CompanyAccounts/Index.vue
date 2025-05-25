@@ -21,11 +21,6 @@ const primaryColor = computed(() => appSettings?.primary_color || "#3B82F6");
 // Define Header Actions
 const headerActions = ref([
     {
-        text: "Export",
-        url: `/${modelName}/export`,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
-    },
-    {
         text: "Create",
         url: `/${modelName}/create`,
         inertia: true,

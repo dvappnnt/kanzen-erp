@@ -11,6 +11,28 @@
                     col.label
                 }}</span>
                 <span
+                    v-if="col.clickable"
+                    @click="col.onClick(modelData)"
+                    :class="
+                        (() => {
+                            if (col.render) {
+                                const rendered = col.render(modelData);
+                                return `inline-block ${
+                                    rendered?.class ||
+                                    col.class ||
+                                    'text-gray-700 font-semibold'
+                                }`;
+                            }
+                            return col.class
+                                ? `inline-block ${col.class}`
+                                : 'text-gray-700 font-semibold inline-block';
+                        })()
+                    "
+                >
+                    {{ getValue(col, modelData) || "—" }}
+                </span>
+                <span
+                    v-else
                     :class="
                         (() => {
                             if (col.render) {

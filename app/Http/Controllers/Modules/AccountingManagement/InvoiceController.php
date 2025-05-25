@@ -57,6 +57,11 @@ class InvoiceController extends Controller
         ]);
     }
 
+    public function export()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Export");
+    }
+
     public function print($id)
     {
         $model = $this->modelClass::with([

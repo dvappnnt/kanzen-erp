@@ -169,4 +169,9 @@ class PurchaseOrder extends Model
     {
         return $this->hasMany(ApprovalRemark::class);
     }
+
+    public function approvalLevels()
+    {
+        return $this->hasMany(ApprovalLevel::class);
+    }
 }
