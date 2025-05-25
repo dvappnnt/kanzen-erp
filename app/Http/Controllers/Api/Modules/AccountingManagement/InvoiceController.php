@@ -302,4 +302,27 @@ class InvoiceController extends Controller
             'message' => "{$this->modelName}s retrieved successfully."
         ], 200);
     }
+    
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'from_date' => 'required|date|filled',
+            'to_date' => 'required|date|after_or_equal:from_date|filled',
+            'status' => 'required|string|filled',
+        ]);
+
+        $fromDate = $validated['from_date'];
+        $toDate = $validated['to_date'] ?? now()->toDateString(); // fallback to today if not provided
+        $status = $validated['status'] ?? '*'; // fallback to all statuses
+
+        $export = new \App\Exports\InvoiceExport(
+            $fromDate,
+            $toDate,
+            $status
+        );
+
+        $fileName = 'invoices_' . now()->format('Y-m-d_His') . '.xlsx';
+        
+        return \Maatwebsite\Excel\Facades\Excel::download($export, $fileName);
+    }
 }

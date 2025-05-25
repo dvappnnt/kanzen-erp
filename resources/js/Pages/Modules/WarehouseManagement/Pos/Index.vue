@@ -709,6 +709,20 @@
                                 </DialogTitle>
 
                                 <div class="space-y-4">
+                                    <div v-if="discountType === 'senior' || discountType === 'pwd'" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm text-yellow-700">
+                                                    Tax is automatically set to 0% for {{ discountType === 'senior' ? 'Senior' : 'PWD' }} discounts. To edit tax settings, please select either Percentage or Fixed Amount discount type.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div>
                                         <label
                                             class="block text-sm font-medium text-gray-700 mb-1"
@@ -720,6 +734,8 @@
                                             v-model="tempTaxRate"
                                             @input="updateTaxAmount"
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            :disabled="discountType === 'senior' || discountType === 'pwd'"
+                                            :class="{ 'bg-gray-100 cursor-not-allowed': discountType === 'senior' || discountType === 'pwd' }"
                                         />
                                     </div>
                                     <div>
@@ -733,6 +749,8 @@
                                             v-model="tempTaxAmount"
                                             @input="updateTaxRate"
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            :disabled="discountType === 'senior' || discountType === 'pwd'"
+                                            :class="{ 'bg-gray-100 cursor-not-allowed': discountType === 'senior' || discountType === 'pwd' }"
                                         />
                                     </div>
                                 </div>
@@ -815,9 +833,15 @@
                                             <option value="fixed">
                                                 Fixed Amount
                                             </option>
+                                            <option value="senior">
+                                                Senior Discount
+                                            </option>
+                                            <option value="pwd">
+                                                PWD Discount
+                                            </option>
                                         </select>
                                     </div>
-                                    <div>
+                                    <div v-if="discountType === 'percentage' || discountType === 'fixed'">
                                         <label
                                             class="block text-sm font-medium text-gray-700 mb-1"
                                         >
@@ -832,6 +856,14 @@
                                             v-model="discountValue"
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         />
+                                    </div>
+                                    <div v-if="discountType === 'senior' || discountType === 'pwd'" class="text-sm text-gray-600">
+                                        <p v-if="discountType === 'senior'">
+                                            Senior citizens are entitled to a 20% discount and are exempt from VAT.
+                                        </p>
+                                        <p v-if="discountType === 'pwd'">
+                                            PWDs are entitled to a 20% discount and are exempt from VAT.
+                                        </p>
                                     </div>
                                 </div>
 
@@ -1205,14 +1237,22 @@ const subtotal = computed(() => {
 });
 
 const taxAmount = computed(() => {
+    if (discountType.value === "senior" || discountType.value === "pwd") {
+        return 0;
+    }
     return (subtotal.value * taxRate.value) / 100;
 });
 
 const discountAmount = computed(() => {
     if (discountType.value === "percentage") {
         return (subtotal.value * discountValue.value) / 100;
+    } else if (discountType.value === "fixed") {
+        return discountValue.value;
+    } else if (discountType.value === "senior" || discountType.value === "pwd") {
+        // 20% discount for Senior/PWD
+        return (subtotal.value * 20) / 100;
     }
-    return discountValue.value;
+    return 0;
 });
 
 const total = computed(() => {
@@ -1314,15 +1354,30 @@ const clearCart = () => {
 };
 
 const updateTaxAmount = () => {
+    if (discountType.value === "senior" || discountType.value === "pwd") {
+        tempTaxAmount.value = 0;
+        tempTaxRate.value = 0;
+        return;
+    }
     tempTaxAmount.value = (subtotal.value * tempTaxRate.value) / 100;
 };
 
 const updateTaxRate = () => {
+    if (discountType.value === "senior" || discountType.value === "pwd") {
+        tempTaxRate.value = 0;
+        tempTaxAmount.value = 0;
+        return;
+    }
     tempTaxRate.value = (tempTaxAmount.value / subtotal.value) * 100;
 };
 
 const saveTaxChanges = () => {
-    taxRate.value = tempTaxRate.value;
+    if (discountType.value === "senior" || discountType.value === "pwd") {
+        taxRate.value = 0;
+        tempTaxRate.value = 0;
+    } else {
+        taxRate.value = tempTaxRate.value;
+    }
     showTaxModal.value = false;
 };
 
@@ -1337,8 +1392,13 @@ const saveShippingChanges = () => {
 
 watch(showTaxModal, (newVal) => {
     if (newVal) {
-        tempTaxRate.value = taxRate.value;
-        tempTaxAmount.value = taxAmount.value;
+        if (discountType.value === "senior" || discountType.value === "pwd") {
+            tempTaxRate.value = 0;
+            tempTaxAmount.value = 0;
+        } else {
+            tempTaxRate.value = taxRate.value;
+            tempTaxAmount.value = taxAmount.value;
+        }
     }
 });
 
@@ -1629,6 +1689,21 @@ const handleProceedToReceipt = (data) => {
     invoice.value = data;
     currentStep.value = 4;
 };
+
+// Update the watch for discountType
+watch(discountType, (newType) => {
+    if (newType === "senior" || newType === "pwd") {
+        // Reset discount value when switching to special discount types
+        discountValue.value = 0;
+        // Set tax rate to 0 for Senior/PWD
+        taxRate.value = 0;
+        tempTaxRate.value = 0;
+    } else {
+        // Reset to default tax rate when switching back to regular discounts
+        taxRate.value = 12;
+        tempTaxRate.value = 12;
+    }
+});
 </script>
 
 <style scoped>

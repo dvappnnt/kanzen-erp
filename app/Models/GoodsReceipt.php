@@ -71,48 +71,5 @@ class GoodsReceipt extends Model
                 $gr->status = 'pending';
             }
         });
-
-        static::updated(function ($gr) {
-            // If status changed to in-warehouse, update PO status
-            if ($gr->wasChanged('status') && $gr->status === 'in-warehouse') {
-                $gr->purchaseOrder()->update(['status' => 'received']);
-            }
-        });
-
-        // Listen to detail changes to update GR status
-        static::retrieved(function ($gr) {
-            $gr->updateStatusFromDetails();
-        });
-    }
-
-    // Helper method to update status based on details
-    public function updateStatusFromDetails()
-    {
-        if (!$this->details()->exists()) {
-            return;
-        }
-
-        // ❌ Don't touch if it's already in-warehouse
-        if ($this->status === 'in-warehouse') {
-            return;
-        }
-
-        $allDetails = $this->details()->get();
-        $totalExpected = $allDetails->sum('expected_qty');
-        $totalReceived = $allDetails->sum('received_qty');
-
-        if ($this->status != 'in-warehouse') {
-            if ($totalReceived === 0) {
-                $this->status = 'pending';
-            } elseif ($totalReceived < $totalExpected) {
-                $this->status = 'partially-received';
-            } elseif ($totalReceived === $totalExpected) {
-                $this->status = 'fully-received';
-            }
-        }
-
-        if ($this->isDirty('status')) {
-            $this->save();
-        }
     }
 }

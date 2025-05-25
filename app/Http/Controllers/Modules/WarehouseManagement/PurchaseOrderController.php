@@ -48,6 +48,11 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
+    public function export()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Export");
+    }
+
     public function print($id)
     {
         $purchaseOrder = $this->modelClass::with([

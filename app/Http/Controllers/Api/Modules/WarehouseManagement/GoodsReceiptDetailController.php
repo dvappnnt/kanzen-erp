@@ -134,6 +134,23 @@ class GoodsReceiptDetailController extends Controller
                 }
             }
 
+            // Update GoodsReceipt status
+            $goodsReceipt = $goodsReceiptDetail->goodsReceipt;
+            if ($goodsReceipt->status !== 'in-warehouse') {
+                $allDetails = $goodsReceipt->details()->get();
+                $totalExpected = $allDetails->sum('expected_qty');
+                $totalReceived = $allDetails->sum('received_qty');
+
+                if ($totalReceived === 0) {
+                    $goodsReceipt->status = 'pending';
+                } elseif ($totalReceived < $totalExpected) {
+                    $goodsReceipt->status = 'partially-received';
+                } elseif ($totalReceived === $totalExpected) {
+                    $goodsReceipt->status = 'fully-received';
+                }
+                $goodsReceipt->save();
+            }
+
             DB::commit();
 
             return response()->json([
@@ -173,6 +190,23 @@ class GoodsReceiptDetailController extends Controller
             $goodsReceiptDetail->received_qty -= $request->return_qty;
             $goodsReceiptDetail->notes = $request->notes;
             $goodsReceiptDetail->save();
+
+            // Update GoodsReceipt status
+            $goodsReceipt = $goodsReceiptDetail->goodsReceipt;
+            if ($goodsReceipt->status !== 'in-warehouse') {
+                $allDetails = $goodsReceipt->details()->get();
+                $totalExpected = $allDetails->sum('expected_qty');
+                $totalReceived = $allDetails->sum('received_qty');
+
+                if ($totalReceived === 0) {
+                    $goodsReceipt->status = 'pending';
+                } elseif ($totalReceived < $totalExpected) {
+                    $goodsReceipt->status = 'partially-received';
+                } elseif ($totalReceived === $totalExpected) {
+                    $goodsReceipt->status = 'fully-received';
+                }
+                $goodsReceipt->save();
+            }
 
             DB::commit();
 

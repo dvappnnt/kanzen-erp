@@ -67,4 +67,9 @@ class ExpenseController extends Controller
             'companies' => $companies,
         ]);
     }
+
+    public function export()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Export");
+    }
 }

@@ -79,12 +79,14 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('autocomplete/agents', [AgentController::class, 'autocomplete'])->name('agents.autocomplete');
 
     Route::apiResource('expenses', ExpenseController::class);
+    Route::post('expenses/export', [ExpenseController::class, 'export'])->name('expenses.export');
     Route::get('autocomplete/expenses', [ExpenseController::class, 'autocomplete'])->name('expenses.autocomplete');
 
     Route::apiResource('banks', BankController::class);
     Route::get('autocomplete/banks', [BankController::class, 'autocomplete'])->name('banks.autocomplete');
 
     Route::apiResource('invoices', InvoiceController::class);
+    Route::post('invoices/export', [InvoiceController::class, 'export'])->name('invoices.export');
     Route::get('autocomplete/invoices', [InvoiceController::class, 'autocomplete'])->name('invoices.autocomplete');
 
     // Add new routes for invoice payments
@@ -95,6 +97,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::post('invoices/{invoice}/payments/{payment}/reject', [InvoicePaymentMethodDetailController::class, 'reject'])->name('invoice-payments.reject');
 
     Route::apiResource('supplier-invoices', SupplierInvoiceController::class);
+    Route::post('supplier-invoices/export', [SupplierInvoiceController::class, 'export'])->name('supplier-invoices.export');
     Route::get('autocomplete/supplier-invoices', [SupplierInvoiceController::class, 'autocomplete'])->name('supplier-invoices.autocomplete');
 
     Route::apiResource('supplier-invoice-payments', SupplierInvoicePaymentController::class);
@@ -159,6 +162,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('autocomplete/warehouse-stock-transfers', [WarehouseStockTransferController::class, 'autocomplete'])->name('warehouse-stock-transfers.autocomplete');
 
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    Route::post('purchase-orders/export', [PurchaseOrderController::class, 'export'])->name('purchase-orders.export');
     Route::post('purchase-orders/{purchaseOrder}/pending', [PurchaseOrderController::class, 'pending'])->name('purchase-orders.pending');
     Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
     Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->name('purchase-orders.approve');
@@ -166,7 +170,9 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::post('purchase-orders/{purchaseOrder}/order', [PurchaseOrderController::class, 'order'])->name('purchase-orders.order');
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
     Route::get('autocomplete/purchase-orders', [PurchaseOrderController::class, 'autocomplete'])->name('purchase-orders.autocomplete');
-    
+    Route::get('purchase-orders/{purchaseOrder}/approval-levels', [PurchaseOrderController::class, 'approvalLevels'])->name('purchase-orders.approval-levels');
+    Route::get('purchase-orders/{purchaseOrder}/approval-remarks', [PurchaseOrderController::class, 'approvalRemarks'])->name('purchase-orders.approval-remarks');
+
     // Add nested route for purchase order details
     Route::group(['prefix' => 'purchase-orders/{purchaseOrder}'], function () {
         Route::apiResource('details', PurchaseOrderDetailController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
@@ -180,6 +186,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('goods-receipt-detail-remarks', GoodsReceiptDetailRemarkController::class);
 
     Route::apiResource('goods-receipts', GoodsReceiptController::class);
+    Route::post('goods-receipts/export', [GoodsReceiptController::class, 'export'])->name('goods-receipts.export');
     Route::get('autocomplete/goods-receipts', [GoodsReceiptController::class, 'autocomplete'])->name('goods-receipts.autocomplete');
     Route::post('goods-receipts/{goodsReceipt}/transfer', [GoodsReceiptController::class, 'transfer'])->name('goods-receipts.transfer');
 

@@ -27,4 +27,9 @@ class ApprovalLevel extends Model
     {
         return $this->belongsTo(GoodsReceipt::class);
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
