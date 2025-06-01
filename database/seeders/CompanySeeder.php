@@ -13,12 +13,12 @@ class CompanySeeder extends Seeder
     {
         // Create a Company
         $company = Company::create([
-            'name' => 'Neonetwork of Technologies',
-            'email' => 'ceogab@neonetwork.ph',
-            'address' => 'Quezon City',
-            'description' => "Unlock Big Opportunities with Our Unique Niche Business Model",
-            'mobile' => '9604704024',
-            'website' => 'https://neonetwork.ph/',
+            'name' => 'Kanzen Homes Bulacan',
+            'email' => 'kanzenbulacan@gmail.com',
+            'address' => '140 Doña Remedios Trinidad Highway Tarcan Baliuag City, Bulacan',
+            'description' => "Kanzen Homes sells smart home appliances and gadgets",
+            'mobile' => '09178889999',
+            'website' => 'https://fe-kanzen.dvapp.cloud/',
             'created_by_user_id' => null,  // Temporarily null, will update after user creation
             'country_id' => 177,
             'avatar' => null,
@@ -29,9 +29,9 @@ class CompanySeeder extends Seeder
 
         // Create a Company (Kanzen)
         $company = Company::create([
-            'name' => 'Kanzen Homes',
+            'name' => 'Kanzen Homes Cavite',
             'email' => 'support@dvapp.cloud',
-            'address' => 'Quezon City',
+            'address' => 'MG Center, Governors Drive, Langkaan II Dasmariñas, Cavite',
             'description' => "Kanzen Homes sells smart home appliances and gadgets",
             'mobile' => '09178889999',
             'website' => 'https://fe-kanzen.dvapp.cloud/',
@@ -46,7 +46,7 @@ class CompanySeeder extends Seeder
         // Create Super Admin User after company is created
         $superAdmin = User::factory()->withPersonalTeam()->create([
             'name' => 'Super Admin User',
-            'email' => 'super.admin@neonetwork.ph',
+            'email' => 'super.admin@kanzen.ph',
             'password' => bcrypt('123123123'),
             'company_id' => $company->id,
         ]);

@@ -103,4 +103,14 @@ class CategoryController extends Controller
             'resources' => array_values($resources),
         ]);
     }
+
+    public function export()
+    {
+        return Inertia::render("{$this->modelName}/Export");
+    }
+
+    public function import()
+    {
+        return Inertia::render("{$this->modelName}/Import");
+    }
 }

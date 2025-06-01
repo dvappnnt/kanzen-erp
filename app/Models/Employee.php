@@ -12,22 +12,41 @@ class Employee extends Model
 
     protected $fillable = [
         'company_id',
-        'name',
-        'email',
-        'country_id',
-        'landline',
-        'mobile',
-        'address',
+        'department_id',
+        'number',
+        'firstname',
+        'middlename',
+        'lastname',
+        'suffix',
+        'gender',
+        'birthdate',
+        'birthplace',
+        'civil_status',
+        'citizenship',
+        'religion',
+        'sss',
+        'philhealth',
+        'pagibig',
+        'tin',
+        'umid',
         'avatar',
-        'description',
-        'website',
-        'token',
-        'slug',
+        'blood_type',
+        'height',
+        'weight',
+    ];
+
+    protected $appends = [
+        'full_name',
     ];
 
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function country()
@@ -37,33 +56,36 @@ class Employee extends Model
 
     protected static function booted()
     {
-        static::creating(function ($modelData) {
-            $modelData->slug = self::generateUniqueSlug($modelData->name);
+        static::creating(function ($employee) {
+            if (empty($employee->number)) {
+                $company = \App\Models\Company::find($employee->company_id);
 
-            // Generate a unique token only if it's not set manually
-            if (empty($modelData->token)) {
-                $modelData->token = Str::random(64);
-            }
-        });
-
-        static::updating(function ($modelData) {
-            if ($modelData->isDirty('name')) {
-                $modelData->slug = self::generateUniqueSlug($modelData->name);
+                if ($company) {
+                    $prefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+                    $count = self::where('company_id', $employee->company_id)->withTrashed()->count() + 1;
+                    $employee->number = sprintf('%s-EMP-%06d', $prefix, $count);
+                } else {
+                    $employee->number = 'UNK-EMP-' . sprintf('%06d', rand(1, 999999));
+                }
             }
         });
     }
 
-    protected static function generateUniqueSlug($name)
+    public function getFullNameAttribute()
     {
-        $baseSlug = Str::slug($name);
-        $slug = $baseSlug;
-        $count = 0;
+        $middleInitial = $this->middlename
+            ? strtoupper(substr($this->middlename, 0, 1)) . '.'
+            : null;
 
-        while (static::where('slug', $slug)->exists()) {
-            $count++;
-            $slug = "{$baseSlug}-{$count}";
-        }
+        $names = [
+            $this->firstname,
+            $middleInitial,
+            $this->lastname,
+            $this->suffix, // e.g. Jr., Sr., III
+        ];
 
-        return $slug;
+        return collect($names)
+            ->filter() // removes null or empty values
+            ->implode(' ');
     }
 }

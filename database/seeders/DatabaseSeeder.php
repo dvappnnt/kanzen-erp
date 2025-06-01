@@ -29,11 +29,11 @@ class DatabaseSeeder extends Seeder
         User::factory(10)->withPersonalTeam()->create();
 
         $this->call(WarehouseSeeder::class);
-        $this->call(ProductCategorySeeder::class);
+        // $this->call(ProductCategorySeeder::class);
         $this->call(SupplierCategorySeeder::class);
         $this->call(AttributeSeeder::class);
         $this->call(SupplierSeeder::class);
-        $this->call(ProductSeeder::class);
+        // $this->call(ProductSeeder::class);
         // $this->call(ProductVariationSeeder::class);
         $this->call(BankSeeder::class);
         $this->call(CompanyAccountSeeder::class);
@@ -41,5 +41,6 @@ class DatabaseSeeder extends Seeder
         $this->call(ExpenseCategorySeeder::class);
 
         $this->call(ProjectModuleSeeder::class);
+        $this->call(HRModuleSeeder::class);
     }
 }

@@ -47,4 +47,9 @@ class SupplierProductDetail extends Model
     {
         return $this->hasMany(PurchaseOrderDetail::class);
     }
+
+    public function productVariation()
+    {
+        return $this->belongsTo(ProductVariation::class);
+    }
 }

@@ -4,6 +4,13 @@ namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Product;
+use App\Models\Category;
+use App\Models\Company;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -118,7 +125,8 @@ class ProductController extends Controller
 
         $searchTerm = $request->input('search');
 
-        $models = $this->modelClass::where('name', 'like', "%{$searchTerm}%")
+        $models = $this->modelClass::with(['category'])
+            ->where('name', 'like', "%{$searchTerm}%")
             ->take(10)
             ->get();
 
@@ -132,5 +140,63 @@ class ProductController extends Controller
             'data' => $models,
             'message' => "{$this->modelName}s retrieved successfully."
         ], 200);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv',
+        ]);
+
+        $file = $request->file('file');
+        $rows = Excel::toArray([], $file)[0]; // Get the first sheet
+
+        // Assume first row is header
+        $header = array_map('trim', $rows[0]);
+        unset($rows[0]);
+
+        $productsToInsert = [];
+        DB::beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $row = array_combine($header, $row);
+
+                // 1. Check company
+                $company = Company::where('name', trim($row['Company']))->first();
+                if (!$company) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => "Company '{$row['Company']}' does not exist."
+                    ], 422);
+                }
+
+                // 2. Check or create category
+                $category = Category::firstOrCreate(
+                    ['name' => trim($row['Category'])],
+                    ['related_model' => 'products']
+                );
+
+                // 3. Prepare product data
+                $productData = [
+                    'name' => $row['Name'],
+                    'category_id' => $category->id,
+                    'company_id' => $company->id,
+                    'description' => $row['Description'] ?? null,
+                    'unit_of_measure' => $row['Measure'] ?? null,
+                    'avatar' => $row['Avatar (if any)'] ?? null,
+                    'has_variation' => 1, // or parse from row if present
+                    // 'slug' => Str::slug($row['Name']) . '-' . Str::random(5),
+                    // Add other fields as needed
+                ];
+
+                // 4. Insert product
+                Product::create($productData);
+            }
+            DB::commit();
+            return response()->json(['message' => 'Import successful']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Import failed: ' . $e->getMessage()], 500);
+        }
     }
 }

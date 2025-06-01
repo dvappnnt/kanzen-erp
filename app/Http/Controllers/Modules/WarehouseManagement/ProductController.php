@@ -46,7 +46,7 @@ class ProductController extends Controller
     public function edit($id)
     {
         $model = $this->modelClass::with(['category'])->findOrFail($id);
-        
+
         $query = Category::where('related_model', $this->modelName);
         $categories = $query->orderBy('name', 'asc')->get();
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Edit", [
@@ -113,5 +113,15 @@ class ProductController extends Controller
             'modelData' => $model,
             'images' => $images,
         ]);
+    }
+
+    public function export()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Export");
+    }
+
+    public function import()
+    {
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Import");
     }
 }

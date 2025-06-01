@@ -19,7 +19,9 @@ class WarehouseProduct extends Model
         'last_cost',
         'average_cost',
         'has_serials',
-        'critical_level_qty'
+        'critical_level_qty',
+        'sku',
+        'barcode'
     ];
 
     protected $casts = [

@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('token', 64)->unique();
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
             $table->foreignId('supplier_product_detail_id')->constrained()->onDelete('cascade');
+            $table->string('sku')->nullable();
+            $table->string('barcode')->nullable();
             $table->integer('critical_level_qty')->default(0);
             $table->integer('qty')->default(0);
             $table->decimal('price', 15, 2)->default(0)->nullable();

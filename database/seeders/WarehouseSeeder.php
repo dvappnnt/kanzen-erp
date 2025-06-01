@@ -14,32 +14,37 @@ class WarehouseSeeder extends Seeder
         $now = Carbon::now();
 
         $locations = [
-            'Quezon City',
-            'Taguig',
-            'Makati',
-            'Cebu City',
-            'Davao City',
-            'Baguio',
-            'Iloilo City',
-            'Cagayan de Oro',
+            [
+                'name' => 'Bulacan Showroom',
+                'address' => '140 Doña Remedios Trinidad Highway Tarcan Baliuag City, Bulacan',
+            ],
+            [
+                'name' => 'SHOWROOM - CAVITE',
+                'address' => 'MG Center, Governors Drive, Langkaan II Dasmariñas, Cavite',
+                'mobile' => '9619418114',
+            ],
+            [
+                'name' => 'SHOWROOM - BULACAN',
+                'address' => '792 Pinagpala St. Pinagbarilan Baliuag City, Bulacan',
+                'mobile' => '9621929589',
+            ],
         ];
 
-        foreach ($locations as $index => $location) {
+        foreach ($locations as $location) {
             $companyId = rand(1, 2); // Randomly assign to company 1 or 2
-            $name = "{$location} Warehouse " . chr(65 + $index); // A, B, C, ...
             DB::table('warehouses')->insert([
                 'company_id' => $companyId,
                 'token' => Str::random(64),
-                'slug' => Str::slug($name),
+                'slug' => Str::slug($location['name']),
                 'created_by_user_id' => $companyId,
                 'category_id' => null,
-                'country_id' => 177,
-                'name' => $name,
+                'country_id' => 177, // Philippines
+                'name' => $location['name'],
                 'email' => null,
                 'landline' => null,
                 'mobile' => null,
-                'address' => $location,
-                'description' => "Storage facility located in {$location}",
+                'address' => $location['address'],
+                'description' => "Facility located at {$location['address']}",
                 'website' => null,
                 'avatar' => null,
                 'created_at' => $now,
