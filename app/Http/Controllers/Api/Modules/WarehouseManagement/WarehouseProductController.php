@@ -161,4 +161,21 @@ class WarehouseProductController extends Controller
             'message' => $serial ? 'Serial/batch number found' : 'Serial/batch number not found, already sold, or does not belong to this product'
         ], 200);
     }
+
+    public function updateBarcodeSku(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'barcode' => 'required|string',
+            'sku' => 'required|string'
+        ]);
+
+        $warehouseProduct = $this->modelClass::findOrFail($id);
+
+        $warehouseProduct->update($validated);
+
+        return response()->json([
+            'message' => 'Barcode and SKU updated successfully',
+            'data' => $warehouseProduct
+        ], 200);
+    }
 }

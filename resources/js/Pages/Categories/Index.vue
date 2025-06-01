@@ -17,6 +17,12 @@ const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 // Define Header Actions
 const headerActions = ref([
+    // {
+    //     text: "Export",
+    //     url: `/${modelName}/export`,
+    //     inertia: true,
+    //     class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
+    // },
     {
         text: "Create",
         url: `/${modelName}/create`,

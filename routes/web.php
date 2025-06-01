@@ -38,6 +38,9 @@ use App\Http\Controllers\Modules\WarehouseManagement\PurchaseOrderController;
 use App\Http\Controllers\Modules\WarehouseManagement\GoodsReceiptController;
 use App\Http\Controllers\Modules\WarehouseManagement\PurchaseRequisitionController;
 
+use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeController;
+use App\Http\Controllers\Modules\HumanResourceManagement\DepartmentController;
+
 Route::get('/', function () {
     // return Inertia::render('Welcome', [
     //     'canLogin' => Route::has('login'),
@@ -93,9 +96,12 @@ Route::middleware([
 
     Route::resource('companies', CompanyController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('customers', CustomerController::class)->only(['index', 'show', 'edit', 'create']);
-    Route::resource('categories', CategoryController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('agents', AgentController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
+
+    Route::get('categories/export', [CategoryController::class, 'export'])->name('categories.export');
+    Route::get('categories/import', [CategoryController::class, 'import'])->name('categories.import');
+    Route::resource('categories', CategoryController::class)->only(['index', 'show', 'edit', 'create']);
 
     Route::get('purchase-orders/export', [PurchaseOrderController::class, 'export'])->name('purchase-orders.export');
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show', 'edit', 'create']);
@@ -115,12 +121,17 @@ Route::middleware([
         Route::get('products', [SupplierController::class, 'products'])->name('suppliers.products');
     });
 
+    Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
+    Route::get('products/import', [ProductController::class, 'import'])->name('products.import');
     Route::resource('products', ProductController::class)->only(['index', 'show', 'edit', 'create']);
     Route::prefix('products/{product}')->group(function () {
         Route::get('specifications', [ProductController::class, 'specifications'])->name('products.specifications');
         Route::get('variations', [ProductController::class, 'variations'])->name('products.variations');
         Route::get('images', [ProductController::class, 'images'])->name('products.images');
     });
+
+    Route::resource('employees', EmployeeController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('departments', DepartmentController::class)->only(['index', 'show', 'edit', 'create']);
 
     Route::get('app/settings', [SettingController::class, 'index'])->name('app.settings.index');
     Route::get('app/settings/style-kit', [SettingController::class, 'styleKit'])->name('app.settings.style-kit');
@@ -139,6 +150,7 @@ Route::group(['prefix' => 'public'], function () {
         Route::get('/suppliers/{supplier}', [QrController::class, 'suppliers'])->name('qr.suppliers');
         Route::get('/warehouses/{warehouse}', [QrController::class, 'warehouses'])->name('qr.warehouses');
         Route::get('/companies/{company}', [QrController::class, 'companies'])->name('qr.companies');
+        Route::get('/employees/{employee}', [QrController::class, 'employees'])->name('qr.employees');
         Route::get('/purchase-orders/{purchaseOrder}', [QrController::class, 'purchaseOrders'])->name('qr.purchase-orders');
         Route::get('/goods-receipts/{goodsReceipt}', [QrController::class, 'goodsReceipts'])->name('qr.goods-receipts');
         Route::get('/purchase-requisitions/{purchaseRequisition}', [QrController::class, 'purchaseRequisitions'])->name('qr.purchase-requisitions');

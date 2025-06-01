@@ -145,7 +145,9 @@ class GoodsReceiptController extends Controller
                         'qty' => 0,
                         'has_serials' => count($detail->serials) > 0,
                         'price' => $detail->purchaseOrderDetail->price,
-                        'last_cost' => $detail->purchaseOrderDetail->price
+                        'last_cost' => $detail->purchaseOrderDetail->price,
+                        'sku' => $detail->purchaseOrderDetail->supplierProductDetail->productVariation->sku,
+                        'barcode' => $detail->purchaseOrderDetail->supplierProductDetail->productVariation->barcode
                     ]
                 );
 

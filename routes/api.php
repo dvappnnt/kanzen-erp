@@ -57,6 +57,9 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferC
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountTypeController;
 
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\DepartmentController;
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -131,6 +134,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('attribute-values', AttributeValueController::class);
     Route::get('autocomplete/attribute-values', [AttributeValueController::class, 'autocomplete'])->name('attribute-values.autocomplete');
 
+    Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
     Route::apiResource('products', ProductController::class);
     Route::get('complete/products', [ProductController::class, 'complete'])->name('products.complete');
     Route::get('autocomplete/products', [ProductController::class, 'autocomplete'])->name('products.autocomplete');
@@ -154,6 +158,7 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('autocomplete/warehouse-products', [WarehouseProductController::class, 'autocomplete'])->name('warehouse-products.autocomplete');
     Route::get('search/warehouse-products', [WarehouseProductController::class, 'search'])->name('warehouse-products.search');
     Route::get('serial-check/warehouse-products', [WarehouseProductController::class, 'serialCheck'])->name('warehouse-products.serial-check');
+    Route::put('warehouse-products/{warehouseProduct}/update/barcode-sku', [WarehouseProductController::class, 'updateBarcodeSku'])->name('warehouse-products.update-barcode-sku');
 
     Route::apiResource('warehouse-stock-adjustments', WarehouseStockAdjustmentController::class);
     Route::get('autocomplete/warehouse-stock-adjustments', [WarehouseStockAdjustmentController::class, 'autocomplete'])->name('warehouse-stock-adjustments.autocomplete');
@@ -221,6 +226,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('project-tasks', ProjectTaskController::class);
     Route::get('autocomplete/project-tasks', [ProjectTaskController::class, 'autocomplete'])->name('project-tasks.autocomplete');
+
+    Route::apiResource('employees', EmployeeController::class);
+    Route::get('autocomplete/employees', [EmployeeController::class, 'autocomplete'])->name('employees.autocomplete');
+
+    Route::apiResource('departments', DepartmentController::class);
+    Route::get('autocomplete/departments', [DepartmentController::class, 'autocomplete'])->name('departments.autocomplete');
 
     Route::post('app-settings/schedule', [SettingController::class, 'updateSchedule']);
     Route::get('app-settings/export-database', [SettingController::class, 'exportDatabase']);

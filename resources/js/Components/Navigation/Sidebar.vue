@@ -635,6 +635,69 @@
 
                     <div
                         v-if="
+                            hasPermission('read employees') ||
+                            hasPermission('read departments')
+                        "
+                        v-show="!isMinimized"
+                        class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                    >
+                        HR
+                    </div>
+
+                    <Link
+                        v-if="hasPermission('read employees')"
+                        :href="route('employees.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('employees.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('employees.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-group-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('employees.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Employees</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read departments')"
+                        :href="route('departments.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('departments.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('departments.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-group-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('departments.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Departments</span>
+                    </Link>
+
+                    <div
+                        v-if="
                             hasPermission('read users') ||
                             hasPermission('read companies') || 
                             hasPermission('read suppliers') ||

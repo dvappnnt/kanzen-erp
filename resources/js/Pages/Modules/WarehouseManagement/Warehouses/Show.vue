@@ -132,6 +132,13 @@ const stockTransferHistoryPagination = ref({
     last_page: 0
 });
 
+// Add new refs for barcode modal
+const showBarcodeModal = ref(false);
+const barcodeForm = ref({
+    barcode: '',
+    sku: ''
+});
+
 const loadWarehouseProducts = async (page = 1) => {
     try {
         isLoading.value = true;
@@ -432,6 +439,40 @@ const closeStockTransferHistoryModal = () => {
     stockTransferHistory.value = [];
 };
 
+// Add new methods for barcode functionality
+const openBarcodeModal = (product) => {
+    selectedProduct.value = product;
+    barcodeForm.value = {
+        barcode: product.supplier_product_detail?.variation?.barcode || '',
+        sku: product.supplier_product_detail?.variation?.sku || ''
+    };
+    showBarcodeModal.value = true;
+};
+
+const closeBarcodeModal = () => {
+    showBarcodeModal.value = false;
+    selectedProduct.value = null;
+    barcodeForm.value = {
+        barcode: '',
+        sku: ''
+    };
+};
+
+const saveBarcodeSku = async () => {
+    try {
+        isLoading.value = true;
+        await axios.put(`/api/warehouse-products/${selectedProduct.value.id}/update/barcode-sku`, barcodeForm.value);
+        toast.success('Barcode and SKU updated successfully');
+        await loadWarehouseProducts();
+        closeBarcodeModal();
+    } catch (error) {
+        console.error('Error updating barcode and SKU:', error);
+        toast.error(error.response?.data?.message || 'Failed to update barcode and SKU');
+    } finally {
+        isLoading.value = false;
+    }
+};
+
 onMounted(() => {
     loadWarehouseProducts();
 });
@@ -562,10 +603,10 @@ onMounted(() => {
                                                             </span>
                                                         </div>
                                                         <div class="text-sm text-gray-500">
-                                                            SKU: {{ product.supplier_product_detail?.variation?.sku || '-' }}
+                                                            SKU: {{ product.sku || '-' }}
                                                         </div>
                                                         <div class="text-sm text-gray-500">
-                                                            Barcode: {{ product.supplier_product_detail?.variation?.barcode || '-' }}
+                                                            Barcode: {{ product.barcode || '-' }}
                                                             <div class="text-sm text-gray-500">
                                                                 <button 
                                                                     v-if="product.stock_transfers_count > 0"
@@ -649,6 +690,15 @@ onMounted(() => {
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                                             <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        @click="openBarcodeModal(product)"
+                                                        class="text-purple-600 hover:text-purple-900 p-1 rounded-md hover:bg-purple-50"
+                                                        title="Edit Barcode/SKU"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
                                                         </svg>
                                                     </button>
                                                 </div>
@@ -762,11 +812,11 @@ onMounted(() => {
                                         </div>
                                         <div>
                                             <p class="text-sm font-medium text-gray-500">SKU</p>
-                                            <p class="mt-1">{{ selectedProduct.supplier_product_detail?.variation?.sku }}</p>
+                                            <p class="mt-1">{{ selectedProduct.sku }}</p>
                                         </div>
                                         <div>
                                             <p class="text-sm font-medium text-gray-500">Barcode</p>
-                                            <p class="mt-1">{{ selectedProduct.supplier_product_detail?.variation?.barcode }}</p>
+                                            <p class="mt-1">{{ selectedProduct.barcode }}</p>
                                         </div>
                                         <div>
                                             <p class="text-sm font-medium text-gray-500">Unit of Measure</p>
@@ -1295,6 +1345,67 @@ onMounted(() => {
                             </nav>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barcode/SKU Edit Modal -->
+        <div v-if="showBarcodeModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Edit Barcode and SKU</h3>
+                    <button @click="closeBarcodeModal" class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div v-if="selectedProduct">
+                        <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                            <h4 class="text-sm font-medium text-gray-900 mb-2">Product Details</h4>
+                            <p class="text-sm text-gray-600">{{ selectedProduct.supplier_product_detail?.product?.name }}</p>
+                            <p class="text-sm text-gray-500">Variation: {{ selectedProduct.supplier_product_detail?.variation?.name || '-' }}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Barcode</label>
+                        <input 
+                            type="text" 
+                            v-model="barcodeForm.barcode"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="Enter barcode..."
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">SKU</label>
+                        <input 
+                            type="text" 
+                            v-model="barcodeForm.sku"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="Enter SKU..."
+                        />
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button 
+                        @click="closeBarcodeModal"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        :disabled="isLoading"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        @click="saveBarcodeSku"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                        :disabled="isLoading"
+                    >
+                        Save Changes
+                    </button>
                 </div>
             </div>
         </div>
