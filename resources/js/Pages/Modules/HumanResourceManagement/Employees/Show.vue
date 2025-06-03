@@ -85,13 +85,33 @@ const governmentDetails = ref([
 const navigationTabs = ref([
     {
         text: "Overview",
-        url: `/${modelName}/${usePage().props.modelData.id}`,
+        url: `/employees/${usePage().props.modelData.id}`,
         inertia: true,
         permission: "read employees",
     },
     {
+        text: "Employment Details",
+        url: `/employees/${usePage().props.modelData.id}/employment-details`,
+        inertia: true,
+        permission: "read employee employment details",
+    },
+    {
+        text: "Payroll Details",
+        url: `/employees/${usePage().props.modelData.id}/payroll-details`,
+        inertia: true,
+        permission: "read employee payroll details",
+    },
+    {
+        text: "Work Experiences",
+        url: `/employees/${
+            usePage().props.modelData.id
+        }/work-experiences`,
+        inertia: true,
+        permission: "read employee work experiences",
+    },
+    {
         text: "Educational Attainments",
-        url: `/${modelName}/${
+        url: `/employees/${
             usePage().props.modelData.id
         }/educational-attainments`,
         inertia: true,
@@ -99,39 +119,45 @@ const navigationTabs = ref([
     },
     {
         text: "Work Histories",
-        url: `/${modelName}/${usePage().props.modelData.id}/work-histories`,
+        url: `/employees/${usePage().props.modelData.id}/work-histories`,
         inertia: true,
         permission: "read employee work histories",
     },
     {
         text: "Contact Details",
-        url: `/${modelName}/${usePage().props.modelData.id}/contact-details`,
+        url: `/employees/${usePage().props.modelData.id}/contact-details`,
         inertia: true,
         permission: "read employee contact details",
     },
     {
         text: "Dependents",
-        url: `/${modelName}/${usePage().props.modelData.id}/dependents`,
+        url: `/employees/${usePage().props.modelData.id}/dependents`,
         inertia: true,
         permission: "read employee dependents",
     },
     {
         text: "Documents",
-        url: `/${modelName}/${usePage().props.modelData.id}/documents`,
+        url: `/employees/${usePage().props.modelData.id}/documents`,
         inertia: true,
         permission: "read employee documents",
     },
     {
         text: "Certificates & Training",
-        url: `/${modelName}/${usePage().props.modelData.id}/certificates`,
+        url: `/employees/${usePage().props.modelData.id}/certificates`,
         inertia: true,
         permission: "read employee certificates",
     },
     {
         text: "Skills",
-        url: `/${modelName}/${usePage().props.modelData.id}/skills`,
+        url: `/employees/${usePage().props.modelData.id}/skills`,
         inertia: true,
         permission: "read employee skills",
+    },
+    {
+        text: "Disciplinary Actions",
+        url: `/employees/${usePage().props.modelData.id}/disciplinary-actions`,
+        inertia: true,
+        permission: "read employee disciplinary actions",
     },
 ]);
 

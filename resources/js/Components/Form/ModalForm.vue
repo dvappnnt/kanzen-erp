@@ -33,7 +33,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["close", "updated"]);
+const emit = defineEmits(["update:show", "close", "updated"]);
 
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 const toast = useToast();
@@ -76,10 +76,15 @@ const submitForm = async () => {
         isSubmitting.value = false;
     }
 };
+
+const close = () => {
+    emit("update:show", false);
+    emit("close");
+};
 </script>
 
 <template>
-    <Modal :show="show" @close="emit('close')">
+    <Modal :show="show" @close="close">
         <div class="p-6">
             <h2 class="text-lg font-medium text-gray-900">
                 {{ title }}
@@ -107,7 +112,7 @@ const submitForm = async () => {
                         <button
                             type="button"
                             class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs uppercase tracking-widest text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition"
-                            @click="emit('close')"
+                            @click="close"
                             :disabled="isSubmitting"
                         >
                             Cancel

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('employee_educational_attainments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
-            $table->enum('level', ['elementary', 'secondary', 'vocational', 'college', 'post-graduate']);
+            $table->enum('level', ['elementary', 'high-school', 'vocational', 'college', 'post-graduate']);
             $table->string('school_name');
             $table->string('course')->nullable();
             $table->date('from_date')->nullable();

@@ -88,4 +88,49 @@ class Employee extends Model
             ->filter() // removes null or empty values
             ->implode(' ');
     }
+
+    public function educationalAttainments()
+    {
+        return $this->hasMany(EmployeeEducationalAttainment::class);
+    }
+
+    public function workExperiences()
+    {
+        return $this->hasMany(EmployeeWorkExperience::class);
+    }
+
+    public function dependents()
+    {
+        return $this->hasMany(EmployeeDependent::class);
+    }
+
+    public function contactDetails()
+    {
+        return $this->hasMany(EmployeeContactDetail::class);
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(EmployeeDocument::class);
+    }
+
+    public function certificates()
+    {
+        return $this->hasMany(EmployeeCertificate::class);
+    }
+
+    public function disciplinaryActions()
+    {
+        return $this->hasMany(EmployeeDisciplinaryAction::class);
+    }
+
+    public function payrollDetails()
+    {
+        return $this->hasMany(EmployeePayrollDetail::class);
+    }
+
+    public function employmentDetails()
+    {
+        return $this->hasMany(EmployeeEmploymentDetail::class);
+    }
 }

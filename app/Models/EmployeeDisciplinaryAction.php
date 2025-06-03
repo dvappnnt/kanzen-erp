@@ -14,9 +14,10 @@ class EmployeeDisciplinaryAction extends Model
         'offense_type_id',
         'offense_date',
         'offense_description',
-        'action_taken',
         'action_date',
+        'action_taken',
         'action_description',
+        'file_path',
         'remarks',
     ];
 
