@@ -14,11 +14,14 @@ return new class extends Migration
         Schema::create('employee_disciplinary_actions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
-            $table->date('date');
-            $table->string('offense_type');
-            $table->text('description')->nullable();
+            $table->date('offense_date');
+            $table->foreignId('offense_type_id')->constrained()->onDelete('cascade');
+            $table->text('offense_description')->nullable();
+            $table->date('action_date');
             $table->enum('action_taken', ['verbal-warning', 'suspension', 'dismissal']);
+            $table->text('action_description')->nullable();
             $table->text('file_path')->nullable(); // attached memo or proof
+            $table->text('remarks')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

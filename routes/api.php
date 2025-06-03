@@ -57,8 +57,17 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferC
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountTypeController;
 
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\DocumentTypeController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\OffenseTypeController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\DepartmentController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeEducationalAttainmentController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeWorkExperienceController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeContactDetailController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeDependentController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeDisciplinaryActionController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeCertificateController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeDocumentController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -230,8 +239,36 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('employees', EmployeeController::class);
     Route::get('autocomplete/employees', [EmployeeController::class, 'autocomplete'])->name('employees.autocomplete');
 
+    Route::apiResource('employee-educational-attainments', EmployeeEducationalAttainmentController::class);
+    Route::get('autocomplete/educational-attainments', [EmployeeEducationalAttainmentController::class, 'autocomplete'])->name('employee-educational-attainments.autocomplete');
+
+    Route::apiResource('employee-work-experiences', EmployeeWorkExperienceController::class);
+    Route::get('autocomplete/work-experiences', [EmployeeWorkExperienceController::class, 'autocomplete'])->name('employee-work-experiences.autocomplete');
+
+    Route::apiResource('employee-contact-details', EmployeeContactDetailController::class);
+    Route::get('autocomplete/contact-details', [EmployeeContactDetailController::class, 'autocomplete'])->name('employee-contact-details.autocomplete');
+
+    Route::apiResource('employee-dependents', EmployeeDependentController::class);
+    Route::get('autocomplete/dependents', [EmployeeDependentController::class, 'autocomplete'])->name('employee-dependents.autocomplete');
+
     Route::apiResource('departments', DepartmentController::class);
     Route::get('autocomplete/departments', [DepartmentController::class, 'autocomplete'])->name('departments.autocomplete');
+
+    Route::apiResource('employee-disciplinary-actions', EmployeeDisciplinaryActionController::class);
+    Route::get('autocomplete/disciplinary-actions', [EmployeeDisciplinaryActionController::class, 'autocomplete'])->name('employee-disciplinary-actions.autocomplete');
+
+    Route::apiResource('employee-certificates', EmployeeCertificateController::class);
+    Route::get('autocomplete/certificates', [EmployeeCertificateController::class, 'autocomplete'])->name('employee-certificates.autocomplete');
+
+    Route::apiResource('employee-documents', EmployeeDocumentController::class);
+    Route::get('employee-documents/{id}/download', [EmployeeDocumentController::class, 'download'])->name('employee-documents.download');
+    Route::get('autocomplete/documents', [EmployeeDocumentController::class, 'autocomplete'])->name('employee-documents.autocomplete');
+
+    Route::apiResource('document-types', DocumentTypeController::class);
+    Route::get('autocomplete/document-types', [DocumentTypeController::class, 'autocomplete'])->name('document-types.autocomplete');
+
+    Route::apiResource('offense-types', OffenseTypeController::class);
+    Route::get('autocomplete/offense-types', [OffenseTypeController::class, 'autocomplete'])->name('offense-types.autocomplete');
 
     Route::post('app-settings/schedule', [SettingController::class, 'updateSchedule']);
     Route::get('app-settings/export-database', [SettingController::class, 'exportDatabase']);

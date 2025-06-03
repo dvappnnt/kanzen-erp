@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('landline')->nullable();
             $table->string('address')->nullable();
             $table->string('email')->nullable();
-            $table->enum('relationship', ['father', 'mother', 'spouse', 'child', 'other']);
+            $table->string('relationship');
             $table->date('birthdate');
             $table->string('birthplace')->nullable();
             $table->boolean('is_emergency_contact')->default(false);

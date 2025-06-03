@@ -10,6 +10,7 @@ class EmployeeEducationalAttainment extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'level',
         'employee_id',
         'school_name',
         'course',

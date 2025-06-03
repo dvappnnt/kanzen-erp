@@ -67,4 +67,76 @@ class EmployeeController extends Controller
             'departments' => $departments,
         ]);
     }
+
+    public function educationalAttainments($id)
+    {
+        $model = $this->modelClass::with(['educationalAttainments'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/EducationalAttainments", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function workExperiences($id)
+    {
+        $model = $this->modelClass::with(['workExperiences'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/WorkExperiences", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function dependents($id)
+    {
+        $model = $this->modelClass::with(['dependents'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Dependents", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function contactDetails($id)
+    {
+        $model = $this->modelClass::with(['contactDetails'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/ContactDetails", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function documents($id)
+    {
+        $model = $this->modelClass::with(['documents'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Documents", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function certificates($id)
+    {
+        $model = $this->modelClass::with(['certificates'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Certificates", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function disciplinaryActions($id)
+    {
+        $model = $this->modelClass::with(['disciplinaryActions'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/DisciplinaryActions", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function payrollDetails($id)
+    {
+        $model = $this->modelClass::with(['payrollDetails'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/PayrollDetails", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function employmentDetails($id)
+    {
+        $model = $this->modelClass::with(['employmentDetails'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/EmploymentDetails", [
+            'modelData' => $model,
+        ]);
+    }
 }

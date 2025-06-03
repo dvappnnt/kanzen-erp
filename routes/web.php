@@ -131,6 +131,19 @@ Route::middleware([
     });
 
     Route::resource('employees', EmployeeController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::prefix('employees/{employee}')->group(function () {
+        Route::get('educational-attainments', [EmployeeController::class, 'educationalAttainments'])->name('employees.educational-attainments');
+        Route::get('work-experiences', [EmployeeController::class, 'workExperiences'])->name('employees.work-experiences');
+        Route::get('dependents', [EmployeeController::class, 'dependents'])->name('employees.dependents');
+        Route::get('contact-details', [EmployeeController::class, 'contactDetails'])->name('employees.contact-details');
+        Route::get('documents', [EmployeeController::class, 'documents'])->name('employees.documents');
+        Route::get('certificates', [EmployeeController::class, 'certificates'])->name('employees.certificates');
+        Route::get('disciplinary-actions', [EmployeeController::class, 'disciplinaryActions'])->name('employees.disciplinary-actions');
+        Route::get('payroll-details', [EmployeeController::class, 'payrollDetails'])->name('employees.payroll-details');
+        Route::get('employment-details', [EmployeeController::class, 'employmentDetails'])->name('employees.employment-details');
+        Route::get('skills', [EmployeeController::class, 'skills'])->name('employees.skills');
+    });
+
     Route::resource('departments', DepartmentController::class)->only(['index', 'show', 'edit', 'create']);
 
     Route::get('app/settings', [SettingController::class, 'index'])->name('app.settings.index');

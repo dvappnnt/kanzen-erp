@@ -1,26 +1,49 @@
 <template>
     <div class="flex space-x-2">
-        <a
-            v-for="(action, index) in actions" 
-            :key="index"
-            :href="action.inertia ? undefined : action.url"
-            :class="[
-                'cursor-pointer', 
-                action.class || 'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded'
-            ]"
-            :style="getButtonStyle(action)"
-            @click.prevent="action.inertia ? handleInertia(action.url) : null"
-        >
-            <span :class="['flex items-center', action.icon ? 'space-x-2' : '']">
-                <i 
-                    v-if="action.icon" 
-                    :class="action.icon" 
-                    class="text-xl"
-                    :style="'backgroundColor' in (typeof action.style === 'function' ? action.style() : (action.style || {})) ? { color: buttonPrimaryTextColor } : ''"
-                ></i>
-                <span>{{ action.text }}</span>
-            </span>
-        </a>
+        <template v-for="(action, index) in actions" :key="index">
+            <!-- Button for onClick actions -->
+            <button
+                v-if="action.onClick"
+                :class="[
+                    'cursor-pointer', 
+                    action.class || 'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded'
+                ]"
+                :style="getButtonStyle(action)"
+                @click="action.onClick"
+            >
+                <span :class="['flex items-center', action.icon ? 'space-x-2' : '']">
+                    <i 
+                        v-if="action.icon" 
+                        :class="action.icon" 
+                        class="text-xl"
+                        :style="'backgroundColor' in (typeof action.style === 'function' ? action.style() : (action.style || {})) ? { color: buttonPrimaryTextColor } : ''"
+                    ></i>
+                    <span>{{ action.text }}</span>
+                </span>
+            </button>
+
+            <!-- Link for navigation actions -->
+            <a
+                v-else
+                :href="action.inertia ? undefined : action.url"
+                :class="[
+                    'cursor-pointer', 
+                    action.class || 'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded'
+                ]"
+                :style="getButtonStyle(action)"
+                @click.prevent="action.inertia ? handleInertia(action.url) : null"
+            >
+                <span :class="['flex items-center', action.icon ? 'space-x-2' : '']">
+                    <i 
+                        v-if="action.icon" 
+                        :class="action.icon" 
+                        class="text-xl"
+                        :style="'backgroundColor' in (typeof action.style === 'function' ? action.style() : (action.style || {})) ? { color: buttonPrimaryTextColor } : ''"
+                    ></i>
+                    <span>{{ action.text }}</span>
+                </span>
+            </a>
+        </template>
     </div>
 </template>
 

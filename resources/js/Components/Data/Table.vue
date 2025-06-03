@@ -1,6 +1,7 @@
 <script setup>
 import ConfirmationModal from "@/Components/ConfirmationModal.vue";
 import ResponseModal from "@/Components/ResponseModal.vue";
+import ModalForm from "@/Components/Form/ModalForm.vue";
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "@/axios";
@@ -21,6 +22,22 @@ const props = defineProps({
         default: "Data",
     },
     isLoading: {
+        type: Boolean,
+        default: false,
+    },
+    formFields: {
+        type: Array,
+        default: () => [],
+    },
+    viewAsModal: {
+        type: Boolean,
+        default: false,
+    },
+    editAsModal: {
+        type: Boolean,
+        default: false,
+    },
+    customActionsAsModal: {
         type: Boolean,
         default: false,
     },
@@ -158,23 +175,65 @@ const handleSearchSelect = async (selectedModelData) => {
     }
 };
 
+// Modal form states
+const showViewModal = ref(false);
+const showEditModal = ref(false);
+const selectedRow = ref(null);
+
+// Handle view action
+const handleView = (row) => {
+    if (props.viewAsModal) {
+        selectedRow.value = row;
+        showViewModal.value = true;
+    } else {
+        // Use Inertia for navigation
+        router.visit(row.viewUrl);
+    }
+};
+
+// Handle edit action
+const handleEdit = (row) => {
+    if (props.editAsModal) {
+        selectedRow.value = row;
+        showEditModal.value = true;
+    } else {
+        // Use Inertia for navigation
+        router.visit(row.editUrl);
+    }
+};
+
+// Handle form submissions
+const handleFormSubmit = async (data) => {
+    try {
+        await emit('refresh');
+        showEditModal.value = false;
+        selectedRow.value = null;
+        emit('updated', data);
+    } catch (error) {
+        console.error("Form submission failed:", error);
+    }
+};
+
+// Handle custom actions
 const handleCustomAction = async (action, row) => {
     try {
-        if (action.isRedirectPage) {
-            // Use Inertia for navigation if the action is a redirect
-            router.get(action.link);
-        } else {
-            // Trigger the confirmation modal for other API actions
+        if (props.customActionsAsModal && !action.isRedirectPage) {
+            // Show modal for custom actions
             modalAction.value = action.method;
             modalRow.value = row;
             modalTitle.value = action.label;
             modalContent.value = `Are you sure you want to ${action.label.toLowerCase()}?`;
-
             showModal.value = true;
+        } else if (action.isRedirectPage) {
+            // Use Inertia for navigation
+            router.visit(action.link);
+        } else {
+            // Emit action for parent to handle
+            emit('action', { action: action.label, row });
         }
     } catch (error) {
         console.error("Error handling custom action:", error);
-        alert("An unexpected error occurred.");
+        showResponse("Error", "An unexpected error occurred.", "error");
     }
 };
 </script>
@@ -259,18 +318,14 @@ const handleCustomAction = async (action, row) => {
                             <div class="flex items-center space-x-2">
                                 <button
                                     v-if="row.viewUrl"
-                                    @click="
-                                        emit('action', { action: 'view', row })
-                                    "
+                                    @click="() => handleView(row)"
                                     class="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600"
                                 >
                                     View
                                 </button>
                                 <button
                                     v-if="row.editUrl"
-                                    @click="
-                                        emit('action', { action: 'edit', row })
-                                    "
+                                    @click="() => handleEdit(row)"
                                     class="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                                 >
                                     Edit
@@ -415,6 +470,31 @@ const handleCustomAction = async (action, row) => {
             :message="responseModal.message"
             :type="responseModal.type"
             @close="responseModal.show = false"
+        />
+
+        <!-- View Modal (only shown when viewAsModal is true) -->
+        <ModalForm
+            v-if="viewAsModal && selectedRow"
+            v-model:show="showViewModal"
+            :title="`View ${modelName}`"
+            :fields="formFields"
+            :modelData="selectedRow"
+            :submitUrl="null"
+            :isViewOnly="true"
+            @close="showViewModal = false"
+        />
+
+        <!-- Edit Modal (only shown when editAsModal is true) -->
+        <ModalForm
+            v-if="editAsModal && selectedRow"
+            v-model:show="showEditModal"
+            :title="`Edit ${modelName}`"
+            :fields="formFields"
+            :modelData="selectedRow"
+            :submitUrl="`/api/${modelName}/${selectedRow.id}`"
+            method="put"
+            @updated="handleFormSubmit"
+            @close="showEditModal = false"
         />
     </div>
 
