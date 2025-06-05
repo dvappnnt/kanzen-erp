@@ -40,6 +40,13 @@ use App\Http\Controllers\Modules\WarehouseManagement\PurchaseRequisitionControll
 
 use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeController;
 use App\Http\Controllers\Modules\HumanResourceManagement\DepartmentController;
+use App\Http\Controllers\Modules\HumanResourceManagement\HolidayController;
+use App\Http\Controllers\Modules\HumanResourceManagement\PositionController;
+use App\Http\Controllers\Modules\HumanResourceManagement\OffenseTypeController;
+use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeLeaveController;
+use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeOvertimeController;
+use App\Http\Controllers\Modules\HumanResourceManagement\DeductionController;
+use App\Http\Controllers\Modules\HumanResourceManagement\DocumentTypeController;
 
 Route::get('/', function () {
     // return Inertia::render('Welcome', [
@@ -130,11 +137,22 @@ Route::middleware([
         Route::get('images', [ProductController::class, 'images'])->name('products.images');
     });
 
+    Route::resource('document-types', DocumentTypeController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('deductions', DeductionController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('holidays', HolidayController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('positions', PositionController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('offense-types', OffenseTypeController::class)->only(['index', 'show', 'edit', 'create']);
+
+    Route::resource('employee-leaves', EmployeeLeaveController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('employee-overtimes', EmployeeOvertimeController::class)->only(['index', 'show', 'edit', 'create']);
+
     Route::resource('employees', EmployeeController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::get('employees/{employee}/print', [EmployeeController::class, 'print'])->name('employees.print');
     Route::prefix('employees/{employee}')->group(function () {
         Route::get('educational-attainments', [EmployeeController::class, 'educationalAttainments'])->name('employees.educational-attainments');
         Route::get('work-experiences', [EmployeeController::class, 'workExperiences'])->name('employees.work-experiences');
         Route::get('dependents', [EmployeeController::class, 'dependents'])->name('employees.dependents');
+        Route::get('awards', [EmployeeController::class, 'awards'])->name('employees.awards');
         Route::get('contact-details', [EmployeeController::class, 'contactDetails'])->name('employees.contact-details');
         Route::get('documents', [EmployeeController::class, 'documents'])->name('employees.documents');
         Route::get('certificates', [EmployeeController::class, 'certificates'])->name('employees.certificates');
@@ -142,6 +160,7 @@ Route::middleware([
         Route::get('payroll-details', [EmployeeController::class, 'payrollDetails'])->name('employees.payroll-details');
         Route::get('employment-details', [EmployeeController::class, 'employmentDetails'])->name('employees.employment-details');
         Route::get('skills', [EmployeeController::class, 'skills'])->name('employees.skills');
+        Route::get('performance-reviews', [EmployeeController::class, 'performanceReviews'])->name('employees.performance-reviews');
     });
 
     Route::resource('departments', DepartmentController::class)->only(['index', 'show', 'edit', 'create']);

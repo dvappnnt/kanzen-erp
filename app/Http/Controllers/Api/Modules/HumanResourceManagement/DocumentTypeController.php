@@ -18,6 +18,13 @@ class DocumentTypeController extends Controller
 
     public function index(Request $request)
     {
+        $query = $this->modelClass::latest();
+
+        return $query->paginate(10);
+    }
+
+    public function complete(Request $request)
+    {
         $query = $this->modelClass::orderBy('name', 'asc');
 
         return $query->get();

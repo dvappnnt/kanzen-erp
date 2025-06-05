@@ -116,6 +116,36 @@ class EmployeeController extends Controller
         ]);
     }
 
+    public function awards($id)
+    {
+        $model = $this->modelClass::with(['awards'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Awards", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function skills($id)
+    {
+        $model = $this->modelClass::with(['skills'])->findOrFail($id);
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Skills", [
+            'modelData' => $model,
+        ]);
+    }
+
+    public function performanceReviews($id)
+    {
+        $model = $this->modelClass::with(['performanceReviews', 'performanceReviews.reviewer'])->findOrFail($id);
+
+        $reviewerQuery = \App\Models\Employee::orderBy('lastname', 'asc');
+        $reviewerQuery->where('company_id', $model->company_id);
+        $reviewers = $reviewerQuery->get();
+
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/PerformanceReviews", [
+            'modelData' => $model,
+            'reviewers' => $reviewers,
+        ]);
+    }
+
     public function disciplinaryActions($id)
     {
         $model = $this->modelClass::with(['disciplinaryActions'])->findOrFail($id);
@@ -126,17 +156,61 @@ class EmployeeController extends Controller
 
     public function payrollDetails($id)
     {
-        $model = $this->modelClass::with(['payrollDetails'])->findOrFail($id);
+        $model = $this->modelClass::with(['payrollDetails', 'payrollDetails.bank'])->findOrFail($id);
+        $bankQuery = \App\Models\Bank::orderBy('name', 'asc');
+        $banks = $bankQuery->get();
+
         return Inertia::render("{$this->modulePath}/{$this->modelName}/PayrollDetails", [
             'modelData' => $model,
+            'banks' => $banks,
         ]);
     }
 
     public function employmentDetails($id)
     {
         $model = $this->modelClass::with(['employmentDetails'])->findOrFail($id);
+        $positionQuery = \App\Models\Position::orderBy('name', 'asc');
+        $positions = $positionQuery->get();
+
+        $supervisorQuery = \App\Models\Employee::orderBy('lastname', 'asc');
+        $supervisorQuery->where('company_id', $model->company_id);
+        $supervisors = $supervisorQuery->get();
+
         return Inertia::render("{$this->modulePath}/{$this->modelName}/EmploymentDetails", [
             'modelData' => $model,
+            'positions' => $positions,
+            'supervisors' => $supervisors,
+        ]);
+    }
+
+    public function print($id)
+    {
+        $model = $this->modelClass::with('company', 'department', 'educationalAttainments', 'workExperiences', 'dependents', 'contactDetails', 'documents', 'certificates', 'disciplinaryActions', 'payrollDetails', 'payrollDetails.bank', 'employmentDetails', 'employmentDetails.position', 'skills', 'awards')->findOrFail($id);
+        $educationalAttainments = $model->educationalAttainments;
+        $workExperiences = $model->workExperiences;
+        $dependents = $model->dependents;
+        $contactDetails = $model->contactDetails;
+        $documents = $model->documents;
+        $certificates = $model->certificates;
+        $disciplinaryActions = $model->disciplinaryActions;
+        $payrollDetails = $model->payrollDetails;
+        $employmentDetails = $model->employmentDetails;
+        $skills = $model->skills;
+        $awards = $model->awards;
+
+        return Inertia::render("{$this->modulePath}/{$this->modelName}/Print", [
+            'modelData' => $model,
+            'educationalAttainments' => $educationalAttainments,
+            'workExperiences' => $workExperiences,
+            'dependents' => $dependents,
+            'contactDetails' => $contactDetails,
+            'documents' => $documents,
+            'certificates' => $certificates,
+            'disciplinaryActions' => $disciplinaryActions,
+            'payrollDetails' => $payrollDetails,
+            'employmentDetails' => $employmentDetails,
+            'skills' => $skills,
+            'awards' => $awards,
         ]);
     }
 }

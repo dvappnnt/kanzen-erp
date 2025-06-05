@@ -23,7 +23,13 @@
                             <div v-for="item in cartItems" :key="item.id" class="flex items-center justify-between py-3 border-b last:border-0">
                                 <div class="flex items-center gap-4">
                                     <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                                        <span class="text-2xl">📦</span>
+                                        <img
+                                            v-if="item.avatar"
+                                            :src="`/storage/${item.avatar}`"
+                                            :alt="item.name"
+                                            class="h-10 w-10 rounded-full object-cover"
+                                        />
+                                        <span v-else class="text-4xl text-gray-400">📦</span>
                                     </div>
                                     <div>
                                         <h4 class="font-medium">{{ item.name }}</h4>

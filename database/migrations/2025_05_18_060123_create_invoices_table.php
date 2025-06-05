@@ -29,7 +29,7 @@ return new class extends Migration
             $table->decimal('subtotal', 15, 2)->default(0); // Amount before tax
             $table->decimal('total_amount', 15, 2)->default(0); // Total after tax
             $table->string('currency', 5)->default('PHP'); // Currency
-            $table->enum('status', ['draft', 'unpaid', 'partially-paid', 'fully-paid', 'cancelled'])->default('draft'); // Invoice status
+            $table->enum('status', ['draft', 'unpaid', 'partially-paid', 'fully-paid', 'cancelled', 'overdue'])->default('draft'); // Invoice status
             $table->text('notes')->nullable(); // Optional notes
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete(); // Who created it
             $table->boolean('is_credit')->default(false); // If true, it is a credit

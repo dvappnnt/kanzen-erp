@@ -6,7 +6,7 @@ import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import axios from "@/axios";
 import { useColors } from "@/Composables/useColors";
-
+import { humanReadable } from "@/utils/global";
 // Props passed from the parent
 const props = defineProps({
     data: {
@@ -266,8 +266,12 @@ const handleCustomAction = async (action, row) => {
         </div>
 
         <!-- No Data Found -->
-        <div v-else-if="!data.data.length" class="text-center py-6">
-            <p class="text-gray-500 mt-2">No {{ modelName }} found.</p>
+        <div v-else-if="!data.data.length" class="text-center py-12">
+            <div class="flex flex-col items-center justify-center">
+                <i class="mdi mdi-google-downasaur text-gray-400 text-9xl mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No {{ humanReadable(modelName) }} Found</h3>
+                <p class="text-gray-500">There are no {{ humanReadable(modelName).toLowerCase() }} to display at the moment.</p>
+            </div>
         </div>
 
         <!-- Table -->
@@ -309,9 +313,9 @@ const handleCustomAction = async (action, row) => {
                                     v-else
                                     class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold mr-4"
                                 >
-                                    {{ getInitials(row[col.value]) }}
+                                    {{ getInitials(typeof col.value === "function" ? col.value(row) : row[col.value]) }}
                                 </div>
-                                <span>{{ row[col.value] || "-" }}</span>
+                                <span>{{ typeof col.value === "function" ? col.value(row) : row[col.value] || "-" }}</span>
                             </div>
                         </template>
                         <template v-else-if="col.label === 'Actions'">
@@ -499,7 +503,7 @@ const handleCustomAction = async (action, row) => {
     </div>
 
     <!-- Pagination -->
-    <div v-if="data.links.length" class="flex justify-center mt-4 space-x-2">
+    <div v-if="data.links.length && data.data.length" class="flex justify-center mt-4 space-x-2">
         <button
             v-for="link in data.links"
             :key="link.label"

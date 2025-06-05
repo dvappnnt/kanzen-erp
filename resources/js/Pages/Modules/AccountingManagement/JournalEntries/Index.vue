@@ -78,7 +78,6 @@ const fetchTableData = async (url = `/api/${modelName}`) => {
             ...response.data,
             data: response.data.data.map(mapCustomButtons),
         };
-        console.log(modelData.value);
     } catch (error) {
         console.error(
             "Error fetching data:",
@@ -136,7 +135,7 @@ onMounted(() => fetchTableData());
                         <Autocomplete
                             :searchUrl="`/api/autocomplete/${modelName}`"
                             :modelName="modelName"
-                            :placeholder="`Search ${modelName}...`"
+                            :placeholder="`Search ${formatName(modelName).toLowerCase()}...`"
                             :mapCustomButtons="mapCustomButtons"
                             @select="modelData = $event"
                         />

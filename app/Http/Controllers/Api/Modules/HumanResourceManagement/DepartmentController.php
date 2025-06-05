@@ -27,6 +27,13 @@ class DepartmentController extends Controller
         return $query->latest()->paginate(10);
     }
 
+    public function complete(Request $request)
+    {
+        $query = $this->modelClass::latest();
+
+        return $query->get();
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

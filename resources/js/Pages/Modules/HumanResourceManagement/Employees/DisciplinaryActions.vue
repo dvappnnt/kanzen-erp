@@ -8,7 +8,7 @@ import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
 import ProfileCard from "@/Components/Sections/ProfileCard.vue";
 import { singularizeAndFormat } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
-import NavigationTabs from "@/Components/Navigation/NavigationTabs.vue";
+import EmployeeTabs from "@/Components/Navigation/Tabs/EmployeeTabs.vue";
 import { useToast } from "vue-toastification";
 import axios from "axios";
 import { debounce } from "lodash";
@@ -74,83 +74,11 @@ const headerActions = ref([
             resetForm();
             showCreateModal.value = true;
         },
-        class: "bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white",
-    },
-]);
-
-// Navigation tabs
-const navigationTabs = ref([
-    {
-        text: "Overview",
-        url: `/employees/${usePage().props.modelData.id}`,
-        inertia: true,
-        permission: "read employees",
-    },
-    {
-        text: "Employment Details",
-        url: `/employees/${usePage().props.modelData.id}/employment-details`,
-        inertia: true,
-        permission: "read employee employment details",
-    },
-    {
-        text: "Payroll Details",
-        url: `/employees/${usePage().props.modelData.id}/payroll-details`,
-        inertia: true,
-        permission: "read employee payroll details",
-    },
-    {
-        text: "Work Experiences",
-        url: `/employees/${usePage().props.modelData.id}/work-experiences`,
-        inertia: true,
-        permission: "read employee work experiences",
-    },
-    {
-        text: "Educational Attainments",
-        url: `/employees/${usePage().props.modelData.id}/educational-attainments`,
-        inertia: true,
-        permission: "read employee educational attainments",
-    },
-    {
-        text: "Work Histories",
-        url: `/employees/${usePage().props.modelData.id}/work-histories`,
-        inertia: true,
-        permission: "read employee work histories",
-    },
-    {
-        text: "Contact Details",
-        url: `/employees/${usePage().props.modelData.id}/contact-details`,
-        inertia: true,
-        permission: "read employee contact details",
-    },
-    {
-        text: "Dependents",
-        url: `/employees/${usePage().props.modelData.id}/dependents`,
-        inertia: true,
-        permission: "read employee dependents",
-    },
-    {
-        text: "Documents",
-        url: `/employees/${usePage().props.modelData.id}/documents`,
-        inertia: true,
-        permission: "read employee documents",
-    },
-    {
-        text: "Certificates & Training",
-        url: `/employees/${usePage().props.modelData.id}/certificates`,
-        inertia: true,
-        permission: "read employee certificates",
-    },
-    {
-        text: "Skills",
-        url: `/employees/${usePage().props.modelData.id}/skills`,
-        inertia: true,
-        permission: "read employee skills",
-    },
-    {
-        text: "Disciplinary Actions",
-        url: `/employees/${usePage().props.modelData.id}/disciplinary-actions`,
-        inertia: true,
-        permission: "read employee disciplinary actions",
+        class: "px-4 py-2 rounded hover:opacity-90",
+        style: computed(() => ({
+            backgroundColor: buttonPrimaryBgColor.value,
+            color: buttonPrimaryTextColor.value
+        })),
     },
 ]);
 
@@ -195,7 +123,7 @@ const fetchData = async (page = 1) => {
 // Fetch offense types
 const fetchOffenseTypes = async () => {
     try {
-        const response = await axios.get('/api/offense-types');
+        const response = await axios.get('/api/complete/offense-types');
         offenseTypes.value = response.data;
     } catch (error) {
         console.error("Error fetching offense types:", error);
@@ -392,7 +320,7 @@ onMounted(() => {
         </template>
 
         <div class="max-w-12xl mx-auto">
-            <NavigationTabs :tabs="navigationTabs" />
+            <EmployeeTabs />
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg pt-6">
                 <HeaderInformation
@@ -525,6 +453,10 @@ onMounted(() => {
                                                 ? 'relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
                                                 : 'relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0',
                                         ]"
+                                        :style="{
+                                            backgroundColor: buttonPrimaryBgColor,
+                                            color: buttonPrimaryTextColor
+                                        }"
                                     >
                                         {{ page }}
                                     </button>
@@ -656,6 +588,10 @@ onMounted(() => {
                             type="submit"
                             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
                             :disabled="isLoading"
+                            :style="{
+                                backgroundColor: buttonPrimaryBgColor,
+                                color: buttonPrimaryTextColor
+                            }"
                         >
                             Create
                         </button>
@@ -871,6 +807,10 @@ onMounted(() => {
                             type="submit"
                             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
                             :disabled="isLoading"
+                            :style="{
+                                backgroundColor: buttonPrimaryBgColor,
+                                color: buttonPrimaryTextColor
+                            }"
                         >
                             Update
                         </button>

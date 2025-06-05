@@ -81,22 +81,34 @@ class Invoice extends Model
     protected static function booted()
     {
         static::creating(function ($invoice) {
-            // Only generate if number is still empty
             if (empty($invoice->number)) {
-                // Fetch company name
                 $company = \App\Models\Company::find($invoice->company_id);
 
                 if ($company) {
-                    // Get first 3 uppercase letters of company name
-                    $prefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3)); // Removes spaces too
+                    // Extract base prefix from company name
+                    $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
 
-                    // Count existing invoices for that company
+                    // Get all companies with the same base prefix
+                    $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
+                        return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+                    })->values();
+
+                    // Determine final prefix
+                    if ($matchingCompanies->count() === 1) {
+                        $finalPrefix = $basePrefix;
+                    } else {
+                        $index = $matchingCompanies->search(function ($comp) use ($company) {
+                            return $comp->id === $company->id;
+                        });
+                        $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
+                    }
+
+                    // Count existing invoices for the company
                     $count = self::where('company_id', $invoice->company_id)->withTrashed()->count() + 1;
 
-                    // Build the reference number
-                    $invoice->number = sprintf('%s-SI-%06d', $prefix, $count);
+                    // Format invoice number
+                    $invoice->number = sprintf('%s-SI-%06d', $finalPrefix, $count);
                 } else {
-                    // In case no company found (should not happen)
                     $invoice->number = 'UNK-SI-' . sprintf('%06d', rand(1, 999999));
                 }
             }

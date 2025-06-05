@@ -8,7 +8,13 @@ import { usePage } from "@inertiajs/vue3";
 import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
-import { formatName, formatDate, formatNumber } from "@/utils/global";
+import {
+    formatName,
+    formatNumber,
+    formatDate,
+    getStatusPillClass,
+    humanReadable,
+} from "@/utils/global";
 
 const modelName = "company-accounts";
 const modelData = ref({ data: [], links: [] });
@@ -122,7 +128,7 @@ onMounted(() => fetchTableData());
                         <Autocomplete
                             :searchUrl="`/api/autocomplete/${modelName}`"
                             :modelName="modelName"
-                            :placeholder="`Search ${modelName}...`"
+                            :placeholder="`Search ${formatName(modelName).toLowerCase()}...`"
                             :mapCustomButtons="mapCustomButtons"
                             @select="modelData = $event"
                         />

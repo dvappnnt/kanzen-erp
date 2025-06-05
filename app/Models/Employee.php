@@ -37,6 +37,7 @@ class Employee extends Model
 
     protected $appends = [
         'full_name',
+        'name',
     ];
 
     public function company()
@@ -61,14 +62,48 @@ class Employee extends Model
                 $company = \App\Models\Company::find($employee->company_id);
 
                 if ($company) {
-                    $prefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+                    // Extract base prefix from company name
+                    $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+
+                    // Find companies with the same base prefix
+                    $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
+                        return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+                    })->values();
+
+                    if ($matchingCompanies->count() === 1) {
+                        $finalPrefix = $basePrefix;
+                    } else {
+                        $index = $matchingCompanies->search(function ($comp) use ($company) {
+                            return $comp->id === $company->id;
+                        });
+                        $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
+                    }
+
                     $count = self::where('company_id', $employee->company_id)->withTrashed()->count() + 1;
-                    $employee->number = sprintf('%s-EMP-%06d', $prefix, $count);
+                    $employee->number = sprintf('%s-EMP-%06d', $finalPrefix, $count);
                 } else {
                     $employee->number = 'UNK-EMP-' . sprintf('%06d', rand(1, 999999));
                 }
             }
         });
+    }
+
+    public function getNameAttribute()
+    {
+        $middleInitial = $this->middlename
+            ? strtoupper(substr($this->middlename, 0, 1)) . '.'
+            : null;
+
+        $names = [
+            $this->firstname,
+            $middleInitial,
+            $this->lastname,
+            $this->suffix, // e.g. Jr., Sr., III
+        ];
+
+        return collect($names)
+            ->filter() // removes null or empty values
+            ->implode(' ');
     }
 
     public function getFullNameAttribute()
@@ -132,5 +167,20 @@ class Employee extends Model
     public function employmentDetails()
     {
         return $this->hasMany(EmployeeEmploymentDetail::class);
+    }
+
+    public function skills()
+    {
+        return $this->hasMany(EmployeeSkill::class);
+    }
+
+    public function awards()
+    {
+        return $this->hasMany(EmployeeAward::class);
+    }
+
+    public function performanceReviews()
+    {
+        return $this->hasMany(EmployeePerformanceReview::class);
     }
 }

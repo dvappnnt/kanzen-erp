@@ -96,15 +96,33 @@ class PurchaseOrder extends Model
                 $company = Company::find($modelData->company_id);
 
                 if ($company) {
-                    $prefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+                    // Extract base prefix from company name
+                    $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+
+                    // Find companies with same base prefix
+                    $matchingCompanies = Company::all()->filter(function ($comp) use ($basePrefix) {
+                        return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+                    })->values();
+
+                    if ($matchingCompanies->count() === 1) {
+                        // Unique: use basePrefix only
+                        $finalPrefix = $basePrefix;
+                    } else {
+                        // Shared prefix: assign index
+                        $index = $matchingCompanies->search(function ($comp) use ($company) {
+                            return $comp->id === $company->id;
+                        });
+                        $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
+                    }
+
+                    // Generate PO number
                     $count = self::where('company_id', $modelData->company_id)->withTrashed()->count() + 1;
-                    $modelData->number = sprintf('%s-PO-%06d', $prefix, $count);
+                    $modelData->number = sprintf('%s-PO-%06d', $finalPrefix, $count);
                 } else {
                     $modelData->number = 'UNK-PO-' . sprintf('%06d', rand(1, 999999));
                 }
             }
 
-            // Set initial status if not set
             if (empty($modelData->status)) {
                 $modelData->status = 'draft';
             }
@@ -112,7 +130,7 @@ class PurchaseOrder extends Model
 
         static::created(function ($purchaseOrder) {
             $approvalLevelSettings = ApprovalLevelSetting::where('type', 'purchase-order')->where('company_id', $purchaseOrder->company_id)->get();
-            foreach($approvalLevelSettings as $approvalLevelSetting) {
+            foreach ($approvalLevelSettings as $approvalLevelSetting) {
                 ApprovalLevel::create([
                     'purchase_order_id' => $purchaseOrder->id,
                     'level' => $approvalLevelSetting->level,

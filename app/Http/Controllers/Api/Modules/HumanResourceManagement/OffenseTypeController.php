@@ -20,6 +20,13 @@ class OffenseTypeController extends Controller
     {
         $query = $this->modelClass::latest();
 
+        return $query->paginate(10);
+    }
+
+    public function complete(Request $request)
+    {
+        $query = $this->modelClass::latest();
+
         return $query->get();
     }
 

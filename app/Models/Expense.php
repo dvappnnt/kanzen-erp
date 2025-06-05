@@ -46,10 +46,36 @@ class Expense extends Model
     protected static function booted()
     {
         static::creating(function ($expense) {
-            // Auto-generate reference number if not set
             if (empty($expense->reference_number)) {
-                $count = self::withTrashed()->count() + 1;
-                $expense->reference_number = sprintf('EXP-%06d', $count);
+                $company = \App\Models\Company::find($expense->company_id);
+
+                if ($company) {
+                    // Extract base prefix
+                    $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+
+                    // Find all companies with the same base prefix
+                    $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
+                        return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+                    })->values();
+
+                    // Finalize prefix
+                    if ($matchingCompanies->count() === 1) {
+                        $finalPrefix = $basePrefix;
+                    } else {
+                        $index = $matchingCompanies->search(function ($comp) use ($company) {
+                            return $comp->id === $company->id;
+                        });
+                        $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
+                    }
+
+                    // Count existing expenses for the company
+                    $count = self::where('company_id', $expense->company_id)->withTrashed()->count() + 1;
+
+                    // Assign formatted reference number
+                    $expense->reference_number = sprintf('%s-EXP-%06d', $finalPrefix, $count);
+                } else {
+                    $expense->reference_number = 'UNK-EXP-' . sprintf('%06d', rand(1, 999999));
+                }
             }
         });
 
