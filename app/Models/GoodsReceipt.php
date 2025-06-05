@@ -58,9 +58,28 @@ class GoodsReceipt extends Model
                 $company = \App\Models\Company::find($gr->company_id);
 
                 if ($company) {
-                    $prefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+                    // Extract base prefix
+                    $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+
+                    // Get all companies with the same base prefix
+                    $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
+                        return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+                    })->values();
+
+                    if ($matchingCompanies->count() === 1) {
+                        // Only one company with this prefix
+                        $finalPrefix = $basePrefix;
+                    } else {
+                        // Multiple companies sharing prefix
+                        $index = $matchingCompanies->search(function ($comp) use ($company) {
+                            return $comp->id === $company->id;
+                        });
+                        $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
+                    }
+
+                    // Count GRs for this company
                     $count = self::where('company_id', $gr->company_id)->withTrashed()->count() + 1;
-                    $gr->number = sprintf('%s-GR-%06d', $prefix, $count);
+                    $gr->number = sprintf('%s-GR-%06d', $finalPrefix, $count);
                 } else {
                     $gr->number = 'UNK-GR-' . sprintf('%06d', rand(1, 999999));
                 }

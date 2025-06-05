@@ -15,19 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
 
-            $table->enum('employment_status', ['regular', 'probationary', 'contractual', 'other']); // e.g. Regular, Contractual, Probationary
-            $table->date('date_hired')->nullable();
-            $table->date('date_regularized')->nullable();
-
-            $table->foreignId('company_id')->nullable()->constrained()->onDelete('set null');
-            $table->foreignId('department_id')->nullable()->constrained()->onDelete('set null');
+            $table->enum('employment_status', ['regular', 'probationary', 'contractual', 'part-time', 'intern', 'other']); // e.g. Regular, Contractual, Probationary
+            $table->date('from_date')->nullable();
+            $table->date('to_date')->nullable();
             $table->foreignId('position_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('supervisor_id')->nullable()->constrained('employees')->onDelete('set null'); // Supervisor or Manager name or ID
 
             $table->decimal('basic_salary', 10, 2)->nullable();
-            $table->enum('payroll_type', ['monthly', 'semi-monthly', 'weekly', 'daily'])->default('monthly'); // Monthly, Semi-Monthly, Weekly
+            $table->enum('salary_type', ['monthly', 'semi-monthly', 'weekly', 'daily'])->default('monthly'); // Monthly, Semi-Monthly, Weekly
             $table->string('tax_status')->nullable(); // e.g. Z, S, S1, M1, etc.
-            $table->string('cost_center')->nullable();
             $table->string('remarks')->nullable();
             $table->softDeletes();
             $table->timestamps();

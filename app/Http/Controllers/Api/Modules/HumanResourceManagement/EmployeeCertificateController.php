@@ -93,7 +93,7 @@ class EmployeeCertificateController extends Controller
             
             $path = $request->file('file_path')->store('certificates', 'public');
             $validated['file_path'] = $path;
-        }
+            }
 
         $updated = $model->update($validated);
 

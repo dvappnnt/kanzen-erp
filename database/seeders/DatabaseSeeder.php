@@ -41,6 +41,8 @@ class DatabaseSeeder extends Seeder
         $this->call(ExpenseCategorySeeder::class);
 
         $this->call(ProjectModuleSeeder::class);
+        $this->call(HolidaySeeder::class);
+        $this->call(DeductionSeeder::class);
         $this->call(HRModuleSeeder::class);
     }
 }

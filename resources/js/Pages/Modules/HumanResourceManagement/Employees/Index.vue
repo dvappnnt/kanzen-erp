@@ -10,6 +10,7 @@ import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
 
+
 const modelName = "employees";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
@@ -34,10 +35,11 @@ const headerActions = ref([
 const columns = ref([
     {
         label: "Name",
-        value: "name",
+        value: (row) => row.lastname + ", " + row.firstname,
         has_avatar: true,
-        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
+        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null),
     },
+    { label: "Number", value: "number" },
     { label: "Company", value: (row) => row.company?.name || "-" },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },

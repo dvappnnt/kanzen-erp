@@ -1,9 +1,10 @@
 <template>
-    <div :style="{ '--primary-color': primaryColor }" class="relative">
+    <div :style="{ '--primary-color': primaryColor }" class="relative" ref="autocompleteContainer">
         <input
             type="text"
             v-model="searchTerm"
             @input="fetchAutocompleteResults"
+            @focus="handleFocus"
             :placeholder="placeholder"
             class="border border-gray-300 rounded-md w-full py-2 px-4 text-gray-900 placeholder-gray-500 bg-white focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)] focus:outline-none focus:ring-1 ring-opacity-50 transition-all duration-200"
             autocomplete="off"
@@ -56,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import axios from "@/axios";
 import { usePage } from "@inertiajs/vue3";
 
@@ -90,6 +91,8 @@ const searchTerm = ref("");
 const autocompleteResults = ref([]);
 const showResults = ref(false);
 const isLoading = ref(false);
+
+const autocompleteContainer = ref(null);
 
 // Fetch Autocomplete Results
 const fetchAutocompleteResults = async () => {
@@ -145,6 +148,29 @@ const selectModelData = async (selectedModelData) => {
         isLoading.value = false;
     }
 };
+
+// Handle click outside
+const handleClickOutside = (event) => {
+    if (autocompleteContainer.value && !autocompleteContainer.value.contains(event.target)) {
+        showResults.value = false;
+    }
+};
+
+// Handle focus
+const handleFocus = () => {
+    if (searchTerm.value.trim().length > 0) {
+        showResults.value = true;
+    }
+};
+
+// Add and remove event listeners
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style scoped>

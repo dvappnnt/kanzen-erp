@@ -593,7 +593,7 @@ onMounted(() => {
                                             <td class="px-3 py-2">
                                                 <div class="flex items-center">
                                                     <div class="flex-shrink-0 h-10 w-10" v-if="product.supplier_product_detail?.product?.avatar">
-                                                        <img class="h-10 w-10 rounded-full object-cover" :src="product.supplier_product_detail.product.avatar" :alt="product.supplier_product_detail?.product?.name">
+                                                        <img class="h-10 w-10 rounded-full object-cover" :src="`/storage/${product.supplier_product_detail.product.avatar}`" :alt="product.supplier_product_detail?.product?.name">
                                                     </div>
                                                     <div class="ml-4">
                                                         <div class="font-medium text-gray-900 flex items-center">

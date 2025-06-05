@@ -12,14 +12,14 @@ class EmployeeEmploymentDetail extends Model
     protected $fillable = [
         'employee_id',
         'employment_status',
-        'date_hired',
-        'date_regularized',
+        'from_date',
+        'to_date',
         'position_id',
         'department_id',
         'company_id',
         'supervisor_id',
         'basic_salary',
-        'payroll_type',
+        'salary_type',
         'tax_status',
         'remarks',
     ];

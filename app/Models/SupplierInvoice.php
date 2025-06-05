@@ -67,6 +67,30 @@ class SupplierInvoice extends Model
 
     protected static function booted()
     {
+        static::creating(function ($invoice) {
+            if (empty($invoice->invoice_number)) {
+                $company = \App\Models\Company::find($invoice->company_id);
+
+                if ($company) {
+                    $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+
+                    $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
+                        return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+                    })->values();
+
+                    $finalPrefix = $matchingCompanies->count() === 1
+                        ? $basePrefix
+                        : $basePrefix . ($matchingCompanies->search(fn($c) => $c->id === $company->id) + 1);
+
+                    $count = self::where('company_id', $company->id)->withTrashed()->count() + 1;
+
+                    $invoice->invoice_number = sprintf('%s-SUP-INV-%06d', $finalPrefix, $count);
+                } else {
+                    $invoice->invoice_number = 'UNK-SUP-INV-' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT);
+                }
+            }
+        });
+
         static::deleting(function ($model) {
             $model->payments()->delete();
         });

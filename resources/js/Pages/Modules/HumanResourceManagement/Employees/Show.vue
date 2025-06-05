@@ -1,17 +1,18 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
 import HeaderActions from "@/Components/HeaderActions.vue";
-import { ref, computed } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
+import { ref, computed, watch } from "vue";
+import { usePage, router, Link } from "@inertiajs/vue3";
 import moment from "moment";
 import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
 import ProfileCard from "@/Components/Sections/ProfileCard.vue";
 import DisplayInformation from "@/Components/Sections/DisplayInformation.vue";
 import ModalForm from "@/Components/Form/ModalForm.vue";
-import { singularizeAndFormat } from "@/utils/global";
+import { singularizeAndFormat, humanReadable } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
-import NavigationTabs from "@/Components/Navigation/NavigationTabs.vue";
+import EmployeeTabs from "@/Components/Navigation/Tabs/EmployeeTabs.vue";
 import { useToast } from "vue-toastification";
+import axios from "axios";
 
 const modelName = "employees";
 const toast = useToast();
@@ -20,16 +21,7 @@ const toast = useToast();
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 const companies = computed(() => page.props.companies || []);
-const departments = computed(() => page.props.departments || []);
-
-const headerActions = ref([
-    {
-        text: "Go Back",
-        url: `/${modelName}`,
-        inertia: true,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600",
-    },
-]);
+const departments = ref([]);
 
 const getQrUrl = (id) => {
     return route("qr.employees", { employee: usePage().props.modelData.id });
@@ -57,21 +49,35 @@ const personalDetails = ref([
     { label: "Last Name", value: "lastname" },
     { label: "Suffix", value: "suffix" },
     { label: "Nickname", value: "nickname" },
-    { label: "Gender", value: "gender" },
+    {
+        label: "Gender",
+        value: (row) => (row?.gender ? humanReadable(row.gender) : "-"),
+    },
     {
         label: "Birthdate",
-        value: (row) => moment(row.birthdate).format("MMMM D, YYYY"),
+        value: (row) =>
+            row.birthdate ? moment(row.birthdate).format("MMMM D, YYYY") : "-",
     },
     { label: "Birthplace", value: "birthplace" },
-    { label: "Civil Status", value: "civil_status" },
+    {
+        label: "Civil Status",
+        value: (row) =>
+            row?.civil_status ? humanReadable(row.civil_status) : "-",
+    },
     { label: "Citizenship", value: "citizenship" },
     { label: "Religion", value: "religion" },
 ]);
 
 const vitalStatistics = ref([
     { label: "Blood Type", value: "blood_type" },
-    { label: "Height", value: "height" },
-    { label: "Weight", value: "weight" },
+    {
+        label: "Height (cm)",
+        value: (row) => (row.height ? `${row.height} cm` : "-"),
+    },
+    {
+        label: "Weight (kg)",
+        value: (row) => (row.weight ? `${row.weight} kg` : "-"),
+    },
 ]);
 
 const governmentDetails = ref([
@@ -82,85 +88,6 @@ const governmentDetails = ref([
     { label: "UMID", value: "umid" },
 ]);
 
-const navigationTabs = ref([
-    {
-        text: "Overview",
-        url: `/employees/${usePage().props.modelData.id}`,
-        inertia: true,
-        permission: "read employees",
-    },
-    {
-        text: "Employment Details",
-        url: `/employees/${usePage().props.modelData.id}/employment-details`,
-        inertia: true,
-        permission: "read employee employment details",
-    },
-    {
-        text: "Payroll Details",
-        url: `/employees/${usePage().props.modelData.id}/payroll-details`,
-        inertia: true,
-        permission: "read employee payroll details",
-    },
-    {
-        text: "Work Experiences",
-        url: `/employees/${
-            usePage().props.modelData.id
-        }/work-experiences`,
-        inertia: true,
-        permission: "read employee work experiences",
-    },
-    {
-        text: "Educational Attainments",
-        url: `/employees/${
-            usePage().props.modelData.id
-        }/educational-attainments`,
-        inertia: true,
-        permission: "read employee educational attainments",
-    },
-    {
-        text: "Work Histories",
-        url: `/employees/${usePage().props.modelData.id}/work-histories`,
-        inertia: true,
-        permission: "read employee work histories",
-    },
-    {
-        text: "Contact Details",
-        url: `/employees/${usePage().props.modelData.id}/contact-details`,
-        inertia: true,
-        permission: "read employee contact details",
-    },
-    {
-        text: "Dependents",
-        url: `/employees/${usePage().props.modelData.id}/dependents`,
-        inertia: true,
-        permission: "read employee dependents",
-    },
-    {
-        text: "Documents",
-        url: `/employees/${usePage().props.modelData.id}/documents`,
-        inertia: true,
-        permission: "read employee documents",
-    },
-    {
-        text: "Certificates & Training",
-        url: `/employees/${usePage().props.modelData.id}/certificates`,
-        inertia: true,
-        permission: "read employee certificates",
-    },
-    {
-        text: "Skills",
-        url: `/employees/${usePage().props.modelData.id}/skills`,
-        inertia: true,
-        permission: "read employee skills",
-    },
-    {
-        text: "Disciplinary Actions",
-        url: `/employees/${usePage().props.modelData.id}/disciplinary-actions`,
-        inertia: true,
-        permission: "read employee disciplinary actions",
-    },
-]);
-
 const page = usePage();
 const modelData = computed(() => page.props.modelData || {});
 
@@ -169,6 +96,21 @@ const showPersonalInfoModal = ref(false);
 const showVitalStatisticsModal = ref(false);
 const showGovernmentIdsModal = ref(false);
 const showEmployeeDetailsModal = ref(false);
+
+// Modal state for print options
+const showPrintModal = ref(false);
+const printSections = ref({
+    personal: true,
+    contact: true,
+    employment: true,
+    education: true,
+    work: true,
+    skills: true,
+    certificates: true,
+    awards: true,
+    government: true,
+    dependents: true,
+});
 
 // Form fields for personal information
 const personalInfoFields = [
@@ -334,8 +276,34 @@ const governmentIdsFields = [
     },
 ];
 
-// Add employee fields for the modal
-const employeeFields = [
+// Add fetchDepartments function
+const fetchDepartments = async (companyId) => {
+    try {
+        const response = await axios.get(
+            `/api/departments?company_id=${companyId}`
+        );
+        departments.value = response.data.data;
+    } catch (error) {
+        console.error("Error fetching departments:", error);
+        departments.value = [];
+    }
+};
+
+// Watch for company_id changes
+watch(
+    () => modelData.value.company_id,
+    (newCompanyId) => {
+        if (newCompanyId) {
+            fetchDepartments(newCompanyId);
+        } else {
+            departments.value = [];
+        }
+    },
+    { immediate: true }
+);
+
+// Update employeeFields to use dynamic department options
+const employeeFields = computed(() => [
     {
         id: "company_id",
         label: "Company",
@@ -362,7 +330,7 @@ const employeeFields = [
         })),
         placeholder: "Select department",
     },
-];
+]);
 
 const handleUpdate = async (data) => {
     try {
@@ -373,6 +341,20 @@ const handleUpdate = async (data) => {
         toast.error("Something went wrong!");
     }
 };
+
+const handlePrint = () => {
+    showPrintModal.value = true;
+};
+
+const confirmPrint = () => {
+    const params = Object.entries(printSections.value)
+        .filter(([key, val]) => val)
+        .map(([key]) => key)
+        .join(',');
+    const url = `${window.location.origin}/employees/${modelData.value.id}/print?sections=${params}`;
+    window.open(url, '_blank');
+    showPrintModal.value = false;
+};
 </script>
 
 <template>
@@ -382,12 +364,37 @@ const handleUpdate = async (data) => {
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     {{ singularizeAndFormat(modelName) }} Details
                 </h2>
-                <HeaderActions :actions="headerActions" />
+                <div class="flex gap-2">
+                    <Link
+                        :href="`/${modelName}`"
+                        class="border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600"
+                    >
+                        Go Back
+                    </Link>
+                    <button
+                        @click="handlePrint"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5 mr-2"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z"
+                                clip-rule="evenodd"
+                            />
+                        </svg>
+                        Print
+                    </button>
+                </div>
             </div>
         </template>
 
         <div class="max-w-12xl mx-auto">
-            <NavigationTabs :tabs="navigationTabs" />
+            <EmployeeTabs />
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg pt-6">
                 <HeaderInformation
@@ -541,5 +548,22 @@ const handleUpdate = async (data) => {
             @close="showGovernmentIdsModal = false"
             @updated="handleUpdate"
         />
+
+        <!-- Print Options Modal -->
+        <div v-if="showPrintModal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <h2 class="text-lg font-bold mb-4">Select Sections to Print</h2>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-2 mb-4">
+              <div v-for="(val, key) in printSections" :key="key" class="flex items-center">
+                <input type="checkbox" v-model="printSections[key]" :id="key" class="mr-2">
+                <label :for="key" class="capitalize">{{ key.replace('_', ' ') }}</label>
+              </div>
+            </div>
+            <div class="flex justify-end mt-4">
+              <button @click="showPrintModal = false" class="mr-2 px-4 py-2 bg-gray-200 rounded">Cancel</button>
+              <button @click="confirmPrint" class="px-4 py-2 bg-indigo-600 text-white rounded" :style="{ backgroundColor: buttonPrimaryBgColor, color: buttonPrimaryTextColor }">Print</button>
+            </div>
+          </div>
+        </div>
     </AppLayout>
 </template>

@@ -6,8 +6,8 @@
                 <div class="w-1/3 text-sm font-medium text-gray-500">
                     {{ row.label }}
                 </div>
-                <div :class="row.class || 'text-sm text-gray-900'">
-                    {{ getValue(row, modelData) }}
+                <div :class="getRowClass(row, modelData)">
+                    {{ getRowText(row, modelData) }}
                 </div>
             </div>
         </div>
@@ -21,6 +21,22 @@ const getValue = (row, modelData) => {
     }
     return row.format ? row.format(modelData[row.value]) : modelData[row.value] || '-';
 };
+
+function getRowText(row, modelData) {
+    if (typeof row.render === 'function') {
+        const result = row.render(modelData);
+        return result && typeof result === 'object' && 'text' in result ? result.text : result;
+    }
+    return getValue(row, modelData);
+}
+
+function getRowClass(row, modelData) {
+    if (typeof row.render === 'function') {
+        const result = row.render(modelData);
+        return result && typeof result === 'object' && 'class' in result ? result.class : (row.class || 'text-sm text-gray-900');
+    }
+    return row.class || 'text-sm text-gray-900';
+}
 
 defineProps({
     title: {

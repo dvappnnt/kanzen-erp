@@ -1,9 +1,12 @@
 <template>
-    <div class="flex justify-between items-start px-9 mb-6">
-        <div class="flex items-center">
+    <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6 px-4 sm:px-9 mb-6 text-center sm:text-left"
+    >
+        <!-- Avatar and Info -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
             <!-- Avatar -->
             <div
-                class="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-2xl mr-6"
+                class="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-2xl mx-auto sm:mx-0"
             >
                 <img
                     v-if="modelData.avatar"
@@ -16,39 +19,46 @@
                 </span>
             </div>
 
-            <!-- Dynamic Content -->
-            <div>
-                <div v-for="col in columns" :key="col.label || 'qr'">
-                    <template v-if="!col.has_qr && getValue(col, modelData)">
-                        <p :class="col.class || 'text-gray-600 font-semibold'">
+            <!-- Info -->
+            <div class="flex flex-col items-center sm:items-start w-full">
+                <template v-for="col in columns" :key="col.label || 'qr'">
+                    <template v-if="!col.has_qr">
+                        <p
+                            v-if="getValue(col, modelData)"
+                            :class="col.class || 'text-gray-600 font-semibold'"
+                            class="mb-1"
+                        >
                             {{ getValue(col, modelData) }}
                         </p>
-                    </template>
-                    <template v-else-if="!col.has_qr && col.label">
-                        <p class="text-gray-500">
+                        <p v-else-if="col.label" class="text-gray-500 mb-1">
                             No {{ col.label.toLowerCase() }} provided
                         </p>
                     </template>
-                </div>
+                </template>
+
+                <!-- Timestamp Below Info -->
+                <p class="text-sm text-gray-400 mt-1 block sm:hidden">
+                    Created {{ moment(modelData.created_at).fromNow() }}
+                </p>
             </div>
         </div>
-        <!-- QR Code on the right if available -->
-        <template v-if="qrColumn">
-            <div class="flex flex-col items-end">
-                <QRCode
-                    :value="qrColumn.qr_data(modelData)"
-                    :size="128"
-                    level="M"
-                    render-as="svg"
-                    class="bg-white p-2 rounded-lg shadow-sm"
-                />
-            </div>
-        </template>
+
+        <!-- QR Code -->
+        <div v-if="qrColumn" class="flex justify-center sm:justify-end">
+            <QRCode
+                :value="qrColumn.qr_data(modelData)"
+                :size="128"
+                level="M"
+                render-as="svg"
+                class="bg-white p-2 rounded-lg shadow-sm"
+            />
+        </div>
     </div>
 </template>
 
 <script setup>
-import QRCode from 'qrcode.vue';
+import QRCode from "qrcode.vue";
+import moment from "moment";
 import { computed } from "vue";
 
 const getInitials = (name) => {
@@ -79,5 +89,13 @@ const props = defineProps({
     },
 });
 
-const qrColumn = computed(() => props.columns.find(col => col.has_qr));
+const qrColumn = computed(() => props.columns.find((col) => col.has_qr));
 </script>
+
+<style scoped>
+/* Optional scroll protection for QR */
+.qr-container {
+    max-width: 100%;
+    overflow-x: auto;
+}
+</style>

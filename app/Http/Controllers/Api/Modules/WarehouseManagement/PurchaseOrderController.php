@@ -233,7 +233,7 @@ class PurchaseOrderController extends Controller
 
             // Create supplier invoice
             $supplierInvoice = SupplierInvoice::create([
-                'invoice_number' => 'SUP-INV-' . str_pad(SupplierInvoice::count() + 1, 6, '0', STR_PAD_LEFT),
+                // 'invoice_number' => 'SUP-INV-' . str_pad(SupplierInvoice::count() + 1, 6, '0', STR_PAD_LEFT),
                 'company_id' => $purchaseOrder->company_id,
                 'goods_receipt_id' => $goodsReceipt->id,
                 'supplier_id' => $purchaseOrder->supplier_id,

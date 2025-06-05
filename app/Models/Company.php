@@ -68,6 +68,22 @@ class Company extends Model
             if (empty($modelData->token)) {
                 $modelData->token = Str::random(64);
             }
+
+            ApprovalLevelSetting::create([
+                'company_id' => $modelData->id,
+                'type' => 'purchase-order',
+                'level' => 1,
+                'label' => 'Approved By:',
+                'user_id' => $modelData->created_by_user_id
+            ]);
+
+            ApprovalLevelSetting::create([
+                'company_id' => $modelData->id,
+                'type' => 'purchase-order',
+                'level' => 2,
+                'label' => 'Checked By:',
+                'user_id' => $modelData->created_by_user_id
+            ]);
         });
 
         static::updating(function ($modelData) {

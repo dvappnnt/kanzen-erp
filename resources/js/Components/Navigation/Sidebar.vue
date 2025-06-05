@@ -671,6 +671,58 @@
                     </Link>
 
                     <Link
+                        v-if="hasPermission('read employee leaves')"
+                        :href="route('employee-leaves.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('employee-leaves.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('employee-leaves.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-calendar-check-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('employee-leaves.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Leaves</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read employee overtimes')"
+                        :href="route('employee-overtimes.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('employee-overtimes.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('employee-overtimes.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-clock-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('employee-overtimes.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Overtimes</span>
+                    </Link>
+
+                    <Link
                         v-if="hasPermission('read departments')"
                         :href="route('departments.index')"
                         :class="[
@@ -686,7 +738,7 @@
                         "
                     >
                         <span
-                            class="mdi mdi-account-group-outline text-xl"
+                            class="mdi mdi-office-building-outline text-xl"
                             :style="
                                 route().current()?.startsWith('departments.')
                                     ? { color: activeTextColor }
@@ -694,6 +746,110 @@
                             "
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Departments</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read holidays')"
+                        :href="route('holidays.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('holidays.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('holidays.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-calendar-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('holidays.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Holidays</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read offense types')"
+                        :href="route('offense-types.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('offense-types.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('offense-types.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-alert-circle-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('offense-types.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Offense Types</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read deductions')"
+                        :href="route('deductions.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('deductions.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('deductions.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-cash-multiple text-xl"
+                            :style="
+                                route().current()?.startsWith('deductions.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Deductions</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read document types')"
+                        :href="route('document-types.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('document-types.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('document-types.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-file-document-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('document-types.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Document Types</span>
                     </Link>
 
                     <div

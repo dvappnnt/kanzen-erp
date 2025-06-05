@@ -151,7 +151,7 @@ onMounted(() => fetchTableData());
                         <Autocomplete
                             :searchUrl="`/api/autocomplete/${modelName}`"
                             :modelName="modelName"
-                            :placeholder="`Search ${modelName}...`"
+                            :placeholder="`Search ${formatName(modelName).toLowerCase()}...`"
                             :mapCustomButtons="mapCustomButtons"
                             @select="modelData = $event"
                         />

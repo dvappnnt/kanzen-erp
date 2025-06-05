@@ -8,7 +8,7 @@ import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
 import ProfileCard from "@/Components/Sections/ProfileCard.vue";
 import { singularizeAndFormat } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
-import NavigationTabs from "@/Components/Navigation/NavigationTabs.vue";
+import EmployeeTabs from "@/Components/Navigation/Tabs/EmployeeTabs.vue";
 import { useToast } from "vue-toastification";
 import axios from "axios";
 import { debounce } from "lodash";
@@ -65,86 +65,10 @@ const headerActions = ref([
             showCreateModal.value = true;
         },
         class: "bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white",
-    },
-]);
-
-// Navigation tabs
-const navigationTabs = ref([
-    {
-        text: "Overview",
-        url: `/employees/${usePage().props.modelData.id}`,
-        inertia: true,
-        permission: "read employees",
-    },
-    {
-        text: "Employment Details",
-        url: `/employees/${usePage().props.modelData.id}/employment-details`,
-        inertia: true,
-        permission: "read employee employment details",
-    },
-    {
-        text: "Payroll Details",
-        url: `/employees/${usePage().props.modelData.id}/payroll-details`,
-        inertia: true,
-        permission: "read employee payroll details",
-    },
-    {
-        text: "Work Experiences",
-        url: `/employees/${
-            usePage().props.modelData.id
-        }/work-experiences`,
-        inertia: true,
-        permission: "read employee work experiences",
-    },
-    {
-        text: "Educational Attainments",
-        url: `/employees/${
-            usePage().props.modelData.id
-        }/educational-attainments`,
-        inertia: true,
-        permission: "read employee educational attainments",
-    },
-    {
-        text: "Work Histories",
-        url: `/employees/${usePage().props.modelData.id}/work-histories`,
-        inertia: true,
-        permission: "read employee work histories",
-    },
-    {
-        text: "Contact Details",
-        url: `/employees/${usePage().props.modelData.id}/contact-details`,
-        inertia: true,
-        permission: "read employee contact details",
-    },
-    {
-        text: "Dependents",
-        url: `/employees/${usePage().props.modelData.id}/dependents`,
-        inertia: true,
-        permission: "read employee dependents",
-    },
-    {
-        text: "Documents",
-        url: `/employees/${usePage().props.modelData.id}/documents`,
-        inertia: true,
-        permission: "read employee documents",
-    },
-    {
-        text: "Certificates & Training",
-        url: `/employees/${usePage().props.modelData.id}/certificates`,
-        inertia: true,
-        permission: "read employee certificates",
-    },
-    {
-        text: "Skills",
-        url: `/employees/${usePage().props.modelData.id}/skills`,
-        inertia: true,
-        permission: "read employee skills",
-    },
-    {
-        text: "Disciplinary Actions",
-        url: `/employees/${usePage().props.modelData.id}/disciplinary-actions`,
-        inertia: true,
-        permission: "read employee disciplinary actions",
+        style: computed(() => ({
+            backgroundColor: buttonPrimaryBgColor.value,
+            color: buttonPrimaryTextColor.value
+        })),
     },
 ]);
 
@@ -363,7 +287,7 @@ onMounted(() => fetchData());
         </template>
 
         <div class="max-w-12xl mx-auto">
-            <NavigationTabs :tabs="navigationTabs" />
+            <EmployeeTabs />
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg pt-6">
                 <HeaderInformation
@@ -417,11 +341,11 @@ onMounted(() => fetchData());
                                     <td class="px-3 py-2">{{ item.honors_received || '-' }}</td>
                                     <td class="px-3 py-2">
                                         <div class="flex justify-center space-x-2">
-                                            <button
+                    <button
                                                 @click="handleView(item)"
                                                 class="text-blue-600 hover:text-blue-900 p-1 rounded-md hover:bg-blue-50"
                                                 title="View"
-                                            >
+                    >
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                                                     <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
@@ -431,7 +355,7 @@ onMounted(() => fetchData());
                                                 @click="handleEdit(item)"
                                                 class="text-indigo-600 hover:text-indigo-900 p-1 rounded-md hover:bg-indigo-50"
                                                 title="Edit"
-                                            >
+                    >
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                                                 </svg>
@@ -498,6 +422,10 @@ onMounted(() => fetchData());
                                                 ? 'relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
                                                 : 'relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0',
                                         ]"
+                                        :style="{
+                                            backgroundColor: buttonPrimaryBgColor,
+                                            color: buttonPrimaryTextColor
+                                        }"
                                     >
                                         {{ page }}
                                     </button>
@@ -601,6 +529,10 @@ onMounted(() => fetchData());
                             type="submit"
                             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
                             :disabled="isLoading"
+                            :style="{
+                                backgroundColor: buttonPrimaryBgColor,
+                                color: buttonPrimaryTextColor
+                            }"
                         >
                             Create
                         </button>
@@ -778,10 +710,14 @@ onMounted(() => fetchData());
                             type="submit"
                             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
                             :disabled="isLoading"
+                            :style="{
+                                backgroundColor: buttonPrimaryBgColor,
+                                color: buttonPrimaryTextColor
+                            }"
                         >
                             Update
                         </button>
-                    </div>
+                </div>
                 </form>
             </div>
         </div>

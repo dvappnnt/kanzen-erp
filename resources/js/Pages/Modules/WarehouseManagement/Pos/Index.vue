@@ -24,7 +24,7 @@
                             class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                     </div>
-                    <div class="flex-1">
+                    <!-- <div class="flex-1">
                         <select
                             v-model="selectedCategory"
                             class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -38,7 +38,7 @@
                                 {{ category.name }}
                             </option>
                         </select>
-                    </div>
+                    </div> -->
                 </div>
 
                 <!-- Products Grid -->
@@ -53,7 +53,13 @@
                             <div
                                 class="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center"
                             >
-                                <span class="text-4xl text-gray-400">📦</span>
+                                <img
+                                    v-if="product.supplier_product_detail.product.avatar"
+                                    :src="`/storage/${product.supplier_product_detail.product.avatar}`"
+                                    :alt="product.supplier_product_detail.product.name"
+                                    class="h-10 w-10 rounded-full object-cover"
+                                />
+                                <span v-else class="text-4xl text-gray-400">📦</span>
                             </div>
                             <h3 class="font-medium text-gray-900">
                                 {{
@@ -86,11 +92,11 @@
                     <h2 class="text-lg font-semibold text-gray-900">
                         Current Cart
                     </h2>
-                    <p class="text-sm text-gray-500">
+                    <!-- <p class="text-sm text-gray-500">
                         Transaction #TRX-{{
                             new Date().getTime().toString().slice(-6)
                         }}
-                    </p>
+                    </p> -->
                 </div>
 
                 <!-- Cart Items -->
@@ -105,7 +111,13 @@
                                 <div
                                     class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"
                                 >
-                                    <span class="text-xl">📦</span>
+                                    <img
+                                        v-if="item.avatar"
+                                        :src="`/storage/${item.avatar}`"
+                                        :alt="item.name"
+                                        class="h-10 w-10 rounded-full object-cover"
+                                    />
+                                    <span v-else class="text-4xl text-gray-400">📦</span>
                                 </div>
                                 <div>
                                     <h4 class="font-medium">{{ item.name }}</h4>
@@ -1324,7 +1336,8 @@ const addToCart = (product) => {
             price: parseFloat(product.price),
             quantity: 1,
             serials: [],
-            warehouse_id: selectedWarehouseId.value
+            warehouse_id: selectedWarehouseId.value,
+            avatar: product.supplier_product_detail.product.avatar
         });
     }
 };
@@ -1646,7 +1659,8 @@ const checkAndAddSerial = async () => {
                 price: parseFloat(selectedProduct.value.price),
                 quantity: 1,
                 serials: [serialNumber.value],
-                warehouse_id: selectedWarehouseId.value
+                warehouse_id: selectedWarehouseId.value,
+                avatar: selectedProduct.value.supplier_product_detail.product.avatar
             });
         }
 
