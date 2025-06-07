@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('employee_overtimes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
-            $table->date('overtime_date');
+            $table->date('date');
             $table->time('start_time');
             $table->time('end_time');
             $table->text('reason')->nullable();

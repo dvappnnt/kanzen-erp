@@ -303,19 +303,49 @@ const handleCustomAction = async (action, row) => {
                     >
                         <template v-if="col.has_avatar">
                             <div class="flex items-center">
-                                <img
-                                    v-if="col.avatar(row)"
-                                    :src="col.avatar(row)"
-                                    alt="Avatar"
-                                    class="w-10 h-10 rounded-full object-cover mr-4"
-                                />
-                                <div
-                                    v-else
-                                    class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold mr-4"
-                                >
-                                    {{ getInitials(typeof col.value === "function" ? col.value(row) : row[col.value]) }}
-                                </div>
-                                <span>{{ typeof col.value === "function" ? col.value(row) : row[col.value] || "-" }}</span>
+                                <template v-if="col.uri">
+                                    <a :href="typeof col.uri === 'function' ? col.uri(row) : col.uri">
+                                        <img
+                                            v-if="col.avatar(row)"
+                                            :src="col.avatar(row)"
+                                            alt="Avatar"
+                                            class="w-10 h-10 rounded-full object-cover mr-4"
+                                        />
+                                        <div
+                                            v-else
+                                            class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold mr-4"
+                                        >
+                                            {{ getInitials(typeof col.value === "function" ? col.value(row) : row[col.value]) }}
+                                        </div>
+                                    </a>
+                                </template>
+                                <template v-else>
+                                    <img
+                                        v-if="col.avatar(row)"
+                                        :src="col.avatar(row)"
+                                        alt="Avatar"
+                                        class="w-10 h-10 rounded-full object-cover mr-4"
+                                    />
+                                    <div
+                                        v-else
+                                        class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold mr-4"
+                                    >
+                                        {{ getInitials(typeof col.value === "function" ? col.value(row) : row[col.value]) }}
+                                    </div>
+                                </template>
+                                <span :class="col.class">
+                                    <template v-if="col.uri">
+                                        <a
+                                            :href="typeof col.uri === 'function' ? col.uri(row) : col.uri"
+                                            class="inline-flex items-center space-x-1"
+                                        >
+                                            {{ typeof col.value === "function" ? col.value(row) : row[col.value] || "-" }}
+                                        </a>
+                                    </template>
+                                    <template v-else>
+                                        {{ typeof col.value === "function" ? col.value(row) : row[col.value] || "-" }}
+                                    </template>
+                                </span>
                             </div>
                         </template>
                         <template v-else-if="col.label === 'Actions'">
@@ -370,6 +400,7 @@ const handleCustomAction = async (action, row) => {
                         </template>
                         <template v-else-if="col.render">
                             <span :class="[col.render(row).class]">
+                                <i v-if="col.render(row).icon" :class="['mdi', col.render(row).icon, 'mr-1']"></i>
                                 {{ col.render(row).text }}
                             </span>
                         </template>

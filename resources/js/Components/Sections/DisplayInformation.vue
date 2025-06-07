@@ -7,6 +7,9 @@
                     {{ row.label }}
                 </div>
                 <div :class="getRowClass(row, modelData)">
+                    <template v-if="hasIcon(row, modelData)">
+                        <i :class="['mdi', getIcon(row, modelData), 'mr-1']"></i>
+                    </template>
                     {{ getRowText(row, modelData) }}
                 </div>
             </div>
@@ -36,6 +39,22 @@ function getRowClass(row, modelData) {
         return result && typeof result === 'object' && 'class' in result ? result.class : (row.class || 'text-sm text-gray-900');
     }
     return row.class || 'text-sm text-gray-900';
+}
+
+function hasIcon(row, modelData) {
+    if (typeof row.render === 'function') {
+        const result = row.render(modelData);
+        return result && typeof result === 'object' && 'icon' in result;
+    }
+    return false;
+}
+
+function getIcon(row, modelData) {
+    if (typeof row.render === 'function') {
+        const result = row.render(modelData);
+        return result && typeof result === 'object' && 'icon' in result ? result.icon : '';
+    }
+    return '';
 }
 
 defineProps({

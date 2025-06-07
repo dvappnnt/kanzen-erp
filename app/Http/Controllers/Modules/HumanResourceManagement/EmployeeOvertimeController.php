@@ -27,17 +27,17 @@ class EmployeeOvertimeController extends Controller
 
     public function create()
     {
-        $companyQuery = \App\Models\Company::query();
-        $companies = $companyQuery->get();
+        $employeesQuery = \App\Models\Employee::query();
+        $employees = $employeesQuery->get();
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Create", [
-            'companies' => $companies,
+            'employees' => $employees,
         ]);
     }
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['company'])->findOrFail($id);
+        $model = $this->modelClass::with(['employee'])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,
@@ -47,12 +47,12 @@ class EmployeeOvertimeController extends Controller
     public function edit($id)
     {
         $model = $this->modelClass::findOrFail($id);
-        $companyQuery = \App\Models\Company::query();
-        $companies = $companyQuery->get();
+        $employeesQuery = \App\Models\Employee::query();
+        $employees = $employeesQuery->get();
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Edit", [
             'modelData' => $model,
-            'companies' => $companies,
+            'employees' => $employees,
         ]);
     }
 }
