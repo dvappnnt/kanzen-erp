@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeAttendanceD
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeSkillController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeePerformanceReviewController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeLeaveController;
+use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeOvertimeController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -252,9 +253,16 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     // Grouped for employees
     Route::controller(EmployeeLeaveController::class)->group(function () {
         Route::apiResource('employee-leaves', EmployeeLeaveController::class);
-        Route::get('autocomplete/leaves', 'autocomplete')->name('employee-leaves.autocomplete');
+        Route::get('autocomplete/employee-leaves', 'autocomplete')->name('employee-leaves.autocomplete');
         Route::post('employee-leaves/{employeeLeave}/approve', [EmployeeLeaveController::class, 'approve'])->name('employee-leaves.approve');
         Route::post('employee-leaves/{employeeLeave}/reject', [EmployeeLeaveController::class, 'reject'])->name('employee-leaves.reject');
+    });
+
+    Route::controller(EmployeeOvertimeController::class)->group(function () {
+        Route::apiResource('employee-overtimes', EmployeeOvertimeController::class);
+        Route::get('autocomplete/employee-overtimes', 'autocomplete')->name('employee-overtimes.autocomplete');
+        Route::post('employee-overtimes/{employeeOvertime}/approve', [EmployeeOvertimeController::class, 'approve'])->name('employee-overtimes.approve');
+        Route::post('employee-overtimes/{employeeOvertime}/reject', [EmployeeOvertimeController::class, 'reject'])->name('employee-overtimes.reject');
     });
 
     Route::controller(EmployeeEducationalAttainmentController::class)->group(function () {

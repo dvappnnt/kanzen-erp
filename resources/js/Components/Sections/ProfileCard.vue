@@ -9,8 +9,8 @@
                 class="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-2xl mx-auto sm:mx-0"
             >
                 <img
-                    v-if="modelData.avatar"
-                    :src="`/storage/${modelData.avatar}`"
+                    v-if="getAvatarPath(modelData)"
+                    :src="getAvatarPath(modelData)"
                     alt="Avatar"
                     class="w-24 h-24 rounded-full object-cover"
                 />
@@ -75,6 +75,20 @@ const getValue = (col, modelData) => {
         return col.value(modelData);
     }
     return modelData[col.value] || null;
+};
+
+const getAvatarPath = (modelData) => {
+    // Check for custom avatar path in columns
+    const avatarColumn = props.columns.find(col => col.avatar);
+    if (avatarColumn && typeof avatarColumn.avatar === 'function') {
+        const customPath = avatarColumn.avatar(modelData);
+        if (customPath) {
+            return customPath.startsWith('/storage/') ? customPath : `/storage/${customPath}`;
+        }
+    }
+    
+    // Fallback to default avatar path
+    return modelData.avatar ? `/storage/${modelData.avatar}` : null;
 };
 
 const props = defineProps({

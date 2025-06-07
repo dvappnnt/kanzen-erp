@@ -52,6 +52,27 @@ export function formatDate(format, dateString) {
     return format.split('').map(char => map[char] ?? char).join('');
 }
 
+export function formatTime(timeString, format = '12h') {
+    if (!timeString) return '';
+    
+    // Handle both Date objects and time strings
+    const time = timeString instanceof Date ? timeString : new Date(`2000-01-01T${timeString}`);
+    
+    if (format === '12h') {
+        return time.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    } else {
+        return time.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    }
+}
+
 export function formatNumber(number, { style = 'decimal', currency = 'USD', minimumFractionDigits, maximumFractionDigits } = {}) {
     const options = { style };
 

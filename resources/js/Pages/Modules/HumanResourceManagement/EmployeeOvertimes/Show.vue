@@ -11,6 +11,7 @@ import {
     singularizeAndFormat,
     humanReadable,
     formatDate,
+    formatTime,
     getStatusPillClass,
 } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
@@ -18,7 +19,7 @@ import axios from "axios";
 import { useToast } from "vue-toastification";
 
 const page = usePage();
-const modelName = "employee-leaves";
+const modelName = "employee-overtimes";
 const modelData = computed(() => page.props.modelData || {});
 const toast = useToast();
 
@@ -33,7 +34,7 @@ const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 const profileDetails = [
     {
         label: "Name",
-        value: (row) => row.employee?.full_name,
+        value: (row) => row.employee?.formal_full_name,
         class: "text-xl font-bold",
     },
     {
@@ -56,7 +57,7 @@ const profileDetails = [
     },
 ];
 
-const employeeLeaveDetails = ref([
+const employeeOvertimeDetails = ref([
     {
         label: "Status",
         value: (row) => humanReadable(row.status),
@@ -66,69 +67,60 @@ const employeeLeaveDetails = ref([
         }),
     },
     {
-        label: "Leave Type",
+        label: "Date",
         render: (row) => ({
-            text: humanReadable(row.leave_type),
-            class: "font-semibold",
-        }),
-    },
-    {
-        label: "Start Date",
-        render: (row) => ({
-            text: formatDate("M d Y", row.start_date),
+            text: formatDate("M d Y", row.date),
             class: "font-semibold",
             icon: "mdi-calendar-outline",
         }),
     },
     {
-        label: "End Date",
-        value: (row) => formatDate("M d Y", row.end_date),
+        label: "Start Time",
         render: (row) => ({
-            text: formatDate("M d Y", row.end_date),
+            text: formatTime(row.start_time),
             class: "font-semibold",
-            icon: "mdi-calendar-outline",
+            icon: "mdi-clock-outline",
         }),
     },
     {
-        label: "Reason",
-        value: (row) => row.reason || "-",
+        label: "End Time",
+        render: (row) => ({
+            text: formatTime(row.end_time),
+            class: "font-semibold",
+            icon: "mdi-clock-outline",
+        }),
+    },
+    {
+        label: "Minutes Rendered",
+        render: (row) => ({
+            text: `${row.time_difference || 0} minute(s)`,
+            class: "font-semibold",
+            icon: "mdi-clock-outline",
+        }),
+    },
+    { label: "Reason", value: (row) => row.reason || "-",
         render: (row) => ({
             text: row.reason || "-",
             class: "font-semibold",
         }),
     },
-    {
-        label: "Remarks",
-        value: (row) => row.remarks || "-",
-        render: (row) => ({
-            text: row.remarks || "-",
-            class: "font-semibold",
-        }),
-    },
 ]);
 
-const employeeLeaveBreakdownDetails = ref([
+const employeeOvertimeBreakdownDetails = ref([
     {
-        label: "Days",
+        label: "Minutes Rendered",
+        value: (row) => row.minutes_rendered,
         render: (row) => ({
-            text: `${row.leave_days} day(s)`,
-            class: "font-semibold",
-            icon: "mdi-calendar-outline",
-        }),
-    },
-    {
-        label: "Minutes",
-        render: (row) => ({
-            text: `${row.minutes} minute(s) = ${row.hours} hour(s)`,
+            text: `${row.minutes_rendered} minute(s) = ${row.hours_rendered} hour(s)`,
             class: "font-semibold",
             icon: "mdi-clock-outline",
         }),
     },
     {
         label: "Approved Minutes",
-        value: (row) => row.approved_minutes,
+        value: (row) => row.approved_minutes_rendered,
         render: (row) => ({
-            text: `${row.approved_minutes} minute(s) = ${row.approved_hours} hour(s)`,
+            text: `${row.approved_minutes_rendered} minute(s) = ${row.approved_hours_rendered} hour(s)`,
             class: "font-semibold",
             icon: "mdi-clock-outline",
         }),
@@ -151,13 +143,13 @@ async function submitAction() {
     if (!actionType.value) return;
     isSubmitting.value = true;
     try {
-        const url = `/api/employee-leaves/${modelData.value.id}/${actionType.value}`;
+        const url = `/api/employee-overtimes/${modelData.value.id}/${actionType.value}`;
         await axios.post(url, { remarks: remarks.value });
         showActionModal.value = false;
-        toast.success("Leave " + actionType.value + "d successfully");
+        toast.success("Overtime " + actionType.value + "d successfully");
         window.location.reload();
     } catch (e) {
-        alert("Failed to " + actionType.value + " leave.");
+        alert("Failed to " + actionType.value + " overtime.");
     } finally {
         isSubmitting.value = false;
     }
@@ -192,15 +184,15 @@ async function submitAction() {
 
                 <div class="border-t border-gray-200" />
                 <DisplayInformation
-                    title="Employee Leave Information"
+                    title="Employee Overtime Information"
                     :modelData="modelData"
-                    :rowDetails="employeeLeaveDetails"
+                    :rowDetails="employeeOvertimeDetails"
                 />
                 <div class="border-t border-gray-200" />
                 <DisplayInformation
-                    title="Employee Leave Breakdown"
+                    title="Employee Overtime Breakdown"
                     :modelData="modelData"
-                    :rowDetails="employeeLeaveBreakdownDetails"
+                    :rowDetails="employeeOvertimeBreakdownDetails"
                 />
                 <!-- Approve/Reject Buttons (left-aligned, directly below data) -->
                 <div
@@ -232,8 +224,8 @@ async function submitAction() {
                 <h2 class="text-lg font-bold mb-4 text-center">
                     {{
                         actionType === "approve"
-                            ? "Approve Leave"
-                            : "Reject Leave"
+                            ? "Approve Overtime"
+                            : "Reject Overtime"
                     }}
                 </h2>
                 <label class="block mb-2 font-medium"

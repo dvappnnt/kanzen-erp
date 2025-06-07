@@ -41,91 +41,13 @@ const getQrUrl = (id) => {
 const profileDetails = [
     { label: "Name", value: "full_name", class: "text-xl font-bold" },
     { label: "Number", value: "number", class: "text-gray-600 font-semibold" },
+    { label: "Current Position", value: "current_position", class: "text-gray-600 font-semibold" },
     {
         has_qr: true,
         qr_data: (row) => getQrUrl(row.id),
         created_at: (row) => moment(row.created_at).fromNow(),
     },
 ];
-
-const navigationTabs = ref([
-    {
-        text: "Overview",
-        url: `/employees/${usePage().props.modelData.id}`,
-        inertia: true,
-        permission: "read employees",
-    },
-    {
-        text: "Employment Details",
-        url: `/employees/${usePage().props.modelData.id}/employment-details`,
-        inertia: true,
-        permission: "read employee employment details",
-    },
-    {
-        text: "Payroll Details",
-        url: `/employees/${usePage().props.modelData.id}/payroll-details`,
-        inertia: true,
-        permission: "read employee payroll details",
-    },
-    {
-        text: "Work Experiences",
-        url: `/employees/${
-            usePage().props.modelData.id
-        }/work-experiences`,
-        inertia: true,
-        permission: "read employee work experiences",
-    },
-    {
-        text: "Educational Attainments",
-        url: `/employees/${
-            usePage().props.modelData.id
-        }/educational-attainments`,
-        inertia: true,
-        permission: "read employee educational attainments",
-    },
-    {
-        text: "Work Histories",
-        url: `/employees/${usePage().props.modelData.id}/work-histories`,
-        inertia: true,
-        permission: "read employee work histories",
-    },
-    {
-        text: "Contact Details",
-        url: `/employees/${usePage().props.modelData.id}/contact-details`,
-        inertia: true,
-        permission: "read employee contact details",
-    },
-    {
-        text: "Dependents",
-        url: `/employees/${usePage().props.modelData.id}/dependents`,
-        inertia: true,
-        permission: "read employee dependents",
-    },
-    {
-        text: "Documents",
-        url: `/employees/${usePage().props.modelData.id}/documents`,
-        inertia: true,
-        permission: "read employee documents",
-    },
-    {
-        text: "Certificates & Training",
-        url: `/employees/${usePage().props.modelData.id}/certificates`,
-        inertia: true,
-        permission: "read employee certificates",
-    },
-    {
-        text: "Skills",
-        url: `/employees/${usePage().props.modelData.id}/skills`,
-        inertia: true,
-        permission: "read employee skills",
-    },
-    {
-        text: "Disciplinary Actions",
-        url: `/employees/${usePage().props.modelData.id}/disciplinary-actions`,
-        inertia: true,
-        permission: "read employee disciplinary actions",
-    },
-]);
 
 const modelData = computed(() => page.props.modelData || {});
 

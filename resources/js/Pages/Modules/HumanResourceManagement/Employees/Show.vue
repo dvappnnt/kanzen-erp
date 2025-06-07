@@ -28,8 +28,9 @@ const getQrUrl = (id) => {
 };
 
 const profileDetails = [
-    { label: "Name", value: "full_name", class: "text-xl font-bold" },
+    { label: "Name", value: (row) => row.formal_full_name, class: "text-xl font-bold" },
     { label: "Number", value: "number", class: "text-gray-600 font-semibold" },
+    { label: "Current Position", value: "current_position", class: "text-gray-600 font-semibold" },
     {
         has_qr: true,
         qr_data: (row) => getQrUrl(row.id),

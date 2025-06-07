@@ -38,6 +38,8 @@ class Employee extends Model
     protected $appends = [
         'full_name',
         'name',
+        'formal_full_name',
+        'current_position',
     ];
 
     public function company()
@@ -104,6 +106,19 @@ class Employee extends Model
         return collect($names)
             ->filter() // removes null or empty values
             ->implode(' ');
+    }
+
+    public function getFormalFullNameAttribute()
+    {
+        $middleInitial = $this->middlename ? strtoupper($this->middlename[0]) . '.' : '';
+        $suffix = $this->suffix ? ' ' . $this->suffix : '';
+
+        return "{$this->lastname}, {$this->firstname} {$middleInitial}{$suffix}";
+    }
+
+    public function getCurrentPositionAttribute()
+    {
+        return $this->employmentDetails()->where('to_date', null)->first()?->position->name ?? null;
     }
 
     public function getFullNameAttribute()

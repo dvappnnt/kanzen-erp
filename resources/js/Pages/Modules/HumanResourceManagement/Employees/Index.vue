@@ -10,7 +10,6 @@ import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
 
-
 const modelName = "employees";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
@@ -26,7 +25,7 @@ const headerActions = ref([
         class: "px-4 py-2 rounded",
         style: computed(() => ({
             backgroundColor: buttonPrimaryBgColor.value,
-            color: buttonPrimaryTextColor.value
+            color: buttonPrimaryTextColor.value,
         })),
     },
 ]);
@@ -34,12 +33,20 @@ const headerActions = ref([
 // Define Table Columns
 const columns = ref([
     {
-        label: "Name",
-        value: (row) => row.lastname + ", " + row.firstname,
+        label: "Employee",
+        value: (row) => row.formal_full_name,
+        class: "font-semibold",
         has_avatar: true,
-        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null),
+        avatar: (row) =>
+            row.avatar ? `/storage/${row.avatar}` : null, // Adjust for your base URL
+        uri: (row) => route("employees.show", row.id),
     },
     { label: "Number", value: "number" },
+    {
+        label: "Current Position",
+        value: "current_position",
+        class: "text-gray-600 font-semibold",
+    },
     { label: "Company", value: (row) => row.company?.name || "-" },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },

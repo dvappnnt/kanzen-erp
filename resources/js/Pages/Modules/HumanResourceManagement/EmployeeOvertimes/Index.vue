@@ -13,9 +13,10 @@ import {
     formatDate,
     getStatusPillClass,
     humanReadable,
+    formatTime,
 } from "@/utils/global";
 
-const modelName = "employee-leaves";
+const modelName = "employee-overtimes";
 const modelData = ref({ data: [], links: [] });
 const isLoading = ref(false);
 
@@ -42,28 +43,29 @@ const columns = ref([
         value: (row) => row.employee.formal_full_name,
         class: "font-semibold",
         has_avatar: true,
-        avatar: (row) =>
-            row.employee.avatar ? `/storage/${row.employee.avatar}` : null, // Adjust for your base URL
-        uri: (row) => route("employee-leaves.show", row.id),
+        avatar: (row) => (row.employee.avatar ? `/storage/${row.employee.avatar}` : null), // Adjust for your base URL
+        uri: (row) => route("employee-overtimes.show", row.id),
     },
-    { label: "Type", value: (row) => humanReadable(row.leave_type) },
     {
         label: "Date",
         render: (row) => ({
-            text: formatDate("M d Y", row.start_date) +
-                " - " +
-                formatDate("M d Y", row.end_date),
+            text: formatDate("M d Y", row.date),
             icon: "mdi-calendar-outline",
         }),
     },
     {
-        label: "Days",
-        value: (row) => row.leave_days,
+        label: "Start Time",
+        value: (row) => formatTime(row.start_time),
     },
     {
-        label: "Approved Minutes",
+        label: "End Time",
+        value: (row) => formatTime(row.end_time),
+    },
+    {
+        label: "Minutes Rendered",
+        value: (row) => row.minutes_rendered,
         render: (row) => ({
-            text: `${row.approved_minutes} minute(s) = ${row.approved_hours} hour(s)`,
+            text: `${row.minutes_rendered} minute(s)`,
             class: "font-semibold",
             icon: "mdi-clock-outline",
         }),

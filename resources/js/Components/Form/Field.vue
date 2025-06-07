@@ -235,6 +235,19 @@ const togglePassword = () => {
             ></textarea>
         </template>
 
+        <!-- Time Field -->
+        <template v-else-if="type === 'time'">
+            <input
+                :id="id"
+                type="time"
+                :value="modelValue"
+                @input="emit('update:modelValue', $event.target.value)"
+                :placeholder="placeholder"
+                :class="inputClasses"
+                step="60"
+            />
+        </template>
+
         <!-- Input Field (Generic Handler) -->
         <template v-else-if="type !== 'file'">
             <input
