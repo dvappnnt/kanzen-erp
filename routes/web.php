@@ -18,6 +18,7 @@ use App\Http\Controllers\Modules\ProjectManagement\ProjectTaskController;
 
 use App\Http\Controllers\Modules\CustomerRelationshipManagement\CustomerController;
 use App\Http\Controllers\Modules\CustomerRelationshipManagement\AgentController;
+use App\Http\Controllers\Modules\CustomerRelationshipManagement\AdvertisementController;
 
 use App\Http\Controllers\Modules\AccountingManagement\ChartOfAccountController;
 use App\Http\Controllers\Modules\AccountingManagement\BankController;
@@ -105,6 +106,8 @@ Route::middleware([
     Route::resource('customers', CustomerController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('agents', AgentController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
+
+    Route::resource('advertisements', AdvertisementController::class)->only(['index', 'show', 'edit', 'create']);
 
     Route::get('categories/export', [CategoryController::class, 'export'])->name('categories.export');
     Route::get('categories/import', [CategoryController::class, 'import'])->name('categories.import');

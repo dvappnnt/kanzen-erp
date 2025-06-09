@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Modules\ProjectManagement\ProjectColumnController;
 
 use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\CustomerController;
 use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\AgentController;
+use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\AdvertisementController;
 
 use App\Http\Controllers\Api\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\CompanyAccountController;
@@ -95,6 +96,10 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class);
     Route::get('complete/customers', [CustomerController::class, 'complete'])->name('customers.complete');
     Route::get('autocomplete/customers', [CustomerController::class, 'autocomplete'])->name('customers.autocomplete');
+
+    Route::apiResource('advertisements', AdvertisementController::class);
+    Route::get('complete/advertisements', [AdvertisementController::class, 'complete'])->name('advertisements.complete');
+    Route::get('autocomplete/advertisements', [AdvertisementController::class, 'autocomplete'])->name('advertisements.autocomplete');
 
     Route::apiResource('agents', AgentController::class);
     Route::get('autocomplete/agents', [AgentController::class, 'autocomplete'])->name('agents.autocomplete');

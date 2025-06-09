@@ -9,6 +9,7 @@ import { ref, computed } from "vue";
 import { useToast } from "vue-toastification";
 import { singularizeAndFormat } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
+import { parseInput } from "@/utils/parseInput";
 
 const page = usePage();
 const modelName = "agents";
@@ -102,7 +103,12 @@ const submitForm = async () => {
     try {
         isSubmitting.value = true;
 
-        const response = await axios.post(`/api/${modelName}`, formData.value);
+        const formDataObj = parseInput(fields.value, formData.value);
+        const response = await axios.post(`/api/${modelName}`, formDataObj, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
         toast.success("Submitted successfully!");
         const modelDataId = response.data.modelData.id;
         router.get(`/${modelName}/${modelDataId}`);
