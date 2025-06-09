@@ -156,7 +156,7 @@
                         Accounting
                     </div>
 
-                    <Link
+                    <!-- <Link
                         :href="route('chart-of-accounts.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
@@ -181,7 +181,7 @@
                             "
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Chart of Accounts</span>
-                    </Link>
+                    </Link> -->
 
                     <Link
                         v-if="hasPermission('read invoices')"

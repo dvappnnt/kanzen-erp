@@ -69,7 +69,7 @@ class CompanySeeder extends Seeder
         // Create Approval Level Settings
         ApprovalLevelSetting::create([
             'type' => 'purchase-order',
-            'company_id' => $company->id,
+            'company_id' => 1,
             'user_id' => $superAdmin->id,
             'level' => 2,
             'label' => 'Checked By:'
@@ -77,7 +77,23 @@ class CompanySeeder extends Seeder
 
         ApprovalLevelSetting::create([
             'type' => 'purchase-order',
-            'company_id' => $company->id,
+            'company_id' => 1,
+            'user_id' => $kanzenAdmin->id,
+            'level' => 1,
+            'label' => 'Approved By:'
+        ]);
+
+        ApprovalLevelSetting::create([
+            'type' => 'purchase-order',
+            'company_id' => 2,
+            'user_id' => $superAdmin->id,
+            'level' => 2,
+            'label' => 'Checked By:'
+        ]);
+
+        ApprovalLevelSetting::create([
+            'type' => 'purchase-order',
+            'company_id' => 2,
             'user_id' => $kanzenAdmin->id,
             'level' => 1,
             'label' => 'Approved By:'
