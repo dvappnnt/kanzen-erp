@@ -11,17 +11,13 @@ class WarehouseStockTransfer extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'number',
+        'transfer_date',
         'origin_warehouse_id',
-        'origin_warehouse_product_id',
         'destination_warehouse_id',
-        'destination_warehouse_product_id',
-        'quantity',
+        'status',
         'remarks',
         'created_by_user_id'
-    ];
-
-    protected $casts = [
-        'quantity' => 'integer',
     ];
 
     public function originWarehouse()
@@ -34,18 +30,13 @@ class WarehouseStockTransfer extends Model
         return $this->belongsTo(Warehouse::class, 'destination_warehouse_id');
     }
 
-    public function originWarehouseProduct()
-    {
-        return $this->belongsTo(WarehouseProduct::class, 'origin_warehouse_product_id');
-    }
-
-    public function destinationWarehouseProduct()
-    {
-        return $this->belongsTo(WarehouseProduct::class, 'destination_warehouse_product_id');
-    }
-
     public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function details()
+    {
+        return $this->hasMany(WarehouseStockTransferDetail::class);
     }
 }

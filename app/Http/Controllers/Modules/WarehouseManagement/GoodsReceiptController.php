@@ -88,4 +88,24 @@ class GoodsReceiptController extends Controller
             'modelData' => $goodsReceipt
         ]);
     }
+
+    public function printSerials(GoodsReceipt $goodsReceipt)
+    {
+        $goodsReceipt->load([
+            'company',
+            'purchaseOrder',
+            'purchaseOrder.supplier',
+            'purchaseOrder.warehouse',
+            'details',
+            'details.purchaseOrderDetail',
+            'details.purchaseOrderDetail.supplierProductDetail',
+            'details.purchaseOrderDetail.supplierProductDetail.productVariation',
+            'details.purchaseOrderDetail.supplierProductDetail.productVariation.product',
+            'details.serials'
+        ]);
+
+        return Inertia::render('Modules/WarehouseManagement/GoodsReceipts/PrintSerials', [
+            'modelData' => $goodsReceipt
+        ]);
+    }
 }

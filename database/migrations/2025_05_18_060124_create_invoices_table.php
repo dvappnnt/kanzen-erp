@@ -25,11 +25,13 @@ return new class extends Migration
             $table->decimal('discount_amount', 15, 2)->default(0); // Discount amount
             $table->decimal('tax_rate', 5, 2)->default(0);
             $table->decimal('tax_amount', 15, 2)->default(0);
+            $table->enum('shipping_method', ['for-pickup', 'courier'])->nullable()->default('for-pickup');
             $table->decimal('shipping_cost', 15, 2)->default(0);
             $table->decimal('subtotal', 15, 2)->default(0); // Amount before tax
             $table->decimal('total_amount', 15, 2)->default(0); // Total after tax
             $table->string('currency', 5)->default('PHP'); // Currency
             $table->enum('status', ['draft', 'unpaid', 'partially-paid', 'fully-paid', 'cancelled', 'overdue'])->default('draft'); // Invoice status
+            $table->enum('delivery_status', ['pending', 'partially-delivered', 'fully-delivered'])->default('pending'); // Delivery status
             $table->text('notes')->nullable(); // Optional notes
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete(); // Who created it
             $table->boolean('is_credit')->default(false); // If true, it is a credit

@@ -145,7 +145,7 @@
                     <div
                         v-if="
                             hasPermission('read banks') ||
-                            hasPermission('read company accounts') || 
+                            hasPermission('read company accounts') ||
                             hasPermission('read invoices') ||
                             hasPermission('read expenses') ||
                             hasPermission('read journal entries')
@@ -201,9 +201,7 @@
                         <span
                             class="mdi mdi-cash-check text-xl"
                             :style="
-                                route()
-                                    .current()
-                                    ?.startsWith('invoices.')
+                                route().current()?.startsWith('invoices.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
@@ -229,9 +227,7 @@
                         <span
                             class="mdi mdi-cash-multiple text-xl"
                             :style="
-                                route()
-                                    .current()
-                                    ?.startsWith('expenses.')
+                                route().current()?.startsWith('expenses.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
@@ -244,16 +240,12 @@
                         :href="route('journal-entries.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route()
-                                .current()
-                                ?.startsWith('journal-entries.')
+                            route().current()?.startsWith('journal-entries.')
                                 ? 'active-link'
                                 : 'hover:bg-gray-100',
                         ]"
                         :style="
-                            route()
-                                .current()
-                                ?.startsWith('journal-entries.')
+                            route().current()?.startsWith('journal-entries.')
                                 ? activeStyles
                                 : sidebarTextStyle
                         "
@@ -291,9 +283,7 @@
                         <span
                             class="mdi mdi-bank text-xl"
                             :style="
-                                route()
-                                    .current()
-                                    ?.startsWith('banks.')
+                                route().current()?.startsWith('banks.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
@@ -306,16 +296,12 @@
                         :href="route('company-accounts.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route()
-                                .current()
-                                ?.startsWith('company-accounts.')
+                            route().current()?.startsWith('company-accounts.')
                                 ? 'active-link'
                                 : 'hover:bg-gray-100',
                         ]"
                         :style="
-                            route()
-                                .current()
-                                ?.startsWith('company-accounts.')
+                            route().current()?.startsWith('company-accounts.')
                                 ? activeStyles
                                 : sidebarTextStyle
                         "
@@ -342,7 +328,9 @@
                             hasPermission('read purchase orders') ||
                             hasPermission('read supplier invoices') ||
                             hasPermission('read goods receipts') ||
-                            hasPermission('read warehouses')
+                            hasPermission('read warehouses') || 
+                            hasPermission('read suppliers') || 
+                            hasPermission('read products')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -417,16 +405,12 @@
                         :href="route('supplier-invoices.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route()
-                                .current()
-                                ?.startsWith('supplier-invoices.')
+                            route().current()?.startsWith('supplier-invoices.')
                                 ? 'active-link'
                                 : 'hover:bg-gray-100',
                         ]"
                         :style="
-                            route()
-                                .current()
-                                ?.startsWith('supplier-invoices.')
+                            route().current()?.startsWith('supplier-invoices.')
                                 ? activeStyles
                                 : sidebarTextStyle
                         "
@@ -502,6 +486,60 @@
                         >
                     </Link>
 
+                    <Link
+                        v-if="hasPermission('read suppliers')"
+                        :href="route('suppliers.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('suppliers.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('suppliers.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-card-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('suppliers.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Suppliers</span
+                        >
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read products')"
+                        :href="route('products.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('products.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('products.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-package-variant-closed text-xl"
+                            :style="
+                                route().current()?.startsWith('products.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Products</span>
+                    </Link>
+
                     <div
                         v-if="
                             hasPermission('read customers') ||
@@ -536,7 +574,9 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Customers</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Customers</span
+                        >
                     </Link>
 
                     <Link
@@ -562,7 +602,9 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Advertisements</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Advertisements</span
+                        >
                     </Link>
 
                     <Link
@@ -621,9 +663,7 @@
                         <span
                             class="mdi mdi-bulletin-board text-xl"
                             :style="
-                                route()
-                                    .current()
-                                    ?.startsWith('projects.')
+                                route().current()?.startsWith('projects.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
@@ -649,9 +689,7 @@
                         <span
                             class="mdi mdi-clipboard-list-outline text-xl"
                             :style="
-                                route()
-                                    .current()
-                                    ?.startsWith('tasks.')
+                                route().current()?.startsWith('tasks.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
@@ -693,7 +731,9 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Employees</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Employees</span
+                        >
                     </Link>
 
                     <Link
@@ -714,7 +754,9 @@
                         <span
                             class="mdi mdi-calendar-check-outline text-xl"
                             :style="
-                                route().current()?.startsWith('employee-leaves.')
+                                route()
+                                    .current()
+                                    ?.startsWith('employee-leaves.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
@@ -740,12 +782,16 @@
                         <span
                             class="mdi mdi-clock-outline text-xl"
                             :style="
-                                route().current()?.startsWith('employee-overtimes.')
+                                route()
+                                    .current()
+                                    ?.startsWith('employee-overtimes.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Overtimes</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Overtimes</span
+                        >
                     </Link>
 
                     <Link
@@ -771,7 +817,9 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Departments</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Departments</span
+                        >
                     </Link>
 
                     <Link
@@ -823,7 +871,9 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Offense Types</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Offense Types</span
+                        >
                     </Link>
 
                     <Link
@@ -849,7 +899,9 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Deductions</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Deductions</span
+                        >
                     </Link>
 
                     <Link
@@ -875,15 +927,15 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Document Types</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Document Types</span
+                        >
                     </Link>
 
                     <div
                         v-if="
                             hasPermission('read users') ||
-                            hasPermission('read companies') || 
-                            hasPermission('read suppliers') ||
-                            hasPermission('read products')
+                            hasPermission('read companies')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -917,8 +969,6 @@
                         <span v-show="!isMinimized" class="ml-3">Users</span>
                     </Link>
 
-                    
-
                     <Link
                         v-if="hasPermission('read companies')"
                         :href="route('companies.index')"
@@ -945,60 +995,6 @@
                         <span v-show="!isMinimized" class="ml-3"
                             >Companies</span
                         >
-                    </Link>
-
-                    <Link
-                        v-if="hasPermission('read suppliers')"
-                        :href="route('suppliers.index')"
-                        :class="[
-                            'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route().current()?.startsWith('suppliers.')
-                                ? 'active-link'
-                                : 'hover:bg-gray-100',
-                        ]"
-                        :style="
-                            route().current()?.startsWith('suppliers.')
-                                ? activeStyles
-                                : sidebarTextStyle
-                        "
-                    >
-                        <span
-                            class="mdi mdi-account-card-outline text-xl"
-                            :style="
-                                route().current()?.startsWith('suppliers.')
-                                    ? { color: activeTextColor }
-                                    : sidebarTextStyle
-                            "
-                        ></span>
-                        <span v-show="!isMinimized" class="ml-3"
-                            >Suppliers</span
-                        >
-                    </Link>
-
-                    <Link
-                        v-if="hasPermission('read products')"
-                        :href="route('products.index')"
-                        :class="[
-                            'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route().current()?.startsWith('products.')
-                                ? 'active-link'
-                                : 'hover:bg-gray-100',
-                        ]"
-                        :style="
-                            route().current()?.startsWith('products.')
-                                ? activeStyles
-                                : sidebarTextStyle
-                        "
-                    >
-                        <span
-                            class="mdi mdi-package-variant-closed text-xl"
-                            :style="
-                                route().current()?.startsWith('products.')
-                                    ? { color: activeTextColor }
-                                    : sidebarTextStyle
-                            "
-                        ></span>
-                        <span v-show="!isMinimized" class="ml-3">Products</span>
                     </Link>
 
                     <div

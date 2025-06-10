@@ -38,6 +38,7 @@ use App\Http\Controllers\Modules\WarehouseManagement\WarehouseController;
 use App\Http\Controllers\Modules\WarehouseManagement\PurchaseOrderController;
 use App\Http\Controllers\Modules\WarehouseManagement\GoodsReceiptController;
 use App\Http\Controllers\Modules\WarehouseManagement\PurchaseRequisitionController;
+use App\Http\Controllers\Modules\WarehouseManagement\ShipmentController;
 
 use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeController;
 use App\Http\Controllers\Modules\HumanResourceManagement\DepartmentController;
@@ -106,6 +107,7 @@ Route::middleware([
     Route::resource('customers', CustomerController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('agents', AgentController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('shipments', ShipmentController::class)->only(['index', 'show', 'edit', 'create']);
 
     Route::resource('advertisements', AdvertisementController::class)->only(['index', 'show', 'edit', 'create']);
 
@@ -122,6 +124,7 @@ Route::middleware([
     Route::get('goods-receipts/export', [GoodsReceiptController::class, 'export'])->name('goods-receipts.export');
     Route::resource('goods-receipts', GoodsReceiptController::class)->only(['index', 'show', 'edit', 'create']);
     Route::get('goods-receipts/{goodsReceipt}/print', [GoodsReceiptController::class, 'print'])->name('goods-receipts.print');
+    Route::get('goods-receipts/{goodsReceipt}/print/serials', [GoodsReceiptController::class, 'printSerials'])->name('goods-receipts.print.serials');
 
     Route::resource('purchase-requisitions', PurchaseRequisitionController::class)->only(['index', 'show', 'edit', 'create']);
     Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
