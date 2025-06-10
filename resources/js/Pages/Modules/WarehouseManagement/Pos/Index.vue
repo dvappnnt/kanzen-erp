@@ -352,6 +352,7 @@
             :discount-value="discountValue"
             :discount-amount="discountAmount"
             :shipping-amount="shippingAmount"
+            :shipping-method="shippingMethod || 'pickup'"
             :total="total"
             @back="currentStep = 2"
             @proceed="handleProceedToReceipt"
@@ -656,6 +657,26 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <!-- Shipping Method -->
+                                    <div>
+                                        <label
+                                            class="block text-sm font-medium text-gray-700 mb-1"
+                                        >
+                                            Shipping Method
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            v-model="shippingMethod"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="">
+                                                Select shipping method
+                                            </option>
+                                            <option value="pickup">Pickup</option>
+                                            <option value="delivery">Delivery</option>
+                                        </select>
                                     </div>
                                 </div>
 
@@ -1197,6 +1218,7 @@ const discountType = ref("percentage");
 const discountValue = ref(0);
 const shippingAmount = ref(0);
 const tempShippingAmount = ref(0);
+const shippingMethod = ref("");
 
 // Modals
 const showCheckoutModal = ref(false);
@@ -1578,6 +1600,7 @@ const proceedToReview = () => {
         total_amount: total.value,
         currency: 'PHP',
         status: 'fully-paid',
+        shipping_method: shippingMethod.value,
         payment_method: paymentMethod.value,
         payment_details: paymentMethodDetails.payment_details,
         items: cartItems.value.map(item => ({

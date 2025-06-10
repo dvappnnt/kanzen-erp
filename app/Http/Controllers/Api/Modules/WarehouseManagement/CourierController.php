@@ -4,15 +4,16 @@ namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
-class SupplierController extends Controller
+class CourierController extends Controller
 {
     protected $modelClass;
     protected $modelName;
 
     public function __construct()
     {
-        $this->modelClass = \App\Models\Supplier::class;
+        $this->modelClass = \App\Models\Courier::class;
         $this->modelName = class_basename($this->modelClass);
     }
 
@@ -24,18 +25,20 @@ class SupplierController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'code' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|string|max:255',
-            'mobile' => 'required|string|max:255',
-            'landline' => 'nullable|string|max:255',
-            'address' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1024',
+            'phone' => 'nullable|string|max:255',
+            'mobile' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'zip' => 'nullable|string|max:255',
             'website' => 'nullable|url|string|max:255',
             'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
         ]);
 
         if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('suppliers/avatars', 'public');
+            $avatarPath = $request->file('avatar')->store('couriers/avatars', 'public');
             $validated['avatar'] = $avatarPath;
         }
 
@@ -59,12 +62,14 @@ class SupplierController extends Controller
         $model = $this->modelClass::findOrFail($id);
 
         $validated = $request->validate([
+            'code' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|string|max:255',
-            'mobile' => 'required|string|max:255',
-            'landline' => 'nullable|string|max:255',
-            'address' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1024',
+            'phone' => 'nullable|string|max:255',
+            'mobile' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'zip' => 'nullable|string|max:255',
             'website' => 'nullable|url|string|max:255',
             'avatar' => 'nullable|file|mimes:png,jpg,jpeg,svg|max:2048',
         ]);
@@ -74,7 +79,7 @@ class SupplierController extends Controller
                 \Storage::disk('public')->delete($model->avatar);
             }
 
-            $avatarPath = $request->file('avatar')->store('suppliers/avatars', 'public');
+            $avatarPath = $request->file('avatar')->store('couriers/avatars', 'public');
             $validated['avatar'] = $avatarPath;
         }
 
@@ -126,13 +131,5 @@ class SupplierController extends Controller
             'data' => $models,
             'message' => "{$this->modelName}s retrieved successfully."
         ], 200);
-    }
-
-    public function products($id)
-    {
-        $supplier = $this->modelClass::findOrFail($id);
-        $products = $supplier->products()->latest()->paginate(10);
-
-        return response()->json($products);
     }
 }

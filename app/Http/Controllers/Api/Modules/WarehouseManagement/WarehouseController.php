@@ -141,7 +141,6 @@ class WarehouseController extends Controller
         
         $query = $warehouse->products()
             ->withCount('stockAdjustments')
-            ->withCount('stockTransfers')
             ->with([
                 'supplierProductDetail.product',
                 'supplierProductDetail.variation',

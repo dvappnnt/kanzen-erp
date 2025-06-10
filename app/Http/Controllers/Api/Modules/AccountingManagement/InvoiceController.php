@@ -42,6 +42,7 @@ class InvoiceController extends Controller
             'discount_amount' => 'required|numeric|min:0',
             'tax_rate' => 'required|numeric|min:0',
             'tax_amount' => 'required|numeric|min:0',
+            'shipping_method' => 'required|string|in:pickup,delivery',
             'shipping_cost' => 'required|numeric|min:0',
             'subtotal' => 'required|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
@@ -136,6 +137,7 @@ class InvoiceController extends Controller
                 'discount_amount' => $validated['discount_amount'],
                 'tax_rate' => $validated['tax_rate'],
                 'tax_amount' => $validated['tax_amount'],
+                'shipping_method' => $validated['shipping_method'],
                 'shipping_cost' => $validated['shipping_cost'],
                 'subtotal' => $validated['subtotal'],
                 'total_amount' => $validated['total_amount'],
@@ -221,7 +223,7 @@ class InvoiceController extends Controller
             DB::commit();
 
             return response()->json([
-                'data' => $invoice->fresh(['details.warehouseProduct', 'paymentMethodDetails', 'customer', 'company']),
+                'data' => $invoice->fresh(['details.warehouseProduct', 'details.warehouseProduct.supplierProductDetail', 'details.warehouseProduct.supplierProductDetail.product', 'paymentMethodDetails', 'customer', 'company']),
                 'message' => "Invoice '{$invoice->number}' " . ($validated['status'] === 'draft' ? 'saved as draft' : 'created') . " successfully."
             ], 201);
 

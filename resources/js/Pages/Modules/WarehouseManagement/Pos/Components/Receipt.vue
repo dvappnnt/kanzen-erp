@@ -131,6 +131,9 @@ console.log(props.invoice);
                             <p class="font-medium">{{ invoice.customer?.name }}</p>
                             <p class="text-sm text-gray-500">{{ invoice.customer?.mobile }}</p>
                             <p v-if="invoice.customer?.address" class="text-sm text-gray-500">{{ invoice.customer.address }}</p>
+                            
+                            <p class="text-sm text-gray-500 mt-1">Shipping Method</p>
+                            <p class="font-medium">{{ invoice.shipping_method === 'pickup' ? 'Pickup' : invoice.shipping_method === 'delivery' ? 'Delivery' : '-' }}</p>
                         </div>
                         <div class="text-right">
                             <p class="text-sm text-gray-500">Payment Method</p>
