@@ -39,6 +39,7 @@ use App\Http\Controllers\Modules\WarehouseManagement\PurchaseOrderController;
 use App\Http\Controllers\Modules\WarehouseManagement\GoodsReceiptController;
 use App\Http\Controllers\Modules\WarehouseManagement\PurchaseRequisitionController;
 use App\Http\Controllers\Modules\WarehouseManagement\ShipmentController;
+use App\Http\Controllers\Modules\WarehouseManagement\CourierController;
 
 use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeController;
 use App\Http\Controllers\Modules\HumanResourceManagement\DepartmentController;
@@ -108,6 +109,7 @@ Route::middleware([
     Route::resource('agents', AgentController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('shipments', ShipmentController::class)->only(['index', 'show', 'edit', 'create']);
+    Route::resource('couriers', CourierController::class)->only(['index', 'show', 'edit', 'create']);
 
     Route::resource('advertisements', AdvertisementController::class)->only(['index', 'show', 'edit', 'create']);
 

@@ -147,6 +147,7 @@
                             hasPermission('read banks') ||
                             hasPermission('read company accounts') ||
                             hasPermission('read invoices') ||
+                            hasPermission('read supplier invoices') || 
                             hasPermission('read expenses') ||
                             hasPermission('read journal entries')
                         "
@@ -207,6 +208,61 @@
                             "
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Invoices</span>
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read shipments')"
+                        :href="route('shipments.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('shipments.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('shipments.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-truck-fast-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('shipments.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Shipments</span>
+                    </Link>
+
+                    <Link
+                        :href="route('supplier-invoices.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('supplier-invoices.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('supplier-invoices.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-account-credit-card-outline text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('supplier-invoices.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Supplier Invoices</span
+                        >
                     </Link>
 
                     <Link
@@ -323,14 +379,13 @@
 
                     <div
                         v-if="
-                            hasPermission('read users') ||
                             hasPermission('read companies') ||
                             hasPermission('read purchase orders') ||
-                            hasPermission('read supplier invoices') ||
                             hasPermission('read goods receipts') ||
                             hasPermission('read warehouses') || 
                             hasPermission('read suppliers') || 
-                            hasPermission('read products')
+                            hasPermission('read products') ||
+                            hasPermission('read shipments')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -402,35 +457,6 @@
                     </Link> -->
 
                     <Link
-                        :href="route('supplier-invoices.index')"
-                        :class="[
-                            'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route().current()?.startsWith('supplier-invoices.')
-                                ? 'active-link'
-                                : 'hover:bg-gray-100',
-                        ]"
-                        :style="
-                            route().current()?.startsWith('supplier-invoices.')
-                                ? activeStyles
-                                : sidebarTextStyle
-                        "
-                    >
-                        <span
-                            class="mdi mdi-account-credit-card-outline text-xl"
-                            :style="
-                                route()
-                                    .current()
-                                    ?.startsWith('supplier-invoices.')
-                                    ? { color: activeTextColor }
-                                    : sidebarTextStyle
-                            "
-                        ></span>
-                        <span v-show="!isMinimized" class="ml-3"
-                            >Supplier Invoices</span
-                        >
-                    </Link>
-
-                    <Link
                         v-if="hasPermission('read goods receipts')"
                         :href="route('goods-receipts.index')"
                         :class="[
@@ -483,6 +509,34 @@
                         ></span>
                         <span v-show="!isMinimized" class="ml-3"
                             >Warehouses</span
+                        >
+                    </Link>
+
+                    <Link
+                        v-if="hasPermission('read couriers')"
+                        :href="route('couriers.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('couriers.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('couriers.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-truck-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('couriers.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Couriers</span
                         >
                     </Link>
 
