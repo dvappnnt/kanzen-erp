@@ -8,10 +8,10 @@ import { router, usePage } from "@inertiajs/vue3";
 import { ref, onMounted, computed } from "vue";
 import { parseInput } from "@/utils/parseInput";
 import { useToast } from "vue-toastification";
-import { useColors } from "@/Composables/useColors";
 import { singularizeAndFormat } from "@/utils/global";
+import { useColors } from "@/Composables/useColors";
 
-const modelName = "banks";
+const modelName = "shipments";
 const isSubmitting = ref(false);
 const page = usePage();
 const toast = useToast();
@@ -43,63 +43,74 @@ const fields = ref([
         required: true,
     },
     {
-        id: "code",
-        label: `${singularizeAndFormat(modelName)} Code`,
-        model: "code",
-        type: "text",
+        id: "email",
+        label: `${singularizeAndFormat(modelName)} Email Address`,
+        model: "email",
+        type: "email",
         placeholder: `Enter ${singularizeAndFormat(
             modelName
-        ).toLowerCase()} code`,
+        ).toLowerCase()} email`,
         required: true,
     },
     {
-        id: "phone",
-        label: "Phone",
-        model: "phone",
+        id: "mobile",
+        label: `${singularizeAndFormat(modelName)} Mobile`,
+        model: "mobile",
         type: "text",
-        placeholder: "Enter phone number",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} mobile`,
+        required: true,
     },
     {
-        id: "email",
-        label: "Email",
-        model: "email",
-        type: "email",
-        placeholder: "Enter email address",
+        id: "landline",
+        label: `${singularizeAndFormat(modelName)} Landline`,
+        model: "landline",
+        type: "text",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} landline`,
+        required: false,
     },
     {
         id: "address",
-        label: "Address",
+        label: `${singularizeAndFormat(modelName)} Address`,
         model: "address",
         type: "text",
-        placeholder: "Enter street address",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} address`,
+        required: true,
     },
     {
-        id: "city",
-        label: "City",
-        model: "city",
+        id: "description",
+        label: `${singularizeAndFormat(modelName).toLowerCase()} Description`,
+        model: "description",
         type: "text",
-        placeholder: "Enter city",
-    },
-    {
-        id: "state",
-        label: "State",
-        model: "state",
-        type: "text",
-        placeholder: "Enter state/province",
-    },
-    {
-        id: "zip",
-        label: "ZIP",
-        model: "zip",
-        type: "text",
-        placeholder: "Enter ZIP code",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} description`,
+        required: false,
     },
     {
         id: "website",
-        label: "Website",
+        label: `${singularizeAndFormat(modelName)} Website`,
         model: "website",
-        type: "link",
-        placeholder: "Enter website URL",
+        type: "text",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} website`,
+        required: false,
+    },
+    {
+        id: "avatar",
+        label: `${singularizeAndFormat(modelName)} Avatar`,
+        model: "avatar",
+        type: "file",
+        placeholder: `Upload ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} avatar`,
+        required: false,
     },
 ]);
 
@@ -141,13 +152,7 @@ const submitForm = async () => {
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Edit
-                    {{
-                        singularizeAndFormat(modelName)
-                            .charAt(0)
-                            .toUpperCase() +
-                        singularizeAndFormat(modelName).slice(1)
-                    }}
+                    Edit {{ singularizeAndFormat(modelName) }}
                 </h2>
                 <HeaderActions :actions="headerActions" />
             </div>
@@ -160,25 +165,12 @@ const submitForm = async () => {
                 @submitted="submitForm"
             >
                 <template #title>
-                    Edit
-                    {{
-                        modelName.endsWith("ies")
-                            ? modelName.slice(0, -3) + "y"
-                            : modelName.slice(0, -1).charAt(0).toUpperCase() +
-                              modelName.slice(1, -1)
-                    }}
+                    Edit {{ singularizeAndFormat(modelName) }}
                 </template>
                 <template #description>
                     <p>
                         Modify the form below to update the
-                        {{
-                            modelName.endsWith("ies")
-                                ? modelName.slice(0, -3) + "y"
-                                : modelName
-                                      .slice(0, -1)
-                                      .charAt(0)
-                                      .toUpperCase() + modelName.slice(1, -1)
-                        }}
+                        {{ singularizeAndFormat(modelName).toLowerCase() }}
                         details.
                     </p>
                     <p class="mt-1 text-sm text-gray-500">

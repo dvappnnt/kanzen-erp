@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductVariationControl
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductImageController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockAdjustmentController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\ShipmentController;
 
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountTypeController;
@@ -171,6 +172,10 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('product-images', ProductImageController::class);
     Route::get('autocomplete/product-images', [ProductImageController::class, 'autocomplete'])->name('product-images.autocomplete');
+
+    Route::apiResource('shipments', ShipmentController::class);
+    Route::get('complete/shipments', [ShipmentController::class, 'complete'])->name('shipments.complete');
+    Route::get('autocomplete/shipments', [ShipmentController::class, 'autocomplete'])->name('shipments.autocomplete');
 
     Route::apiResource('warehouses', WarehouseController::class);
     Route::get('complete/warehouses', [WarehouseController::class, 'complete'])->name('warehouses.complete');

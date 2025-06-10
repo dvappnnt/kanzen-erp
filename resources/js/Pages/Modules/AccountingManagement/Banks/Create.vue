@@ -32,14 +32,12 @@ const headerActions = ref([
 ]);
 
 const fields = ref([
-{
+    {
         id: "name",
         label: `${singularizeAndFormat(modelName)} Name`,
         model: "name",
         type: "text",
-        placeholder: `Enter ${singularizeAndFormat(
-            modelName
-        ).toLowerCase()} name`,
+        placeholder: `Enter ${singularizeAndFormat(modelName).toLowerCase()} name`,
         required: true,
     },
     {
@@ -47,10 +45,57 @@ const fields = ref([
         label: `${singularizeAndFormat(modelName)} Code`,
         model: "code",
         type: "text",
-        placeholder: `Enter ${singularizeAndFormat(
-            modelName
-        ).toLowerCase()} code`,
+        placeholder: `Enter ${singularizeAndFormat(modelName).toLowerCase()} code`,
         required: true,
+    },
+    {
+        id: "phone",
+        label: "Phone",
+        model: "phone",
+        type: "text",
+        placeholder: "Enter phone number",
+    },
+    {
+        id: "email",
+        label: "Email",
+        model: "email",
+        type: "email",
+        placeholder: "Enter email address",
+    },
+    {
+        id: "address",
+        label: "Address",
+        model: "address",
+        type: "text",
+        placeholder: "Enter street address",
+    },
+    {
+        id: "city",
+        label: "City",
+        model: "city",
+        type: "text",
+        placeholder: "Enter city",
+    },
+    {
+        id: "state",
+        label: "State",
+        model: "state",
+        type: "text",
+        placeholder: "Enter state/province",
+    },
+    {
+        id: "zip",
+        label: "ZIP",
+        model: "zip",
+        type: "text",
+        placeholder: "Enter ZIP code",
+    },
+    {
+        id: "website",
+        label: "Website",
+        model: "website",
+        type: "link",
+        placeholder: "Enter website URL",
     },
 ]);
 

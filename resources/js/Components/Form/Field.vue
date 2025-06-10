@@ -248,6 +248,20 @@ const togglePassword = () => {
             />
         </template>
 
+        <!-- Link Field -->
+        <template v-else-if="type === 'link'">
+            <input
+                :id="id"
+                type="url"
+                :value="modelValue"
+                @input="emit('update:modelValue', $event.target.value)"
+                :placeholder="
+                    placeholder || 'Enter URL (e.g., https://example.com)'
+                "
+                :class="inputClasses"
+            />
+        </template>
+
         <!-- Input Field (Generic Handler) -->
         <template v-else-if="type !== 'file'">
             <input

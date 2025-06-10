@@ -23,11 +23,13 @@ class Invoice extends Model
         'discount_amount',
         'tax_rate',
         'tax_amount',
+        'shipping_method',
         'shipping_cost',
         'subtotal',
         'total_amount',
         'currency',
         'status',
+        'delivery_status',
         'notes',
         'created_by_user_id',
         'is_credit',
@@ -279,5 +281,15 @@ class Invoice extends Model
     public function invoiceSerials()
     {
         return $this->hasMany(InvoiceSerial::class);
+    }
+
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    public function shipmentDetails()
+    {
+        return $this->hasMany(ShipmentDetail::class);
     }
 }

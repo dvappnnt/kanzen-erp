@@ -18,6 +18,8 @@ class InvoiceDetail extends Model
         'total',
         'currency',
         'notes',
+        'is_pre_order',
+        'is_delivered',
     ];
 
     protected $casts = [

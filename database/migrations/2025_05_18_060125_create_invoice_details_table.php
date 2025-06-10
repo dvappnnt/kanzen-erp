@@ -20,6 +20,7 @@ return new class extends Migration
             $table->decimal('price', 15, 2)->default(0);
             $table->decimal('total', 15, 2)->default(0);
             $table->string('currency')->default('PHP');
+            $table->boolean('is_pre_order')->default(false);
             $table->softDeletes();
             $table->timestamps();
         });

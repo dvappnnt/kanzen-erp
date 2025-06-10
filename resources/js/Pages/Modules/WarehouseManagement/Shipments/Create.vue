@@ -5,15 +5,15 @@ import FormSetup from "@/Components/Form/Setup.vue";
 import FormField from "@/Components/Form/Field.vue";
 import InputError from "@/Components/InputError.vue";
 import { router, usePage } from "@inertiajs/vue3";
-import { ref, onMounted, computed } from "vue";
+import { ref, computed } from "vue";
 import { parseInput } from "@/utils/parseInput";
 import { useToast } from "vue-toastification";
-import { useColors } from "@/Composables/useColors";
 import { singularizeAndFormat } from "@/utils/global";
+import { useColors } from "@/Composables/useColors";
 
-const modelName = "banks";
-const isSubmitting = ref(false);
+const modelName = "shipments";
 const page = usePage();
+const isSubmitting = ref(false);
 const toast = useToast();
 
 const formData = ref({});
@@ -43,85 +43,85 @@ const fields = ref([
         required: true,
     },
     {
-        id: "code",
-        label: `${singularizeAndFormat(modelName)} Code`,
-        model: "code",
-        type: "text",
+        id: "email",
+        label: `${singularizeAndFormat(modelName)} Email Address`,
+        model: "email",
+        type: "email",
         placeholder: `Enter ${singularizeAndFormat(
             modelName
-        ).toLowerCase()} code`,
+        ).toLowerCase()} email`,
         required: true,
     },
     {
-        id: "phone",
-        label: "Phone",
-        model: "phone",
+        id: "mobile",
+        label: `${singularizeAndFormat(modelName)} Mobile`,
+        model: "mobile",
         type: "text",
-        placeholder: "Enter phone number",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} mobile`,
+        required: true,
     },
     {
-        id: "email",
-        label: "Email",
-        model: "email",
-        type: "email",
-        placeholder: "Enter email address",
+        id: "landline",
+        label: `${singularizeAndFormat(modelName)} Landline`,
+        model: "landline",
+        type: "text",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} landline`,
+        required: false,
     },
     {
         id: "address",
-        label: "Address",
+        label: `${singularizeAndFormat(modelName)} Address`,
         model: "address",
         type: "text",
-        placeholder: "Enter street address",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} address`,
+        required: true,
     },
     {
-        id: "city",
-        label: "City",
-        model: "city",
+        id: "description",
+        label: "Tell us about your company",
+        model: "description",
         type: "text",
-        placeholder: "Enter city",
-    },
-    {
-        id: "state",
-        label: "State",
-        model: "state",
-        type: "text",
-        placeholder: "Enter state/province",
-    },
-    {
-        id: "zip",
-        label: "ZIP",
-        model: "zip",
-        type: "text",
-        placeholder: "Enter ZIP code",
+        placeholder: "Enter company description",
+        required: false,
     },
     {
         id: "website",
-        label: "Website",
+        label: `${singularizeAndFormat(modelName)} Website`,
         model: "website",
-        type: "link",
-        placeholder: "Enter website URL",
+        type: "text",
+        placeholder: `Enter ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} website`,
+        required: false,
+    },
+    {
+        id: "avatar",
+        label: `${singularizeAndFormat(modelName)} Avatar`,
+        model: "avatar",
+        type: "file",
+        placeholder: `Upload ${singularizeAndFormat(
+            modelName
+        ).toLowerCase()} avatar`,
+        required: false,
     },
 ]);
-
-onMounted(() => {
-    formData.value = { ...page.props.modelData };
-});
 
 const submitForm = async () => {
     try {
         isSubmitting.value = true;
 
         const formDataObj = parseInput(fields.value, formData.value);
-        formDataObj.append("_method", "PUT");
-        const response = await axios.post(
-            `/api/${modelName}/${formData.value.id}`,
-            formDataObj,
-            {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            }
-        );
+        const response = await axios.post(`/api/${modelName}`, formDataObj, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
         toast.success("Submitted successfully!");
         const modelDataId = response.data.modelData.id;
         router.get(`/${modelName}/${modelDataId}`);
@@ -137,11 +137,11 @@ const submitForm = async () => {
 </script>
 
 <template>
-    <AppLayout :title="`Edit ${singularizeAndFormat(modelName)}`">
+    <AppLayout :title="`Create ${singularizeAndFormat(modelName)}`">
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Edit
+                    Create
                     {{
                         singularizeAndFormat(modelName)
                             .charAt(0)
@@ -160,30 +160,17 @@ const submitForm = async () => {
                 @submitted="submitForm"
             >
                 <template #title>
-                    Edit
-                    {{
-                        modelName.endsWith("ies")
-                            ? modelName.slice(0, -3) + "y"
-                            : modelName.slice(0, -1).charAt(0).toUpperCase() +
-                              modelName.slice(1, -1)
-                    }}
+                    Create
+                    {{ singularizeAndFormat(modelName) }}
                 </template>
                 <template #description>
                     <p>
-                        Modify the form below to update the
-                        {{
-                            modelName.endsWith("ies")
-                                ? modelName.slice(0, -3) + "y"
-                                : modelName
-                                      .slice(0, -1)
-                                      .charAt(0)
-                                      .toUpperCase() + modelName.slice(1, -1)
-                        }}
-                        details.
+                        Fill out the form below to create a new
+                        {{ singularizeAndFormat(modelName).toLowerCase() }}.
                     </p>
                     <p class="mt-1 text-sm text-gray-500">
                         <span class="text-red-500 font-semibold">*</span>
-                        Fields with this mark are required.
+                        Fields marked with this symbol are required.
                     </p>
                 </template>
 
@@ -200,7 +187,7 @@ const submitForm = async () => {
                             :options="field.options || []"
                             v-model="formData[field.model]"
                         />
-                        <!-- InputError component for showing field-specific errors -->
+                        <!-- Display field-specific errors -->
                         <InputError :message="errors[field.model]" />
                     </div>
                 </template>
