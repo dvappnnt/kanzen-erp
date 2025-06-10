@@ -540,6 +540,32 @@
                     </Link>
 
                     <Link
+                        v-if="hasPermission('read advertisements')"
+                        :href="route('advertisements.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('advertisements.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('advertisements.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-bullhorn-outline text-xl"
+                            :style="
+                                route().current()?.startsWith('advertisements.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">Advertisements</span>
+                    </Link>
+
+                    <Link
                         v-if="hasPermission('read agents')"
                         :href="route('agents.index')"
                         :class="[
@@ -565,7 +591,7 @@
                         <span v-show="!isMinimized" class="ml-3">Agents</span>
                     </Link>
 
-                    <!-- <div
+                    <div
                         v-if="
                             hasPermission('read projects') ||
                             hasPermission('read project tasks') ||
@@ -631,7 +657,7 @@
                             "
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Tasks</span>
-                    </Link> -->
+                    </Link>
 
                     <div
                         v-if="
