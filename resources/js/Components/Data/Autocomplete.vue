@@ -8,28 +8,33 @@
             :placeholder="placeholder"
             class="border border-gray-300 rounded-md w-full py-2 px-4 text-gray-900 placeholder-gray-500 bg-white focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)] focus:outline-none focus:ring-1 ring-opacity-50 transition-all duration-200"
             autocomplete="off"
+            ref="inputRef"
         />
 
-        <ul
-            v-if="showResults && autocompleteResults.length"
-            class="absolute bg-white border mt-1 rounded-md w-full z-50 shadow-lg max-h-60 overflow-y-auto"
-        >
-            <li
-                v-for="selectedModelData in autocompleteResults"
-                :key="selectedModelData.id"
-                @click="selectModelData(selectedModelData)"
-                class="p-2 hover:bg-gray-100 cursor-pointer"
+        <teleport to="body">
+            <ul
+                v-if="showResults && autocompleteResults.length"
+                :style="dropdownStyle"
+                class="fixed bg-white border mt-1 rounded-md w-full z-[9999] shadow-lg max-h-60 overflow-y-auto"
             >
-                {{ selectedModelData.name ?? selectedModelData.title }}
-            </li>
-        </ul>
+                <li
+                    v-for="selectedModelData in autocompleteResults"
+                    :key="selectedModelData.id"
+                    @click="selectModelData(selectedModelData)"
+                    class="p-2 hover:bg-gray-100 cursor-pointer"
+                >
+                    {{ selectedModelData.name ?? selectedModelData.title }}
+                </li>
+            </ul>
 
-        <div
-            v-if="showResults && !autocompleteResults.length && !isLoading"
-            class="absolute bg-white border mt-1 rounded-md w-full p-2 text-gray-500 text-center z-50 shadow-lg"
-        >
-            No results found
-        </div>
+            <div
+                v-if="showResults && !autocompleteResults.length && !isLoading"
+                :style="dropdownStyle"
+                class="fixed bg-white border mt-1 rounded-md w-full p-2 text-gray-500 text-center z-[9999] shadow-lg"
+            >
+                No results found
+            </div>
+        </teleport>
 
         <div v-if="isLoading" class="absolute top-0 right-0 mt-2 mr-4 z-50">
             <svg
@@ -57,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import axios from "@/axios";
 import { usePage } from "@inertiajs/vue3";
 
@@ -93,6 +98,19 @@ const showResults = ref(false);
 const isLoading = ref(false);
 
 const autocompleteContainer = ref(null);
+const inputRef = ref(null);
+const dropdownStyle = ref({});
+
+// Position dropdown below input
+const updateDropdownPosition = () => {
+    if (!inputRef.value) return;
+    const rect = inputRef.value.getBoundingClientRect();
+    dropdownStyle.value = {
+        left: rect.left + "px",
+        top: rect.bottom + "px",
+        width: rect.width + "px",
+    };
+};
 
 // Fetch Autocomplete Results
 const fetchAutocompleteResults = async () => {
@@ -104,6 +122,8 @@ const fetchAutocompleteResults = async () => {
             );
             autocompleteResults.value = response.data.data || [];
             showResults.value = true;
+            await nextTick();
+            updateDropdownPosition();
         } catch (error) {
             console.error("Error fetching search results:", error);
         } finally {
@@ -160,16 +180,21 @@ const handleClickOutside = (event) => {
 const handleFocus = () => {
     if (searchTerm.value.trim().length > 0) {
         showResults.value = true;
+        nextTick(updateDropdownPosition);
     }
 };
 
 // Add and remove event listeners
 onMounted(() => {
     document.addEventListener('click', handleClickOutside);
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
 });
 
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside);
+    window.removeEventListener('resize', updateDropdownPosition);
+    window.removeEventListener('scroll', updateDropdownPosition, true);
 });
 </script>
 

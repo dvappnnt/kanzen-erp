@@ -199,6 +199,9 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('warehouse-stock-transfers', WarehouseStockTransferController::class);
     Route::get('autocomplete/warehouse-stock-transfers', [WarehouseStockTransferController::class, 'autocomplete'])->name('warehouse-stock-transfers.autocomplete');
 
+    Route::apiResource('warehouse-stock-transfer-details', WarehouseStockTransferDetailController::class);
+    Route::get('autocomplete/warehouse-stock-transfer-details', [WarehouseStockTransferDetailController::class, 'autocomplete'])->name('warehouse-stock-transfer-details.autocomplete');
+    
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::post('purchase-orders/export', [PurchaseOrderController::class, 'export'])->name('purchase-orders.export');
     Route::post('purchase-orders/{purchaseOrder}/pending', [PurchaseOrderController::class, 'pending'])->name('purchase-orders.pending');
