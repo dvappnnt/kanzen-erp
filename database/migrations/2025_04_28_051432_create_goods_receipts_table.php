@@ -38,6 +38,7 @@ return new class extends Migration
             $table->integer('received_qty')->default(0);
             $table->text('notes')->nullable();
             $table->boolean('has_serials')->default(false);
+            $table->boolean('is_synced')->default(false);
             $table->softDeletes();
             $table->timestamps();
         });

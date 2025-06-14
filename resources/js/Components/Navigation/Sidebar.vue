@@ -485,6 +485,34 @@
                     </Link>
 
                     <Link
+                        v-if="hasPermission('read warehouse stock transfers')"
+                        :href="route('warehouse-stock-transfers.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('warehouse-stock-transfers.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('warehouse-stock-transfers.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-transfer text-xl"
+                            :style="
+                                route().current()?.startsWith('warehouse-stock-transfers.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Stock Transfers</span
+                        >
+                    </Link>
+
+                    <Link
                         v-if="hasPermission('read warehouses')"
                         :href="route('warehouses.index')"
                         :class="[

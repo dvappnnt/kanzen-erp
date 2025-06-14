@@ -16,7 +16,8 @@ class GoodsReceiptDetail extends Model
         'expected_qty',
         'received_qty',
         'notes',
-        'has_serials'
+        'has_serials',
+        'is_synced'
     ];
 
     protected $casts = [

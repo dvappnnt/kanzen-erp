@@ -10,6 +10,7 @@ import { singularizeAndFormat, formatNumber } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
 import NavigationTabs from "@/Components/Navigation/NavigationTabs.vue";
 import { useToast } from "vue-toastification";
+import Autocomplete from "@/Components/Data/Autocomplete.vue";
 
 const modelName = "suppliers";
 const toast = useToast();
@@ -64,17 +65,6 @@ const navigationTabs = ref([
     },
 ]);
 
-// Load available products that are not yet assigned to the supplier
-const loadAvailableProducts = async () => {
-    try {
-        const response = await axios.get('/api/complete/products');
-        availableProducts.value = response.data || [];
-    } catch (error) {
-        console.error('Error loading products:', error);
-        toast.error('Failed to load products');
-    }
-};
-
 const getProductVariations = async (productId) => {
     try {
         const response = await axios.get(`/api/products/${productId}/variations`);
@@ -109,33 +99,42 @@ const getProductVariations = async (productId) => {
     }
 };
 
-const handleProductSelect = async (item) => {
-    console.log('Selected Product ID:', item.product_id);
-    if (!item.product_id) {
+const handleProductSelect = async (responseData) => {
+    const selectedProduct = responseData.data[0];
+    console.log('Selected Product:', selectedProduct);
+    
+    if (!selectedProduct?.id) {
         item.variations = [];
         item.variation_id = '';
         return;
     }
 
-    const variations = await getProductVariations(item.product_id);
+    // Find the current item being edited
+    const currentItem = items.value.find(item => item.id === selectedProduct.tempId);
+    if (!currentItem) return;
+
+    currentItem.product_id = selectedProduct.id;
+    const variations = await getProductVariations(selectedProduct.id);
     console.log('Received Variations:', variations);
-    item.variations = variations;
+    currentItem.variations = variations;
     
     // If there's only one variation (default), select it automatically
     if (variations.length === 1) {
-        item.variation_id = variations[0].id;
-        console.log('Auto-selected variation:', item.variation_id);
+        currentItem.variation_id = variations[0].id;
+        console.log('Auto-selected variation:', currentItem.variation_id);
     }
 };
 
 const addNewRow = () => {
+    const tempId = Date.now();
     items.value.push({
-        id: Date.now(),
+        id: tempId,
         product_id: '',
         variation_id: '',
         currency: 'PHP',
         price: formatNumber(0),
         variations: [],
+        tempId: tempId // Add tempId for tracking
     });
 };
 
@@ -271,7 +270,6 @@ const saveEdit = async () => {
 };
 
 onMounted(async () => {
-    await loadAvailableProducts();
     await loadSupplierProducts();
 });
 </script>
@@ -316,17 +314,14 @@ onMounted(async () => {
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr v-for="(item, index) in items" :key="item.id">
                                         <td class="px-2 py-2">
-                                            <select 
-                                                v-model="item.product_id"
-                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                @change="handleProductSelect(item)"
-                                                @keydown="handleKeyDown($event, item)"
-                                            >
-                                                <option value="">Select Product</option>
-                                                <option v-for="product in availableProducts" :key="product.id" :value="product.id">
-                                                    {{ product.name }}
-                                                </option>
-                                            </select>
+                                            <Autocomplete
+                                                :searchUrl="'/api/autocomplete/products'"
+                                                :placeholder="'Search product...'"
+                                                :modelName="'products'"
+                                                :mapCustomButtons="(data) => ({ ...data, tempId: item.tempId })"
+                                                @select="handleProductSelect"
+                                                class="w-full"
+                                            />
                                         </td>
                                         <td class="px-2 py-2">
                                             <select 

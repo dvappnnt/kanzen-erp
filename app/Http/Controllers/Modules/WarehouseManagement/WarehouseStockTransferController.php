@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-class CourierController extends Controller
+class WarehouseStockTransferController extends Controller
 {
     protected $modelClass;
     protected $modelName;
@@ -15,7 +15,7 @@ class CourierController extends Controller
 
     public function __construct()
     {
-        $this->modelClass = \App\Models\Courier::class;
+        $this->modelClass = \App\Models\WarehouseStockTransfer::class;
         $this->modelName = Str::plural(Str::singular(class_basename($this->modelClass)));
         $this->modulePath = 'Modules/WarehouseManagement';
     }
@@ -32,7 +32,7 @@ class CourierController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::findOrFail($id);
+        $model = $this->modelClass::with(['originWarehouse', 'destinationWarehouse', 'createdBy'])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,
