@@ -18,6 +18,7 @@ import { router } from "@inertiajs/vue3";
 import { useToast } from "vue-toastification";
 import { formatNumber, formatDate } from "@/utils/global";
 import Autocomplete from "@/Components/Data/Autocomplete.vue";
+import Modal from "@/Components/Modal.vue";
 
 const modelName = "warehouse-stock-transfers";
 const page = usePage();
@@ -130,6 +131,22 @@ const confirmMessage = ref("");
 const approvalLevels = ref([]);
 const approvalRemarks = ref([]);
 const selectedRemarks = ref([]);
+const details = ref(modelData.value?.details || []);
+const showReceiveModal = ref(false);
+const showReturnModal = ref(false);
+const selectedDetail = ref(null);
+const receiveForm = ref({
+    received_qty: 0,
+    has_serials: false,
+    type: "serial_numbers",
+    serials: [],
+});
+const returnForm = ref({
+    return_qty: 0,
+    serials: [],
+});
+const bulkManufacturedDate = ref("");
+const bulkExpiryDate = ref("");
 
 const hasDetails = computed(() => {
     return purchaseOrderDetails.value.length > 0;
@@ -615,6 +632,83 @@ const loadApprovalRemarks = async () => {
     } catch (error) {
         console.error("Error loading approval remarks:", error);
         toast.error("Failed to load approval remarks");
+    }
+};
+
+const openReceiveModal = (detail) => {
+    selectedDetail.value = detail;
+    receiveForm.value = {
+        received_qty: detail.expected_qty - detail.transferred_qty,
+        has_serials: detail.origin_warehouse_product.has_serials,
+        type: "serial_numbers",
+        serials: [],
+    };
+    showReceiveModal.value = true;
+};
+const closeReceiveModal = () => {
+    showReceiveModal.value = false;
+    selectedDetail.value = null;
+    receiveForm.value = { received_qty: 0, has_serials: false, type: "serial_numbers", serials: [] };
+};
+const openReturnModal = (detail) => {
+    selectedDetail.value = detail;
+    returnForm.value = {
+        return_qty: detail.transferred_qty,
+        serials: [],
+    };
+    showReturnModal.value = true;
+};
+const closeReturnModal = () => {
+    showReturnModal.value = false;
+    selectedDetail.value = null;
+    returnForm.value = { return_qty: 0, serials: [] };
+};
+const applyBulkDates = () => {
+    receiveForm.value.serials = receiveForm.value.serials.map((serial) => ({
+        ...serial,
+        manufactured_at: bulkManufacturedDate.value || serial.manufactured_at,
+        expired_at: bulkExpiryDate.value || serial.expired_at,
+    }));
+};
+const addSerialRow = () => {
+    if (receiveForm.value.serials.length < receiveForm.value.received_qty) {
+        receiveForm.value.serials.push({
+            serial_number: "",
+            batch_number: "",
+            manufactured_at: bulkManufacturedDate.value || "",
+            expired_at: bulkExpiryDate.value || "",
+        });
+    }
+};
+const removeSerialRow = (idx) => {
+    receiveForm.value.serials.splice(idx, 1);
+};
+const handleReceive = async () => {
+    if (isLoading.value) return;
+    isLoading.value = true;
+    try {
+        await axios.post(`/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/receive`, receiveForm.value);
+        toast.success("Received successfully");
+        window.location.reload();
+    } catch (e) {
+        toast.error(e.response?.data?.message || "Failed to receive");
+    } finally {
+        isLoading.value = false;
+        closeReceiveModal();
+    }
+};
+const handleReturn = async () => {
+    if (isLoading.value) return;
+    isLoading.value = true;
+    try {
+        await axios.post(`/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/return`, returnForm.value);
+        toast.success("Returned successfully");
+        window.location.reload();
+    } catch (e) {
+        toast.error(e.response?.data?.message || "Failed to return");
+    } finally {
+        isLoading.value = false;
+        closeReturnModal();
     }
 };
 
@@ -1552,4 +1646,91 @@ onMounted(async () => {
             </div>
         </div>
     </div>
+
+    <!-- Receive Modal -->
+    <Modal :show="showReceiveModal" @close="closeReceiveModal">
+        <div class="p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Receive Items</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Quantity to Receive</label>
+                    <input type="number" v-model="receiveForm.received_qty" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
+                </div>
+                <div v-if="receiveForm.has_serials">
+                    <div class="flex gap-2 mb-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Bulk Manufactured Date</label>
+                            <input type="date" v-model="bulkManufacturedDate" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Bulk Expiry Date</label>
+                            <input type="date" v-model="bulkExpiryDate" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
+                        </div>
+                    </div>
+                    <button @click="applyBulkDates" class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" type="button">Apply Bulk Dates</button>
+                    <div class="overflow-x-auto mt-2">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch Number</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manufactured Date</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="(serial, idx) in receiveForm.serials" :key="idx">
+                                    <td class="px-3 py-2"><input type="text" v-model="serial.serial_number" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" placeholder="Serial number" /></td>
+                                    <td class="px-3 py-2"><input type="text" v-model="serial.batch_number" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" placeholder="Batch number" /></td>
+                                    <td class="px-3 py-2"><input type="date" v-model="serial.manufactured_at" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" /></td>
+                                    <td class="px-3 py-2"><input type="date" v-model="serial.expired_at" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" /></td>
+                                    <td class="px-3 py-2 text-right"><button @click="removeSerialRow(idx)" class="text-red-600 hover:text-red-900">Remove</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button @click="addSerialRow" class="mt-2 text-sm text-indigo-600 hover:text-indigo-900 flex items-center">+ Add Serial</button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button @click="closeReceiveModal" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50" :disabled="isLoading">Cancel</button>
+                <button @click="handleReceive" class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700" :disabled="isLoading">Receive</button>
+            </div>
+        </div>
+    </Modal>
+
+    <!-- Return Modal -->
+    <Modal :show="showReturnModal" @close="closeReturnModal">
+        <div class="p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Return Items</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Quantity to Return</label>
+                    <input type="number" v-model="returnForm.return_qty" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
+                </div>
+                <div v-if="selectedDetail && selectedDetail.origin_warehouse_product.has_serials">
+                    <div class="overflow-x-auto mt-2">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="(serial, idx) in returnForm.serials" :key="idx">
+                                    <td class="px-3 py-2"><input type="text" v-model="serial.serial_number" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" placeholder="Serial number" /></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button @click="() => returnForm.serials.push({ serial_number: '' })" class="mt-2 text-sm text-indigo-600 hover:text-indigo-900 flex items-center">+ Add Serial</button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button @click="closeReturnModal" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50" :disabled="isLoading">Cancel</button>
+                <button @click="handleReturn" class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700" :disabled="isLoading">Return</button>
+            </div>
+        </div>
+    </Modal>
 </template>
