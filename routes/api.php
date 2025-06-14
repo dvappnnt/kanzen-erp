@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductVariationControl
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ProductImageController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockAdjustmentController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferDetailController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ShipmentController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\CourierController;
 
@@ -413,4 +414,8 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('account-types', AccountTypeController::class);
     Route::get('autocomplete/account-types', [AccountTypeController::class, 'autocomplete'])->name('account-types.autocomplete');
     Route::post('account-types/{accountType}/restore', [AccountTypeController::class, 'restore'])->name('account-types.restore');
+
+    Route::apiResource('warehouse-stock-transfer-serials', App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferSerialController::class);
+    Route::post('warehouse-stock-transfer-details/{detail}/receive', [App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferDetailController::class, 'receive'])->name('warehouse-stock-transfer-details.receive');
+    Route::post('warehouse-stock-transfer-details/{detail}/return', [App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferDetailController::class, 'return'])->name('warehouse-stock-transfer-details.return');
 });
