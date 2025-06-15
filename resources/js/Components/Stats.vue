@@ -4,30 +4,7 @@ import { formatNumber } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
 import { computed } from "vue";
 import { Chart } from "vue-chartjs";
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    BarController,
-} from "chart.js";
-
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    BarController,
-    Title,
-    Tooltip,
-    Legend
-);
+import 'chart.js/auto';
 
 const props = defineProps({
     stats: {
