@@ -8,6 +8,7 @@ use App\Models\WarehouseProduct;
 use App\Models\WarehouseProductSerial;
 use App\Models\WarehouseTransfer;
 use Illuminate\Support\Facades\DB;
+use App\Models\GoodsReceiptDetail;
 
 class GoodsReceiptController extends Controller
 {
@@ -126,6 +127,12 @@ class GoodsReceiptController extends Controller
                 }
             }
 
+            // Check if there are any unsynced details
+            $unsyncedDetails = $goodsReceipt->details->where('is_synced', false);
+            if ($unsyncedDetails->isEmpty()) {
+                throw new \Exception('All items have already been synced to warehouse');
+            }
+
             // Create warehouse transfer record
             $transfer = WarehouseTransfer::create([
                 'goods_receipt_id' => $goodsReceipt->id,
@@ -133,8 +140,8 @@ class GoodsReceiptController extends Controller
                 'created_by_user_id' => request()->user()->id
             ]);
 
-            // Process each detail
-            foreach ($goodsReceipt->details as $detail) {
+            // Process each unsynced detail
+            foreach ($unsyncedDetails as $detail) {
                 // Find or create warehouse product
                 $warehouseProduct = WarehouseProduct::firstOrCreate(
                     [
@@ -167,15 +174,26 @@ class GoodsReceiptController extends Controller
                         ]);
                     }
                 }
+
+                // Mark detail as synced
+                $detail->is_synced = true;
+                $detail->save();
             }
 
-            // Update goods receipt status to in-warehouse
-            $goodsReceipt->status = 'in-warehouse';
-            $goodsReceipt->save();
+            // Check if all details are now synced
+            $allDetailsSynced = $goodsReceipt->details()
+                ->where('is_synced', false)
+                ->count() === 0;
 
-            // Update purchase order status to received
-            $goodsReceipt->purchaseOrder->status = 'received';
-            $goodsReceipt->purchaseOrder->save();
+            if ($allDetailsSynced) {
+                // Update goods receipt status to in-warehouse
+                $goodsReceipt->status = 'in-warehouse';
+                $goodsReceipt->save();
+
+                // Update purchase order status to received
+                $goodsReceipt->purchaseOrder->status = 'received';
+                $goodsReceipt->purchaseOrder->save();
+            }
 
             DB::commit();
 

@@ -16,9 +16,8 @@ class WarehouseStockTransferController extends Controller
     {
         $query = WarehouseStockTransfer::with([
             'originWarehouse',
-            'originWarehouseProduct.supplierProductDetail.product',
+            'originWarehouse.company',
             'destinationWarehouse',
-            'destinationWarehouseProduct.supplierProductDetail.product',
             'createdByUser'
         ])->latest();
 
@@ -36,53 +35,20 @@ class WarehouseStockTransferController extends Controller
     {
         $validated = $request->validate([
             'origin_warehouse_id' => 'required|exists:warehouses,id',
-            'origin_warehouse_product_id' => 'required|exists:warehouse_products,id',
             'destination_warehouse_id' => 'required|exists:warehouses,id|different:origin_warehouse_id',
-            'quantity' => 'required|integer|min:1',
-            'remarks' => 'nullable|string|max:1024',
+            'transfer_date' => 'required|date',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Get the origin warehouse product
-            $originProduct = WarehouseProduct::findOrFail($validated['origin_warehouse_product_id']);
-
-            // Check if there's enough stock
-            if ($originProduct->qty < $validated['quantity']) {
-                throw new \Exception('Insufficient stock in origin warehouse');
-            }
-
-            // Find or create the destination warehouse product
-            $destinationProduct = WarehouseProduct::firstOrCreate(
-                [
-                    'warehouse_id' => $validated['destination_warehouse_id'],
-                    'supplier_product_detail_id' => $originProduct->supplier_product_detail_id,
-                ],
-                [
-                    'qty' => 0,
-                    'price' => $originProduct->price,
-                    'last_cost' => $originProduct->last_cost,
-                    'average_cost' => $originProduct->average_cost,
-                    'has_serials' => $originProduct->has_serials,
-                    'critical_level_qty' => $originProduct->critical_level_qty
-                ]
-            );
-
             // Create the transfer record
             $transfer = WarehouseStockTransfer::create([
                 'origin_warehouse_id' => $validated['origin_warehouse_id'],
-                'origin_warehouse_product_id' => $validated['origin_warehouse_product_id'],
                 'destination_warehouse_id' => $validated['destination_warehouse_id'],
-                'destination_warehouse_product_id' => $destinationProduct->id,
-                'quantity' => $validated['quantity'],
-                'remarks' => $validated['remarks'],
+                'transfer_date' => $validated['transfer_date'],
                 'created_by_user_id' => Auth::id()
             ]);
-
-            // Update the stock quantities
-            $originProduct->decrement('qty', $validated['quantity']);
-            $destinationProduct->increment('qty', $validated['quantity']);
 
             DB::commit();
 
@@ -90,9 +56,7 @@ class WarehouseStockTransferController extends Controller
                 'message' => 'Stock transfer created successfully',
                 'data' => $transfer->load([
                     'originWarehouse',
-                    'originWarehouseProduct.supplierProductDetail.product',
                     'destinationWarehouse',
-                    'destinationWarehouseProduct.supplierProductDetail.product',
                     'createdByUser'
                 ])
             ], 201);
@@ -110,10 +74,11 @@ class WarehouseStockTransferController extends Controller
     {
         $transfer = WarehouseStockTransfer::with([
             'originWarehouse',
-            'originWarehouseProduct.supplierProductDetail.product',
+            'originWarehouse.company',
             'destinationWarehouse',
-            'destinationWarehouseProduct.supplierProductDetail.product',
-            'createdByUser'
+            'createdByUser',
+            'details',
+            'details.serials'
         ])->findOrFail($id);
         
         return response()->json($transfer);

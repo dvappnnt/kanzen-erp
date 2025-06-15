@@ -35,6 +35,7 @@ class WarehouseStockTransferDetailController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'warehouse_stock_transfer_id' => 'required|exists:warehouse_stock_transfers,id',
             'origin_warehouse_id' => 'required|exists:warehouses,id',
             'origin_warehouse_product_id' => 'required|exists:warehouse_products,id',
             'destination_warehouse_id' => 'required|exists:warehouses,id|different:origin_warehouse_id',
@@ -71,29 +72,43 @@ class WarehouseStockTransferDetailController extends Controller
 
             // Create the transfer record
             $transfer = WarehouseStockTransferDetail::create([
+                'warehouse_stock_transfer_id' => $validated['warehouse_stock_transfer_id'],
                 'origin_warehouse_id' => $validated['origin_warehouse_id'],
                 'origin_warehouse_product_id' => $validated['origin_warehouse_product_id'],
                 'destination_warehouse_id' => $validated['destination_warehouse_id'],
                 'destination_warehouse_product_id' => $destinationProduct->id,
-                'quantity' => $validated['quantity'],
+                'expected_qty' => $validated['quantity'],
+                'transferred_qty' => 0,
                 'remarks' => $validated['remarks'],
                 'created_by_user_id' => Auth::id()
             ]);
 
-            // Update the stock quantities
-            $originProduct->decrement('qty', $validated['quantity']);
-            $destinationProduct->increment('qty', $validated['quantity']);
+            // Save serials if provided
+            if (!empty($request->serials) && is_array($request->serials)) {
+                foreach ($request->serials as $serial) {
+                    \App\Models\WarehouseStockTransferSerial::create([
+                        'warehouse_stock_transfer_id' => $validated['warehouse_stock_transfer_id'],
+                        'warehouse_stock_transfer_detail_id' => $transfer->id,
+                        'serial_number' => $serial['serial_number'] ?? null,
+                        'batch_number' => $serial['batch_number'] ?? null,
+                        'manufactured_at' => $serial['manufactured_at'] ?? null,
+                        'expired_at' => $serial['expired_at'] ?? null,
+                        'is_sold' => 0,
+                    ]);
+                }
+            }
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Stock transfer created successfully',
                 'data' => $transfer->load([
-                    'originWarehouse',
-                    'originWarehouseProduct.supplierProductDetail.product',
-                    'destinationWarehouse',
-                    'destinationWarehouseProduct.supplierProductDetail.product',
-                    'createdByUser'
+                    'warehouseStockTransfer.originWarehouse',
+                    'warehouseStockTransfer.originWarehouse.company',
+                    'warehouseStockTransfer.destinationWarehouse',
+                    'warehouseStockTransfer.destinationWarehouse.company',
+                    'warehouseStockTransfer.createdByUser',
+                    'warehouseStockTransfer.details'
                 ])
             ], 201);
 
@@ -110,10 +125,11 @@ class WarehouseStockTransferDetailController extends Controller
     {
         $transfer = WarehouseStockTransfer::with([
             'originWarehouse',
-            'originWarehouseProduct.supplierProductDetail.product',
+            'originWarehouse.company',
             'destinationWarehouse',
-            'destinationWarehouseProduct.supplierProductDetail.product',
-            'createdByUser'
+            'destinationWarehouse.company',
+            'createdByUser',
+            'details'
         ])->findOrFail($id);
         
         return response()->json($transfer);

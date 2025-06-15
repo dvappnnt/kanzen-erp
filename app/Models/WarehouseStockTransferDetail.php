@@ -36,4 +36,9 @@ class WarehouseStockTransferDetail extends Model
     {
         return $this->belongsTo(WarehouseProduct::class, 'destination_warehouse_product_id');
     }
+
+    public function serials()
+    {
+        return $this->hasMany(\App\Models\WarehouseStockTransferSerial::class);
+    }
 }

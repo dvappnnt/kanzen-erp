@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Password;
 use App\Models\User;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+use App\Models\Company;
 
 class UserController extends Controller
 {
@@ -54,8 +55,11 @@ class UserController extends Controller
     public function create()
     {
         $roles = Role::all();
+        $companiesQuery = Company::query();
+        $companies = $companiesQuery->orderBy('name', 'asc')->get();
         return Inertia::render('Users/Create', [
             'roles' => $roles,
+            'companies' => $companies,
         ]);
     }
 
@@ -71,9 +75,12 @@ class UserController extends Controller
     {
         $user->role = $user->getRoleNames()->first();
         $roles = Role::all();
+        $companiesQuery = Company::query();
+        $companies = $companiesQuery->orderBy('name', 'asc')->get();
         return Inertia::render('Users/Edit', [
             'modelData' => $user,
             'roles' => $roles,
+            'companies' => $companies,
         ]);
     }
 

@@ -24,6 +24,11 @@ const page = usePage();
 
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
+const isSuperAdmin = computed(() => {
+    const roles = page.props.roles || [];
+    return roles.includes('super-admin');
+});
+
 const headerActions = ref([
     {
         text: "Go Back",
@@ -818,11 +823,13 @@ onMounted(async () => {
                                                 Free
                                             </th>
                                             <th
+                                                v-if="isSuperAdmin"
                                                 class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
                                             >
                                                 Price
                                             </th>
                                             <th
+                                                v-if="isSuperAdmin"
                                                 class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
                                             >
                                                 Total
@@ -929,7 +936,7 @@ onMounted(async () => {
                                                     class="block w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                                 />
                                             </td>
-                                            <td class="px-2 py-2">
+                                            <td v-if="isSuperAdmin" class="px-2 py-2">
                                                 <input
                                                     type="number"
                                                     v-model="item.price"
@@ -944,7 +951,7 @@ onMounted(async () => {
                                                     class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                                 />
                                             </td>
-                                            <td class="px-2 py-2 text-gray-500">
+                                            <td v-if="isSuperAdmin" class="px-2 py-2 text-gray-500">
                                                 {{
                                                     calculateTotal(
                                                         item
@@ -1050,11 +1057,13 @@ onMounted(async () => {
                                                 Free
                                             </th>
                                             <th
+                                                v-if="isSuperAdmin"
                                                 class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
                                             >
                                                 Price
                                             </th>
                                             <th
+                                                v-if="isSuperAdmin"
                                                 class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
                                             >
                                                 Total
@@ -1109,7 +1118,7 @@ onMounted(async () => {
                                             <td class="px-2 py-2">
                                                 {{ detail.free_qty }}
                                             </td>
-                                            <td class="px-2 py-2">
+                                            <td v-if="isSuperAdmin" class="px-2 py-2">
                                                 {{
                                                     formatNumber(detail.price, {
                                                         style: "currency",
@@ -1117,7 +1126,7 @@ onMounted(async () => {
                                                     })
                                                 }}
                                             </td>
-                                            <td class="px-2 py-2">
+                                            <td v-if="isSuperAdmin" class="px-2 py-2">
                                                 {{
                                                     formatNumber(detail.total, {
                                                         style: "currency",
@@ -1197,7 +1206,7 @@ onMounted(async () => {
                                 </table>
 
                                 <!-- Total Section -->
-                                <div class="mt-4 flex justify-end px-2">
+                                <div v-if="isSuperAdmin" class="mt-4 flex justify-end px-2">
                                     <div class="w-64 space-y-2">
                                         <div
                                             class="flex justify-between text-sm"
@@ -1326,7 +1335,7 @@ onMounted(async () => {
                     />
                 </div>
 
-                <div>
+                <div v-if="isSuperAdmin">
                     <label class="block text-sm font-medium text-gray-700"
                         >Price</label
                     >
@@ -1339,7 +1348,7 @@ onMounted(async () => {
                     />
                 </div>
 
-                <div>
+                <div v-if="isSuperAdmin">
                     <label class="block text-sm font-medium text-gray-700"
                         >Discount</label
                     >

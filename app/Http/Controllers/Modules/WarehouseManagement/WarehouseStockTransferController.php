@@ -32,7 +32,15 @@ class WarehouseStockTransferController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['originWarehouse', 'destinationWarehouse', 'createdBy'])->findOrFail($id);
+        $model = $this->modelClass::with([
+            'originWarehouse',
+            'originWarehouse.company',
+            'destinationWarehouse',
+            'destinationWarehouse.company',
+            'createdByUser',
+            'details',
+            'details.serials'
+        ])->findOrFail($id);
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\WarehouseProduct;
+use App\Models\WarehouseProductSerial;
 use App\Models\GoodsReceiptDetail;
 use App\Models\GoodsReceiptSerial;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +58,7 @@ class GoodsReceiptDetailController extends Controller
             if (!$request->has_serials) {
                 $goodsReceiptDetail->received_qty += $request->received_qty;
             }
-            
+
             if ($goodsReceiptDetail->received_qty > $goodsReceiptDetail->expected_qty) {
                 throw new \Exception('Received quantity cannot exceed expected quantity');
             }
@@ -72,7 +74,7 @@ class GoodsReceiptDetailController extends Controller
             $errors = [];
             $success = [];
             $successfulQty = 0;
-            
+
             if ($request->has_serials && !empty($request->serials)) {
                 foreach ($request->serials as $index => $serial) {
                     try {
@@ -80,7 +82,7 @@ class GoodsReceiptDetailController extends Controller
                         if (!empty($serial['manufactured_at']) && !empty($serial['expired_at'])) {
                             $manufacturedDate = new \DateTime($serial['manufactured_at']);
                             $expiryDate = new \DateTime($serial['expired_at']);
-                            
+
                             if ($expiryDate <= $manufacturedDate) {
                                 throw new \Exception('Expiry date must be after manufactured date');
                             }
@@ -91,7 +93,7 @@ class GoodsReceiptDetailController extends Controller
                             $exists = GoodsReceiptSerial::where('serial_number', $serial['serial_number'])
                                 ->where('goods_receipt_detail_id', '!=', $goodsReceiptDetail->id)
                                 ->exists();
-                                
+
                             if ($exists) {
                                 throw new \Exception('Serial number already exists');
                             }
@@ -104,7 +106,7 @@ class GoodsReceiptDetailController extends Controller
                             'manufactured_at' => $serial['manufactured_at'],
                             'expired_at' => $serial['expired_at'],
                         ]);
-                        
+
                         $success[] = [
                             'index' => $index,
                             'data' => $serialRecord
@@ -122,14 +124,14 @@ class GoodsReceiptDetailController extends Controller
                 if ($request->has_serials) {
                     // Get current count of serials
                     $currentSerialCount = $goodsReceiptDetail->serials()->count();
-                    
+
                     // Set received_qty to match total number of serials
                     $goodsReceiptDetail->received_qty = $currentSerialCount;
-                    
+
                     if ($goodsReceiptDetail->received_qty > $goodsReceiptDetail->expected_qty) {
                         throw new \Exception('Total serial numbers cannot exceed expected quantity');
                     }
-                    
+
                     $goodsReceiptDetail->save();
                 }
             }
@@ -161,7 +163,6 @@ class GoodsReceiptDetailController extends Controller
                     'errors' => $errors
                 ]
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -214,7 +215,6 @@ class GoodsReceiptDetailController extends Controller
                 'message' => 'Items returned successfully',
                 'data' => $goodsReceiptDetail->load('serials')
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -353,7 +353,7 @@ class GoodsReceiptDetailController extends Controller
             if ($request->filled('manufactured_at') && $request->filled('expired_at')) {
                 $manufacturedDate = new \DateTime($request->manufactured_at);
                 $expiryDate = new \DateTime($request->expired_at);
-                
+
                 if ($expiryDate <= $manufacturedDate) {
                     throw new \Exception('Expiry date must be after manufactured date');
                 }
@@ -364,7 +364,7 @@ class GoodsReceiptDetailController extends Controller
                 $exists = GoodsReceiptSerial::where('serial_number', $request->serial_number)
                     ->where('id', '!=', $serialId)
                     ->exists();
-                    
+
                 if ($exists) {
                     throw new \Exception('Serial number already exists');
                 }
@@ -378,7 +378,81 @@ class GoodsReceiptDetailController extends Controller
                 'message' => 'Serial/batch number updated successfully',
                 'data' => $serial->goodsReceiptDetail->load('serials')
             ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
 
+    public function sync(Request $request, GoodsReceiptDetail $goodsReceiptDetail)
+    {
+        try {
+            DB::beginTransaction();
+
+            $request->validate([
+                'received_qty' => 'required|numeric|min:0',
+            ]);
+
+            $goodsReceiptDetail->is_synced = true;
+            $goodsReceiptDetail->save();
+
+            // Find or create warehouse product
+            $warehouseProduct = WarehouseProduct::firstOrCreate(
+                [
+                    'warehouse_id' => $goodsReceiptDetail->goodsReceipt->purchaseOrder->warehouse_id,
+                    'supplier_product_detail_id' => $goodsReceiptDetail->purchaseOrderDetail->supplier_product_detail_id,
+                ],
+                [
+                    'qty' => 0,
+                    'has_serials' => count($goodsReceiptDetail->serials) > 0,
+                    'price' => $goodsReceiptDetail->purchaseOrderDetail->price,
+                    'last_cost' => $goodsReceiptDetail->purchaseOrderDetail->price,
+                    'sku' => $goodsReceiptDetail->purchaseOrderDetail->supplierProductDetail->productVariation->sku,
+                    'barcode' => $goodsReceiptDetail->purchaseOrderDetail->supplierProductDetail->productVariation->barcode
+                ]
+            );
+
+            // Update quantity
+            $warehouseProduct->qty += $goodsReceiptDetail->received_qty;
+            $warehouseProduct->save();
+
+            // Transfer serials if any
+            if ($goodsReceiptDetail->serials->count() > 0) {
+                foreach ($goodsReceiptDetail->serials as $serial) {
+                    WarehouseProductSerial::create([
+                        'warehouse_product_id' => $warehouseProduct->id,
+                        'serial_number' => $serial->serial_number,
+                        'batch_number' => $serial->batch_number,
+                        'manufactured_at' => $serial->manufactured_at,
+                        'expired_at' => $serial->expired_at
+                    ]);
+                }
+            }
+
+            // Check if all details are synced
+            $goodsReceipt = $goodsReceiptDetail->goodsReceipt;
+            $allDetailsSynced = $goodsReceipt->details()
+                ->where('is_synced', false)
+                ->count() === 0;
+
+            // If all details are synced, update goods receipt status
+            if ($allDetailsSynced) {
+                $goodsReceipt->status = 'in-warehouse';
+                $goodsReceipt->save();
+
+                // Update purchase order status to received
+                $goodsReceipt->purchaseOrder->status = 'received';
+                $goodsReceipt->purchaseOrder->save();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Goods receipt detail synced successfully',
+                'data' => $goodsReceiptDetail
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

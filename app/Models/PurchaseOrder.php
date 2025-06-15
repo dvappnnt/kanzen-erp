@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptDetail;
+use Illuminate\Database\Eloquent\Builder;
 
 class PurchaseOrder extends Model
 {
@@ -89,6 +90,17 @@ class PurchaseOrder extends Model
 
     protected static function booted()
     {
+        static::addGlobalScope('company_filter', function (Builder $builder) {
+            $user = Auth::user();
+    
+            if ($user && !$user->hasRole('super-admin')) {
+                $builder->where(function ($query) use ($user) {
+                    $query->where('company_id', $user->company_id)
+                          ->orWhereNull('company_id');
+                });
+            }
+        });
+
         static::creating(function ($modelData) {
             $modelData->created_by_user_id = Auth::id();
 
