@@ -1047,7 +1047,7 @@ const removeSerial = (item, serial) => {
                         >
                             Cancel
                         </Link>
-                        <button
+                        <!-- <button
                             type="button"
                             @click="saveAsDraft"
                             :disabled="isSubmitting"
@@ -1055,7 +1055,7 @@ const removeSerial = (item, serial) => {
                         >
                             <span v-if="isSubmitting">Saving...</span>
                             <span v-else>Save as Draft</span>
-                        </button>
+                        </button> -->
                         <button
                             type="button"
                             @click="submitForm"

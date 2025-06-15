@@ -44,7 +44,7 @@ class WarehouseStockTransfer extends Model
     {
         static::creating(function ($wst) {
             if (empty($wst->number)) {
-                $company = \App\Models\Company::find($wst->company_id);
+                $company = \App\Models\Company::find($wst->origin_warehouse->company_id);
 
                 if ($company) {
                     // Extract base prefix

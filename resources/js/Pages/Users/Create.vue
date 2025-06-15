@@ -21,6 +21,10 @@ const roles = computed(() =>
     Array.isArray(page.props.roles) ? page.props.roles : []
 );
 
+const companies = computed(() =>
+    Array.isArray(page.props.companies) ? page.props.companies : []
+);
+
 const headerActions = ref([
     {
         text: "Go Back",
@@ -31,6 +35,17 @@ const headerActions = ref([
 ]);
 
 const fields = computed(() => [
+    {
+        id: "company_id",
+        label: "Company",
+        model: "company_id",
+        type: "select",
+        required: true,
+        options: companies.value.map((company) => ({
+            value: company.id,
+            text: company.name,
+        })),
+    },
     {
         id: "name",
         label: "Name",

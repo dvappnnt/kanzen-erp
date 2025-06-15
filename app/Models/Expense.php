@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryDetail;
 use App\Models\Account;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class Expense extends Model
 {
@@ -45,6 +47,17 @@ class Expense extends Model
 
     protected static function booted()
     {
+        static::addGlobalScope('company_filter', function (Builder $builder) {
+            $user = Auth::user();
+    
+            if ($user && !$user->hasRole('super-admin')) {
+                $builder->where(function ($query) use ($user) {
+                    $query->where('company_id', $user->company_id)
+                          ->orWhereNull('company_id');
+                });
+            }
+        });
+
         static::creating(function ($expense) {
             if (empty($expense->reference_number)) {
                 $company = \App\Models\Company::find($expense->company_id);

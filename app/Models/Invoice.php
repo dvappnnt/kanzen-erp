@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class Invoice extends Model
 {
@@ -82,6 +84,17 @@ class Invoice extends Model
 
     protected static function booted()
     {
+        static::addGlobalScope('company_filter', function (Builder $builder) {
+            $user = Auth::user();
+    
+            if ($user && !$user->hasRole('super-admin')) {
+                $builder->where(function ($query) use ($user) {
+                    $query->where('company_id', $user->company_id)
+                          ->orWhereNull('company_id');
+                });
+            }
+        });
+
         static::creating(function ($invoice) {
             if (empty($invoice->number)) {
                 $company = \App\Models\Company::find($invoice->company_id);

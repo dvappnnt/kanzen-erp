@@ -33,6 +33,13 @@ class WarehouseProduct extends Model
         'critical_level_qty' => 'integer'
     ];
 
+    protected $appends = ['name'];
+
+    public function getNameAttribute()
+    {
+        return $this->supplierProductDetail->product->name;
+    }
+
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);

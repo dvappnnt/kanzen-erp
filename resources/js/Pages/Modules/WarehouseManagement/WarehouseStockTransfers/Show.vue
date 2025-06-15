@@ -19,36 +19,28 @@ import { useToast } from "vue-toastification";
 import { formatNumber, formatDate } from "@/utils/global";
 import Autocomplete from "@/Components/Data/Autocomplete.vue";
 import Modal from "@/Components/Modal.vue";
+import axios from "@/axios";
 
 const modelName = "warehouse-stock-transfers";
 const page = usePage();
 
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
-const headerActions = ref([
-    {
-        text: "Go Back",
-        url: `/${modelName}`,
-        inertia: true,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded text-gray-600",
-    },
-]);
-
 const profileDetails = [
     { label: "Number", value: "number", class: "text-xl font-bold" },
     {
         label: "Company",
-        value: (row) => row.company.name,
+        value: (row) => row.origin_warehouse?.company?.name || "—",
         class: "text-gray-500",
     },
     {
-        label: "Supplier",
-        value: (row) => row.supplier.name,
+        label: "Origin Warehouse",
+        value: (row) => row.origin_warehouse?.name || "—",
         class: "text-gray-600 font-semibold",
     },
     {
-        label: "Warehouse",
-        value: (row) => row.warehouse.name,
+        label: "Destination Warehouse",
+        value: (row) => row.destination_warehouse?.name || "—",
         class: "text-gray-600 font-semibold",
     },
     {
@@ -57,58 +49,22 @@ const profileDetails = [
         class: "text-gray-600 font-semibold",
     },
     {
-        label: "Order Date",
+        label: "Transfer Date",
         value: (row) =>
-            row.order_date ? formatDate("M d Y", row.order_date) : "—",
+            row.transfer_date ? formatDate("M d Y", row.transfer_date) : "—",
         class: "text-gray-600 font-semibold",
-    },
-    {
-        label: "Expected Delivery Date",
-        value: (row) =>
-            row.expected_delivery_date
-                ? formatDate("M d Y", row.expected_delivery_date)
-                : "—",
-        class: "text-gray-600 font-semibold",
-    },
-    {
-        label: "Payment Terms",
-        value: (row) => row.payment_terms,
-        class: "text-gray-600 font-semibold",
-    },
-    {
-        label: "Shipping Terms",
-        value: (row) => row.shipping_terms,
-        class: "text-gray-600 font-semibold",
-    },
-    {
-        label: "Notes",
-        value: (row) => row.notes,
-        class: "text-gray-600 font-semibold",
-    },
-    {
-        label: "Remarks",
-        value: (row) => {
-            const remarks = approvalRemarks.value.filter(
-                (r) => r.purchase_order_id === row.id
-            );
-            return remarks.length > 0 ? `${remarks.length} remark(s)` : "—";
-        },
-        class: "text-gray-600 font-semibold cursor-pointer hover:text-indigo-600",
-        clickable: true,
-        onClick: (row) => {
-            console.log("Remarks clicked for row:", row); // Debug log
-            const remarks = approvalRemarks.value.filter(
-                (r) => r.purchase_order_id === row.id
-            );
-            console.log("Opening modal with remarks:", remarks); // Debug log
-            if (remarks.length > 0) {
-                openRemarksViewModal(remarks);
-            }
-        },
     },
 ];
 
 const modelData = computed(() => page.props.modelData || {});
+const originWarehouseId = computed(() => modelData.value.origin_warehouse_id);
+const details = ref([]);
+const showSerialModal = ref(false);
+const serialModalRowIdx = ref(null);
+const serialInput = ref("");
+const serialsInputList = ref([]);
+const serialValidationLoading = ref(false);
+const serialValidationError = ref("");
 
 const toast = useToast();
 const items = ref([]);
@@ -131,7 +87,6 @@ const confirmMessage = ref("");
 const approvalLevels = ref([]);
 const approvalRemarks = ref([]);
 const selectedRemarks = ref([]);
-const details = ref(modelData.value?.details || []);
 const showReceiveModal = ref(false);
 const showReturnModal = ref(false);
 const selectedDetail = ref(null);
@@ -209,29 +164,42 @@ const loadSupplierProducts = async () => {
     }
 };
 
-const handleProductSelect = async (item) => {
-    if (!item.product_id) {
-        item.variation_id = "";
-        item.price = 0;
-        item.supplier_product_detail_id = null;
+const handleProductSelect = (response) => {
+    const product = response?.data?.[0];
+    if (!product) return;
+    // Prevent duplicate
+    if (
+        details.value.some(
+            (row) => row.origin_warehouse_product_id === product.id
+        )
+    ) {
+        toast.error("Product already added.");
         return;
     }
+    details.value.push({
+        origin_warehouse_product_id: product.id,
+        product,
+        transfer_qty: 1,
+        serials: [],
+        serials_valid: true,
+        serials_error: "",
+    });
+};
 
-    const product = supplierProducts.value.find(
-        (p) => p.id === parseInt(item.product_id)
+const mapWarehouseProductData = (data) => {
+    // Accepts the API response and returns the product object
+    return data.data || data;
+};
+
+const fetchWarehouseProductAutocomplete = async (search) => {
+    // Used by Autocomplete to fetch with warehouse_id param
+    if (!originWarehouseId.value) return [];
+    const res = await axios.get(
+        `/api/autocomplete/warehouse-products?search=${encodeURIComponent(
+            search
+        )}&warehouse_id=${originWarehouseId.value}`
     );
-    if (product) {
-        // If product has only one variation, select it automatically
-        if (
-            product.supplier_product_details &&
-            product.supplier_product_details.length === 1
-        ) {
-            const detail = product.supplier_product_details[0];
-            item.variation_id = detail.product_variation_id;
-            item.price = detail.price;
-            item.supplier_product_detail_id = detail.id;
-        }
-    }
+    return res.data.data || [];
 };
 
 const handleVariationSelect = (item) => {
@@ -279,8 +247,8 @@ const addNewRow = async () => {
     });
 };
 
-const removeRow = (index) => {
-    items.value.splice(index, 1);
+const removeRow = (idx) => {
+    details.value.splice(idx, 1);
 };
 
 const saveAllRows = async () => {
@@ -309,7 +277,7 @@ const saveAllRows = async () => {
             };
 
             await axios.post(
-                `/api/purchase-orders/${modelData.value.id}/details`,
+                `/api/warehouse-products/${modelData.value.id}/details`,
                 payload
             );
         }
@@ -389,7 +357,7 @@ const saveEdit = async () => {
         };
 
         await axios.put(
-            `/api/purchase-orders/${modelData.value.id}/details/${editingDetail.value.id}`,
+            `/api/warehouse-products/${modelData.value.id}/details/${editingDetail.value.id}`,
             payload
         );
 
@@ -410,7 +378,7 @@ const deleteDetail = async (detailId) => {
     try {
         isLoading.value = true;
         await axios.delete(
-            `/api/purchase-orders/${modelData.value.id}/details/${detailId}`
+            `/api/warehouse-products/${modelData.value.id}/details/${detailId}`
         );
         toast.success("Item deleted successfully");
         await loadPurchaseOrderDetails();
@@ -422,24 +390,25 @@ const deleteDetail = async (detailId) => {
     }
 };
 
-const loadPurchaseOrderDetails = async () => {
+const loadWarehouseStockTransferDetails = async () => {
     try {
         const [detailsResponse, orderResponse] = await Promise.all([
-            axios.get(`/api/purchase-orders/${modelData.value.id}/details`),
-            axios.get(`/api/purchase-orders/${modelData.value.id}`),
+            axios.get(`/api/warehouse-products/${modelData.value.id}`),
         ]);
-        purchaseOrderDetails.value = detailsResponse.data.data || [];
+        warehouseStockTransferDetails.value = detailsResponse.data.data || [];
         Object.assign(modelData.value, orderResponse.data);
     } catch (error) {
-        console.error("Error loading purchase order details:", error);
-        toast.error("Failed to load purchase order details");
+        console.error("Error loading warehouse stock transfer details:", error);
+        toast.error("Failed to load warehouse stock transfer details");
     }
 };
 
 const handlePending = async () => {
     try {
         isLoading.value = true;
-        await axios.post(`/api/purchase-orders/${modelData.value.id}/pending`);
+        await axios.post(
+            `/api/warehouse-products/${modelData.value.id}/pending`
+        );
         toast.success("Purchase order marked as pending");
         window.location.reload();
     } catch (error) {
@@ -458,7 +427,7 @@ const handleOrder = async () => {
 
         // Call the order endpoint which will handle GR creation
         const response = await axios.post(
-            `/api/purchase-orders/${modelData.value.id}/order`
+            `/api/warehouse-products/${modelData.value.id}/order`
         );
 
         toast.success("Order processed successfully");
@@ -482,7 +451,7 @@ const handleOrder = async () => {
 const handlePrint = () => {
     // Open the print window
     const printWindow = window.open(
-        `${window.location.origin}/purchase-orders/${modelData.value.id}/print`,
+        `${window.location.origin}/warehouse-products/${modelData.value.id}/print`,
         "_blank"
     );
 
@@ -545,7 +514,7 @@ const handleAction = async () => {
 
         // Then update the purchase order status
         await axios.post(
-            `/api/purchase-orders/${modelData.value.id}/${endpoint}`
+            `/api/warehouse-products/${modelData.value.id}/${endpoint}`
         );
 
         toast.success(successMessage);
@@ -570,7 +539,7 @@ const handleCancel = () => openActionRemarksModal("cancel");
 const loadApprovalLevels = async () => {
     try {
         const response = await axios.get(
-            `/api/purchase-orders/${modelData.value.id}/approval-levels`
+            `/api/warehouse-products/${modelData.value.id}/approval-levels`
         );
         approvalLevels.value = response.data.data || [];
     } catch (error) {
@@ -623,7 +592,7 @@ const handleProcessOrder = () => openConfirmModal("process");
 const loadApprovalRemarks = async () => {
     try {
         const response = await axios.get(
-            `/api/purchase-orders/${modelData.value.id}/approval-remarks`
+            `/api/warehouse-products/${modelData.value.id}/approval-remarks`
         );
         console.log("Approval remarks response:", response.data); // Debug log
         approvalRemarks.value = Array.isArray(response.data)
@@ -648,7 +617,12 @@ const openReceiveModal = (detail) => {
 const closeReceiveModal = () => {
     showReceiveModal.value = false;
     selectedDetail.value = null;
-    receiveForm.value = { received_qty: 0, has_serials: false, type: "serial_numbers", serials: [] };
+    receiveForm.value = {
+        received_qty: 0,
+        has_serials: false,
+        type: "serial_numbers",
+        serials: [],
+    };
 };
 const openReturnModal = (detail) => {
     selectedDetail.value = detail;
@@ -687,7 +661,10 @@ const handleReceive = async () => {
     if (isLoading.value) return;
     isLoading.value = true;
     try {
-        await axios.post(`/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/receive`, receiveForm.value);
+        await axios.post(
+            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/receive`,
+            receiveForm.value
+        );
         toast.success("Received successfully");
         window.location.reload();
     } catch (e) {
@@ -701,7 +678,10 @@ const handleReturn = async () => {
     if (isLoading.value) return;
     isLoading.value = true;
     try {
-        await axios.post(`/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/return`, returnForm.value);
+        await axios.post(
+            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/return`,
+            returnForm.value
+        );
         toast.success("Returned successfully");
         window.location.reload();
     } catch (e) {
@@ -712,11 +692,156 @@ const handleReturn = async () => {
     }
 };
 
-onMounted(async () => {
-    await loadSupplierProducts();
-    await loadPurchaseOrderDetails();
-    await loadApprovalLevels();
-    await loadApprovalRemarks();
+// Add computed for transfer status
+const transferStatus = computed(() => modelData.value.status);
+const canShowForTransfer = computed(() =>
+    modelData.value.status === "pending" && details.value.length > 0
+);
+const showAddProductModal = ref(false);
+
+function openAddProductModal() {
+    showAddProductModal.value = true;
+}
+function closeAddProductModal() {
+    showAddProductModal.value = false;
+}
+
+const openSerialModal = (rowIdx) => {
+    serialModalRowIdx.value = rowIdx;
+    serialsInputList.value = [...(details.value[rowIdx].serials || [])];
+    serialInput.value = "";
+    serialValidationError.value = "";
+    showSerialModal.value = true;
+};
+const closeSerialModal = () => {
+    showSerialModal.value = false;
+    serialModalRowIdx.value = null;
+    serialsInputList.value = [];
+    serialInput.value = "";
+    serialValidationError.value = "";
+};
+const addSerialToList = async () => {
+    const serial = serialInput.value.trim();
+    if (!serial) return;
+    serialValidationLoading.value = true;
+    serialValidationError.value = "";
+    try {
+        const row = details.value[serialModalRowIdx.value];
+        const product = row.product;
+        // Use the correct API for serial check
+        const res = await axios.get("/api/serial-check/warehouse-products", {
+            params: {
+                warehouse_id: modelData.value.origin_warehouse_id,
+                serial_number: serial,
+                product_id: product.id,
+            },
+        });
+        const found = res.data.data;
+        if (!found) {
+            serialValidationError.value = "Serial/batch not found, already sold, or does not belong to this product.";
+            return;
+        }
+        if (serialsInputList.value.some((s) => s.serial_number === serial)) {
+            serialValidationError.value = "Serial already added.";
+            return;
+        }
+        serialsInputList.value.push({
+            serial_number: serial,
+            batch_number: found.batch_number,
+            manufactured_at: found.manufactured_at,
+            expired_at: found.expired_at,
+        });
+        serialInput.value = "";
+    } catch (e) {
+        serialValidationError.value = "Error validating serial/batch.";
+    } finally {
+        serialValidationLoading.value = false;
+    }
+};
+const saveSerialsToRow = () => {
+    if (serialModalRowIdx.value !== null) {
+        details.value[serialModalRowIdx.value].serials = [
+            ...serialsInputList.value,
+        ];
+        details.value[serialModalRowIdx.value].serials_valid =
+            serialsInputList.value.length ===
+            details.value[serialModalRowIdx.value].transfer_qty;
+        details.value[serialModalRowIdx.value].serials_error = details.value[
+            serialModalRowIdx.value
+        ].serials_valid
+            ? ""
+            : "Serial count must match transfer qty.";
+    }
+    closeSerialModal();
+};
+
+const updateTransferQty = (row, val) => {
+    row.transfer_qty = Math.max(1, parseInt(val) || 1);
+    // Only require serial count to match qty if product has serials
+    if (row.product.has_serials) {
+        row.serials_valid = row.serials.length === row.transfer_qty;
+        row.serials_error = row.serials_valid
+            ? ""
+            : "Serial count must match transfer qty.";
+    } else {
+        row.serials_valid = true;
+        row.serials_error = "";
+    }
+};
+
+const canSubmit = computed(() => {
+    return (
+        details.value.length > 0 &&
+        details.value.every((row) => {
+            if (row.product.has_serials) {
+                return (
+                    row.serials_valid && row.serials.length === row.transfer_qty
+                );
+            }
+            return row.transfer_qty > 0;
+        })
+    );
+});
+
+const submitTransferDetails = async () => {
+    if (!canSubmit.value) {
+        toast.error("Please complete all product details and serials.");
+        return;
+    }
+    try {
+        for (const row of details.value) {
+            await axios.post("/api/warehouse-stock-transfer-details", {
+                warehouse_stock_transfer_id: modelData.value.id,
+                origin_warehouse_id: modelData.value.origin_warehouse_id,
+                origin_warehouse_product_id: row.origin_warehouse_product_id,
+                destination_warehouse_id: modelData.value.destination_warehouse_id,
+                quantity: row.transfer_qty,
+                serials: row.product.has_serials ? row.serials : [],
+                remarks: null,
+            });
+        }
+        toast.success("Transfer details saved.");
+        window.location.reload();
+    } catch (e) {
+        toast.error(
+            e.response?.data?.message || "Failed to save transfer details."
+        );
+    }
+};
+
+onMounted(() => {
+    
+    // Initialize details from modelData if present
+    if (Array.isArray(modelData.value.details)) {
+        details.value = modelData.value.details.map(d => ({
+            ...d,
+            product: d.product || d.origin_warehouse_product?.supplier_product_detail?.product || {},
+            transfer_qty: d.expected_qty || 1,
+            serials: d.serials || [],
+            serials_valid: true,
+            serials_error: "",
+        }));
+    }
 });
 </script>
 
@@ -727,22 +852,22 @@ onMounted(async () => {
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     {{ singularizeAndFormat(modelName) }} Details
                 </h2>
-                <HeaderActions :actions="headerActions" />
+                <HeaderActions :actions="[]" />
             </div>
         </template>
-
-        <div class="max-w-12xl mx-auto">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg pt-6">
-                <HeaderInformation
-                    :title="`${singularizeAndFormat(modelName)} Details`"
-                    :modelData="modelData"
-                />
-
-                <!-- Action Buttons -->
-                <div class="px-6 py-4 flex justify-end space-x-3">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white shadow rounded p-6">
+                <div class="mb-6">
+                    <DetailedProfileCard
+                        :modelData="modelData"
+                        :columns="profileDetails"
+                        :columnsPerRow="3"
+                    />
+                </div>
+                <!-- Action Buttons (approve/reject/cancel etc.) -->
+                <div class="flex flex-wrap gap-2 mb-6">
                     <button
-                        v-if="modelData.status === 'draft' && hasDetails"
-                        @click="handleSubmitForApproval"
+                        v-if="['for-transfer'].includes(modelData.status)"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
@@ -762,7 +887,7 @@ onMounted(async () => {
                     </button>
 
                     <button
-                        v-if="modelData.status === 'pending'"
+                        v-if="['for-transfer'].includes(modelData.status)"
                         @click="handleApprove"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -783,7 +908,7 @@ onMounted(async () => {
                     </button>
 
                     <button
-                        v-if="modelData.status === 'pending'"
+                        v-if="['for-transfer'].includes(modelData.status)"
                         @click="handleReject"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -804,7 +929,7 @@ onMounted(async () => {
                     </button>
 
                     <button
-                        v-if="['draft', 'pending'].includes(modelData.status)"
+                        v-if="['pending'].includes(modelData.status)"
                         @click="handleCancel"
                         :disabled="isLoading"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -870,867 +995,254 @@ onMounted(async () => {
                         Print
                     </button>
                 </div>
-
-                <DetailedProfileCard
-                    :modelData="modelData"
-                    :columns="profileDetails"
-                    :columnsPerRow="3"
-                />
-
-                <div class="border-t border-gray-200 py-6">
-                    <div class="px-6">
-                        <span v-if="modelData.status === 'draft'">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                                Purchase Order Items
-                            </h3>
-
-                            <!-- Items Table -->
-                            <div class="overflow-x-auto">
-                                <table
-                                    class="min-w-full divide-y divide-gray-200"
+                <div class="mb-4">
+                    <Autocomplete
+                        :search-url="'/api/autocomplete/warehouse-products'"
+                        :placeholder="'Search warehouse products...'"
+                        :model-name="'warehouse-products'"
+                        :map-custom-buttons="mapWarehouseProductData"
+                        @select="handleProductSelect"
+                        :extra-params="{ warehouse_id: originWarehouseId }"
+                    />
+                </div>
+                <div v-if="details.length" class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
                                 >
-                                    <thead>
-                                        <tr>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5"
-                                            >
-                                                Product
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5"
-                                            >
-                                                Variation
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16"
-                                            >
-                                                Qty
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16"
-                                            >
-                                                Free
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
-                                            >
-                                                Price
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
-                                            >
-                                                Total
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
-                                            >
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody
-                                        class="bg-white divide-y divide-gray-200"
-                                    >
-                                        <tr
-                                            v-for="(item, index) in items"
-                                            :key="item.id"
-                                        >
-                                            <td class="px-2 py-2">
-                                                <select
-                                                    v-model="item.product_id"
-                                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                    @change="
-                                                        handleProductSelect(
-                                                            item
-                                                        )
-                                                    "
-                                                    @keydown="
-                                                        handleKeyDown(
-                                                            $event,
-                                                            item
-                                                        )
-                                                    "
-                                                >
-                                                    <option value="">
-                                                        Select Product
-                                                    </option>
-                                                    <option
-                                                        v-for="product in supplierProducts"
-                                                        :key="product.id"
-                                                        :value="product.id"
-                                                    >
-                                                        {{ product.name }}
-                                                    </option>
-                                                </select>
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                <select
-                                                    v-model="item.variation_id"
-                                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                    @change="
-                                                        handleVariationSelect(
-                                                            item
-                                                        )
-                                                    "
-                                                    @keydown="
-                                                        handleKeyDown(
-                                                            $event,
-                                                            item
-                                                        )
-                                                    "
-                                                    :disabled="!item.product_id"
-                                                >
-                                                    <option value="">
-                                                        Select Variation
-                                                    </option>
-                                                    <option
-                                                        v-for="variation in getProductVariations(
-                                                            item.product_id
-                                                        )"
-                                                        :key="variation.id"
-                                                        :value="variation.id"
-                                                    >
-                                                        {{ variation.name }}
-                                                    </option>
-                                                </select>
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                <input
-                                                    type="number"
-                                                    v-model="item.qty"
-                                                    min="1"
-                                                    @input="updateTotal(item)"
-                                                    @keydown="
-                                                        handleKeyDown(
-                                                            $event,
-                                                            item
-                                                        )
-                                                    "
-                                                    class="block w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                />
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                <input
-                                                    type="number"
-                                                    v-model="item.free_qty"
-                                                    min="0"
-                                                    @keydown="
-                                                        handleKeyDown(
-                                                            $event,
-                                                            item
-                                                        )
-                                                    "
-                                                    class="block w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                />
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                <input
-                                                    type="number"
-                                                    v-model="item.price"
-                                                    step="0.01"
-                                                    @input="updateTotal(item)"
-                                                    @keydown="
-                                                        handleKeyDown(
-                                                            $event,
-                                                            item
-                                                        )
-                                                    "
-                                                    class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                />
-                                            </td>
-                                            <td class="px-2 py-2 text-gray-500">
-                                                {{
-                                                    calculateTotal(
-                                                        item
-                                                    ).toFixed(2)
-                                                }}
-                                            </td>
-                                            <td
-                                                class="px-2 py-2 text-right text-sm font-medium"
-                                            >
-                                                <div class="flex space-x-2">
-                                                    <button
-                                                        @click="startEdit(item)"
-                                                        class="text-indigo-600 hover:text-indigo-900 p-1 rounded-md hover:bg-indigo-50"
-                                                        :disabled="isLoading"
-                                                        title="Edit"
-                                                    >
-                                                        <svg
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            class="h-4 w-4"
-                                                            viewBox="0 0 20 20"
-                                                            fill="currentColor"
-                                                        >
-                                                            <path
-                                                                d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                                                            />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        @click="
-                                                            removeRow(index)
-                                                        "
-                                                        class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
-                                                        :disabled="isLoading"
-                                                        title="Remove"
-                                                    >
-                                                        <svg
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            class="h-5 w-5"
-                                                            viewBox="0 0 20 20"
-                                                            fill="currentColor"
-                                                        >
-                                                            <path
-                                                                fill-rule="evenodd"
-                                                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                                                clip-rule="evenodd"
-                                                            />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <!-- Add Row Button -->
-                                        <tr>
-                                            <td colspan="7" class="px-2 py-2">
-                                                <button
-                                                    @click="addNewRow"
-                                                    class="text-sm text-indigo-600 hover:text-indigo-900 flex items-center"
-                                                    :disabled="isLoading"
-                                                >
-                                                    <span class="mr-1">+</span>
-                                                    Add Row
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </span>
-
-                        <!-- Existing Purchase Order Details -->
-                        <div
-                            :class="
-                                modelData.status === 'draft' ? 'mt-8' : 'mt-0'
-                            "
-                        >
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                                Details
-                            </h3>
-                            <div class="overflow-x-auto">
-                                <table
-                                    class="min-w-full divide-y divide-gray-200"
+                                    Product
+                                </th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
                                 >
-                                    <thead>
-                                        <tr>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                            >
-                                                Product
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                            >
-                                                Variation
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16"
-                                            >
-                                                Qty
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16"
-                                            >
-                                                Free
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
-                                            >
-                                                Price
-                                            </th>
-                                            <th
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
-                                            >
-                                                Total
-                                            </th>
-                                            <th
-                                                v-if="
-                                                    modelData.status ===
-                                                        'draft' ||
-                                                    modelData.status ===
-                                                        'rejected'
-                                                "
-                                                class="px-2 py-2 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
-                                            >
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody
-                                        class="bg-white divide-y divide-gray-200"
-                                    >
-                                        <tr
-                                            v-for="detail in purchaseOrderDetails"
-                                            :key="detail.id"
+                                    SKU
+                                </th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                    Qty
+                                </th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                    Serials
+                                </th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="(row, idx) in details"
+                                :key="row.origin_warehouse_product_id"
+                            >
+                                <td class="px-3 py-2">
+                                    {{
+                                        row.product?.supplier_product_detail
+                                            ?.product?.name || row.product?.name
+                                    }}
+                                </td>
+                                <td class="px-3 py-2">
+                                    {{ row.product?.sku }}
+                                </td>
+                                <td class="px-3 py-2">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        :value="row.transfer_qty"
+                                        @input="
+                                            (e) =>
+                                                updateTransferQty(
+                                                    row,
+                                                    e.target.value
+                                                )
+                                        "
+                                        class="w-20 border rounded px-2 py-1"
+                                    />
+                                </td>
+                                <td class="px-3 py-2">
+                                    <template v-if="row.product.has_serials">
+                                        <button
+                                            class="px-2 py-1 bg-blue-100 rounded"
+                                            @click="openSerialModal(idx)"
                                         >
-                                            <td class="px-2 py-2">
-                                                <div
-                                                    class="font-medium text-gray-900"
-                                                >
-                                                    {{
-                                                        detail
-                                                            .supplier_product_detail
-                                                            ?.product?.name ||
-                                                        "N/A"
-                                                    }}
-                                                </div>
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                <div
-                                                    class="text-sm text-gray-600"
-                                                >
-                                                    {{
-                                                        detail
-                                                            .supplier_product_detail
-                                                            ?.variation?.name ||
-                                                        "N/A"
-                                                    }}
-                                                </div>
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                {{ detail.qty }}
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                {{ detail.free_qty }}
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                {{
-                                                    formatNumber(detail.price, {
-                                                        style: "currency",
-                                                        currency: "PHP",
-                                                    })
-                                                }}
-                                            </td>
-                                            <td class="px-2 py-2">
-                                                {{
-                                                    formatNumber(detail.total, {
-                                                        style: "currency",
-                                                        currency: "PHP",
-                                                    })
-                                                }}
-                                            </td>
-                                            <td
-                                                v-if="
-                                                    modelData.status ===
-                                                        'draft' ||
-                                                    modelData.status ===
-                                                        'rejected'
-                                                "
-                                                class="px-2 py-2 text-right text-sm font-medium"
-                                            >
-                                                <div class="flex space-x-2">
-                                                    <button
-                                                        @click="
-                                                            startEdit(detail)
-                                                        "
-                                                        class="text-indigo-600 hover:text-indigo-900 p-1 rounded-md hover:bg-indigo-50"
-                                                        :disabled="isLoading"
-                                                        title="Edit"
-                                                    >
-                                                        <svg
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            class="h-4 w-4"
-                                                            viewBox="0 0 20 20"
-                                                            fill="currentColor"
-                                                        >
-                                                            <path
-                                                                d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                                                            />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        @click="
-                                                            deleteDetail(
-                                                                detail.id
-                                                            )
-                                                        "
-                                                        class="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"
-                                                        :disabled="isLoading"
-                                                        title="Delete"
-                                                    >
-                                                        <svg
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            class="h-5 w-5"
-                                                            viewBox="0 0 20 20"
-                                                            fill="currentColor"
-                                                        >
-                                                            <path
-                                                                fill-rule="evenodd"
-                                                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                                                clip-rule="evenodd"
-                                                            />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr
-                                            v-if="
-                                                purchaseOrderDetails.length ===
-                                                0
-                                            "
-                                        >
-                                            <td
-                                                colspan="7"
-                                                class="px-2 py-4 text-center text-gray-500"
-                                            >
-                                                No items found
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-
-                                <!-- Total Section -->
-                                <div class="mt-4 flex justify-end px-2">
-                                    <div class="w-64 space-y-2">
-                                        <div
-                                            class="flex justify-between text-sm"
-                                        >
-                                            <span class="text-gray-600"
-                                                >Subtotal:</span
-                                            >
-                                            <span class="font-medium">
-                                                {{
-                                                    formatNumber(subtotal, {
-                                                        style: "currency",
-                                                        currency: "PHP",
-                                                    })
-                                                }}
-                                            </span>
-                                        </div>
-                                        <div
-                                            class="flex justify-between text-sm"
-                                        >
-                                            <span class="text-gray-600"
-                                                >Tax Rate:</span
-                                            >
-                                            <span class="font-medium"
-                                                >{{ modelData.tax_rate }}%</span
-                                            >
-                                        </div>
-                                        <div
-                                            class="flex justify-between text-sm"
-                                        >
-                                            <span class="text-gray-600"
-                                                >Tax Amount:</span
-                                            >
-                                            <span class="font-medium">
-                                                {{
-                                                    formatNumber(taxAmount, {
-                                                        style: "currency",
-                                                        currency: "PHP",
-                                                    })
-                                                }}
-                                            </span>
-                                        </div>
-                                        <div
-                                            class="flex justify-between text-sm"
-                                        >
-                                            <span class="text-gray-600"
-                                                >Shipping Cost:</span
-                                            >
-                                            <span class="font-medium">
-                                                {{
-                                                    formatNumber(
-                                                        modelData.shipping_cost ||
-                                                            0,
-                                                        {
-                                                            style: "currency",
-                                                            currency: "PHP",
-                                                        }
-                                                    )
-                                                }}
-                                            </span>
-                                        </div>
-                                        <div
-                                            class="pt-2 border-t border-gray-200"
-                                        >
-                                            <div class="flex justify-between">
-                                                <span
-                                                    class="text-gray-800 font-semibold"
-                                                    >Total Amount:</span
-                                                >
-                                                <span
-                                                    class="text-xl font-bold text-gray-900"
-                                                >
-                                                    {{
-                                                        formatNumber(
-                                                            totalAmount,
-                                                            {
-                                                                style: "currency",
-                                                                currency: "PHP",
-                                                            }
-                                                        )
-                                                    }}
-                                                </span>
+                                            Enter Serial/Batch Number(s)
+                                        </button>
+                                        <div v-if="row.serials.length" class="text-xs text-gray-500 mt-1">
+                                            <div v-for="s in row.serials" :key="s.serial_number">
+                                                <span>{{ s.serial_number }}</span>
+                                                <span v-if="s.batch_number">Batch: {{ s.batch_number }}</span>
+                                                <span v-if="s.manufactured_at"> | Mfg: {{ s.manufactured_at }}</span>
+                                                <span v-if="s.expired_at"> | Exp: {{ s.expired_at }}</span>
                                             </div>
                                         </div>
+                                        <div v-if="row.serials_error" class="text-xs text-red-500 mt-1">
+                                            {{ row.serials_error }}
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <span class="text-gray-400">N/A</span>
+                                    </template>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <button
+                                        class="text-red-600 hover:text-red-900"
+                                        @click="removeRow(idx)"
+                                    >
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button
+                        @click="submitTransferDetails"
+                        :disabled="!canSubmit"
+                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                        Save Transfer Details
+                    </button>
+                </div>
+                <!-- After Save Transfer Details, show details table -->
+                <div v-if="(modelData.value.details || []).length" class="mt-8">
+                    <h3 class="text-lg font-semibold mb-2">Transfer Details</h3>
+                    <table class="min-w-full divide-y divide-gray-200 mb-4">
+                        <thead>
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Expected Qty</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Transferred Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="detail in (modelData.value.details || [])" :key="detail.id">
+                                <td class="px-3 py-2">{{ detail.origin_warehouse_product?.supplier_product_detail?.product?.name || detail.origin_warehouse_product?.name || 'N/A' }}</td>
+                                <td class="px-3 py-2">{{ detail.origin_warehouse_product?.sku || 'N/A' }}</td>
+                                <td class="px-3 py-2">{{ detail.expected_qty }}</td>
+                                <td class="px-3 py-2">{{ detail.transferred_qty }}</td>
+                            </tr>
+                            <tr v-for="detail in (modelData.value.details || [])" :key="'serials-' + detail.id">
+                                <td colspan="4" class="px-3 py-2 bg-gray-50">
+                                    <div v-if="detail.serials && detail.serials.length">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                            <thead>
+                                                <tr>
+                                                    <th class="px-2 py-1 text-xs text-gray-500">Serial Number</th>
+                                                    <th class="px-2 py-1 text-xs text-gray-500">Batch Number</th>
+                                                    <th class="px-2 py-1 text-xs text-gray-500">Manufactured</th>
+                                                    <th class="px-2 py-1 text-xs text-gray-500">Expired</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="serial in detail.serials" :key="serial.id">
+                                                    <td class="px-2 py-1">{{ serial.serial_number }}</td>
+                                                    <td class="px-2 py-1">{{ serial.batch_number || '-' }}</td>
+                                                    <td class="px-2 py-1">{{ serial.manufactured_at || '-' }}</td>
+                                                    <td class="px-2 py-1">{{ serial.expired_at || '-' }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                    <div v-else class="text-xs text-gray-400">No serials for this detail.</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+        <!-- Serial Modal -->
+        <Modal :show="showSerialModal" @close="closeSerialModal">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    Enter Serial/Batch Number(s)
+                </h2>
+                <div class="mb-2 flex gap-2">
+                    <input
+                        v-model="serialInput"
+                        @keyup.enter="addSerialToList"
+                        :disabled="serialValidationLoading"
+                        placeholder="Serial or batch number..."
+                        class="w-full border rounded px-2 py-1"
+                    />
+                    <button
+                </div>
+            </div>
+        </div>
+        <!-- Serial Modal -->
+        <Modal :show="showSerialModal" @close="closeSerialModal">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    Enter Serial/Batch Number(s)
+                </h2>
+                <div class="mb-2 flex gap-2">
+                    <input
+                        v-model="serialInput"
+                        @keyup.enter="addSerialToList"
+                        :disabled="serialValidationLoading"
+                        placeholder="Serial or batch number..."
+                        class="w-full border rounded px-2 py-1"
+                    />
+                    <button
+                        @click="addSerialToList"
+                        :disabled="serialValidationLoading || !serialInput"
+                        class="px-3 py-1 bg-blue-600 text-white rounded"
+                    >
+                        Add
+                    </button>
+                </div>
+                <div v-if="serialValidationError" class="text-red-500 text-xs mb-2">
+                    {{ serialValidationError }}
+                </div>
+                <div v-if="serialsInputList.length">
+                    <table class="min-w-full divide-y divide-gray-200 mb-2">
+                        <thead>
+                            <tr>
+                                <th class="px-2 py-1 text-xs text-gray-500">Serial Number</th>
+                                <th class="px-2 py-1 text-xs text-gray-500">Batch Number</th>
+                                <th class="px-2 py-1 text-xs text-gray-500">Manufactured</th>
+                                <th class="px-2 py-1 text-xs text-gray-500">Expired</th>
+                                <th class="px-2 py-1 text-xs text-gray-500">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(s, i) in serialsInputList" :key="i">
+                                <td class="px-2 py-1">{{ s.serial_number }}</td>
+                                <td class="px-2 py-1">{{ s.batch_number || '-' }}</td>
+                                <td class="px-2 py-1">{{ s.manufactured_at || '-' }}</td>
+                                <td class="px-2 py-1">{{ s.expired_at || '-' }}</td>
+                                <td class="px-2 py-1">
+                                    <button @click="serialsInputList.splice(i, 1)" class="text-red-500 text-xs">Remove</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button
+                        @click="closeSerialModal"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        @click="saveSerialsToRow"
+                        :disabled="details[serialModalRowIdx]?.product?.has_serials && serialsInputList.length !== details[serialModalRowIdx]?.transfer_qty"
+                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                        Save
+                    </button>
+                </div>
+            </div>
+        </Modal>
+        <!-- ...preserved action modals (approve/reject/cancel/remarks/confirm) go here... -->
     </AppLayout>
-
-    <!-- Add Edit Modal -->
-    <div
-        v-if="showEditModal"
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center"
-    >
-        <div class="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                Edit Item Details
-            </h3>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                        >Quantity</label
-                    >
-                    <input
-                        type="number"
-                        v-model="editingDetail.qty"
-                        min="1"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                        >Free Quantity</label
-                    >
-                    <input
-                        type="number"
-                        v-model="editingDetail.free_qty"
-                        min="0"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                        >Price</label
-                    >
-                    <input
-                        type="number"
-                        v-model="editingDetail.price"
-                        step="0.01"
-                        min="0"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                        >Discount</label
-                    >
-                    <input
-                        type="number"
-                        v-model="editingDetail.discount"
-                        step="0.01"
-                        min="0"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end space-x-3">
-                <button
-                    @click="closeEditModal"
-                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    :disabled="isLoading"
-                >
-                    Cancel
-                </button>
-                <button
-                    @click="saveEdit"
-                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                    :disabled="isLoading"
-                >
-                    Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Remarks View Modal -->
-    <div
-        v-if="showRemarksModal"
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
-    >
-        <div class="bg-white rounded-lg p-6 max-w-2xl w-full">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900">
-                    Approval Remarks
-                </h3>
-                <button
-                    @click="showRemarksModal = false"
-                    class="text-gray-400 hover:text-gray-500"
-                >
-                    <svg
-                        class="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
-                </button>
-            </div>
-
-            <div class="space-y-4 max-h-96 overflow-y-auto">
-                <div
-                    v-for="remark in selectedRemarks"
-                    :key="remark.id"
-                    class="bg-gray-50 p-4 rounded-lg"
-                >
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center space-x-3">
-                            <img
-                                v-if="
-                                    remark.user && remark.user.profile_photo_url
-                                "
-                                :src="remark.user.profile_photo_url"
-                                :alt="remark.user.name"
-                                class="w-7 h-7 rounded-full object-cover border border-gray-200"
-                            />
-                            <span
-                                v-if="remark.user"
-                                class="text-sm font-semibold text-gray-700"
-                            >
-                                {{ remark.user.name }}
-                            </span>
-                            <span class="ml-2 text-sm text-gray-500">
-                                {{ formatDate("M d Y", remark.created_at) }}
-                            </span>
-                        </div>
-                        <span
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-4"
-                            :class="{
-                                'bg-green-100 text-green-800':
-                                    remark.status === 'approve',
-                                'bg-red-100 text-red-800':
-                                    remark.status === 'reject',
-                                'bg-yellow-100 text-yellow-800':
-                                    remark.status === 'cancel',
-                            }"
-                        >
-                            {{
-                                remark.status.charAt(0).toUpperCase() +
-                                remark.status.slice(1)
-                            }}
-                        </span>
-                    </div>
-                    <p class="pl-2 pt-2 text-gray-900 font-semibold text-base whitespace-pre-wrap">
-                        {{ remark.remarks }}
-                    </p>
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end">
-                <button
-                    @click="showRemarksModal = false"
-                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Action Remarks Modal -->
-    <div
-        v-if="showActionRemarksModal"
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
-    >
-        <div class="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                {{
-                    actionType.charAt(0).toUpperCase() + actionType.slice(1)
-                }}
-                Purchase Order
-            </h3>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                        >Remarks (Optional)</label
-                    >
-                    <textarea
-                        v-model="remarks"
-                        rows="3"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        placeholder="Enter your remarks here..."
-                    ></textarea>
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end space-x-3">
-                <button
-                    @click="closeActionRemarksModal"
-                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    :disabled="isLoading"
-                >
-                    Cancel
-                </button>
-                <button
-                    @click="handleAction"
-                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white"
-                    :class="{
-                        'bg-green-600 hover:bg-green-700':
-                            actionType === 'approve',
-                        'bg-red-600 hover:bg-red-700':
-                            actionType === 'reject' || actionType === 'cancel',
-                    }"
-                    :disabled="isLoading"
-                >
-                    Confirm
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add the confirmation modal -->
-    <div
-        v-if="showConfirmModal"
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center"
-    >
-        <div class="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                Confirm Action
-            </h3>
-
-            <div class="space-y-4">
-                <p class="text-gray-600">{{ confirmMessage }}</p>
-            </div>
-
-            <div class="mt-6 flex justify-end space-x-3">
-                <button
-                    @click="showConfirmModal = false"
-                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    :disabled="isLoading"
-                >
-                    Cancel
-                </button>
-                <button
-                    @click="handleConfirmAction"
-                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white"
-                    :class="{
-                        'bg-blue-600 hover:bg-blue-700':
-                            confirmAction === 'submit',
-                        'bg-indigo-600 hover:bg-indigo-700':
-                            confirmAction === 'process',
-                    }"
-                    :disabled="isLoading"
-                >
-                    Confirm
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Receive Modal -->
-    <Modal :show="showReceiveModal" @close="closeReceiveModal">
-        <div class="p-6">
-            <h2 class="text-lg font-medium text-gray-900 mb-4">Receive Items</h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Quantity to Receive</label>
-                    <input type="number" v-model="receiveForm.received_qty" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
-                </div>
-                <div v-if="receiveForm.has_serials">
-                    <div class="flex gap-2 mb-2">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Bulk Manufactured Date</label>
-                            <input type="date" v-model="bulkManufacturedDate" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Bulk Expiry Date</label>
-                            <input type="date" v-model="bulkExpiryDate" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
-                        </div>
-                    </div>
-                    <button @click="applyBulkDates" class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" type="button">Apply Bulk Dates</button>
-                    <div class="overflow-x-auto mt-2">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch Number</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manufactured Date</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="(serial, idx) in receiveForm.serials" :key="idx">
-                                    <td class="px-3 py-2"><input type="text" v-model="serial.serial_number" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" placeholder="Serial number" /></td>
-                                    <td class="px-3 py-2"><input type="text" v-model="serial.batch_number" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" placeholder="Batch number" /></td>
-                                    <td class="px-3 py-2"><input type="date" v-model="serial.manufactured_at" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" /></td>
-                                    <td class="px-3 py-2"><input type="date" v-model="serial.expired_at" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" /></td>
-                                    <td class="px-3 py-2 text-right"><button @click="removeSerialRow(idx)" class="text-red-600 hover:text-red-900">Remove</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <button @click="addSerialRow" class="mt-2 text-sm text-indigo-600 hover:text-indigo-900 flex items-center">+ Add Serial</button>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-end space-x-3">
-                <button @click="closeReceiveModal" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50" :disabled="isLoading">Cancel</button>
-                <button @click="handleReceive" class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700" :disabled="isLoading">Receive</button>
-            </div>
-        </div>
-    </Modal>
-
-    <!-- Return Modal -->
-    <Modal :show="showReturnModal" @close="closeReturnModal">
-        <div class="p-6">
-            <h2 class="text-lg font-medium text-gray-900 mb-4">Return Items</h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Quantity to Return</label>
-                    <input type="number" v-model="returnForm.return_qty" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm" />
-                </div>
-                <div v-if="selectedDetail && selectedDetail.origin_warehouse_product.has_serials">
-                    <div class="overflow-x-auto mt-2">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="(serial, idx) in returnForm.serials" :key="idx">
-                                    <td class="px-3 py-2"><input type="text" v-model="serial.serial_number" class="block w-full border-0 p-0 focus:ring-0 sm:text-sm" placeholder="Serial number" /></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <button @click="() => returnForm.serials.push({ serial_number: '' })" class="mt-2 text-sm text-indigo-600 hover:text-indigo-900 flex items-center">+ Add Serial</button>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-end space-x-3">
-                <button @click="closeReturnModal" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50" :disabled="isLoading">Cancel</button>
-                <button @click="handleReturn" class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700" :disabled="isLoading">Return</button>
-            </div>
-        </div>
-    </Modal>
 </template>

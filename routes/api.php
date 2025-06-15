@@ -199,10 +199,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('warehouse-stock-transfers', WarehouseStockTransferController::class);
     Route::get('autocomplete/warehouse-stock-transfers', [WarehouseStockTransferController::class, 'autocomplete'])->name('warehouse-stock-transfers.autocomplete');
+    Route::post('warehouse-stock-transfer-details/{detail}/receive', [WarehouseStockTransferDetailController::class, 'receive'])->name('warehouse-stock-transfer-details.receive');
+    Route::post('warehouse-stock-transfer-details/{detail}/return', [WarehouseStockTransferDetailController::class, 'return'])->name('warehouse-stock-transfer-details.return');
 
     Route::apiResource('warehouse-stock-transfer-details', WarehouseStockTransferDetailController::class);
     Route::get('autocomplete/warehouse-stock-transfer-details', [WarehouseStockTransferDetailController::class, 'autocomplete'])->name('warehouse-stock-transfer-details.autocomplete');
-    
+
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::post('purchase-orders/export', [PurchaseOrderController::class, 'export'])->name('purchase-orders.export');
     Route::post('purchase-orders/{purchaseOrder}/pending', [PurchaseOrderController::class, 'pending'])->name('purchase-orders.pending');
@@ -236,6 +238,8 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::get('autocomplete/goods-receipt-details', [GoodsReceiptDetailController::class, 'autocomplete'])->name('goods-receipt-details.autocomplete');
     Route::post('goods-receipt-details/{goodsReceiptDetail}/receive', [GoodsReceiptDetailController::class, 'receive'])->name('goods-receipt-details.receive');
     Route::post('goods-receipt-details/{goodsReceiptDetail}/return', [GoodsReceiptDetailController::class, 'return'])->name('goods-receipt-details.return');
+    Route::post('goods-receipt-details/{goodsReceiptDetail}/sync', [GoodsReceiptDetailController::class, 'sync'])->name('goods-receipt-details.sync');
+
 
     // Add route for updating serials
     Route::put('goods-receipt-serials/{serial}', [GoodsReceiptDetailController::class, 'updateSerial'])->name('goods-receipt-serials.update');
@@ -416,6 +420,4 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::post('account-types/{accountType}/restore', [AccountTypeController::class, 'restore'])->name('account-types.restore');
 
     Route::apiResource('warehouse-stock-transfer-serials', App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferSerialController::class);
-    Route::post('warehouse-stock-transfer-details/{detail}/receive', [App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferDetailController::class, 'receive'])->name('warehouse-stock-transfer-details.receive');
-    Route::post('warehouse-stock-transfer-details/{detail}/return', [App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferDetailController::class, 'return'])->name('warehouse-stock-transfer-details.return');
 });

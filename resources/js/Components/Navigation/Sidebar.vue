@@ -147,7 +147,7 @@
                             hasPermission('read banks') ||
                             hasPermission('read company accounts') ||
                             hasPermission('read invoices') ||
-                            hasPermission('read supplier invoices') || 
+                            hasPermission('read supplier invoices') ||
                             hasPermission('read expenses') ||
                             hasPermission('read journal entries')
                         "
@@ -233,10 +233,13 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3">Shipments</span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Shipments</span
+                        >
                     </Link>
 
                     <Link
+                        v-if="hasPermission('read supplier invoices')"
                         :href="route('supplier-invoices.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
@@ -382,8 +385,8 @@
                             hasPermission('read companies') ||
                             hasPermission('read purchase orders') ||
                             hasPermission('read goods receipts') ||
-                            hasPermission('read warehouses') || 
-                            hasPermission('read suppliers') || 
+                            hasPermission('read warehouses') ||
+                            hasPermission('read suppliers') ||
                             hasPermission('read products') ||
                             hasPermission('read shipments')
                         "
@@ -489,12 +492,16 @@
                         :href="route('warehouse-stock-transfers.index')"
                         :class="[
                             'flex items-center px-4 py-2 rounded-lg transition-colors',
-                            route().current()?.startsWith('warehouse-stock-transfers.')
+                            route()
+                                .current()
+                                ?.startsWith('warehouse-stock-transfers.')
                                 ? 'active-link'
                                 : 'hover:bg-gray-100',
                         ]"
                         :style="
-                            route().current()?.startsWith('warehouse-stock-transfers.')
+                            route()
+                                .current()
+                                ?.startsWith('warehouse-stock-transfers.')
                                 ? activeStyles
                                 : sidebarTextStyle
                         "
@@ -502,7 +509,9 @@
                         <span
                             class="mdi mdi-transfer text-xl"
                             :style="
-                                route().current()?.startsWith('warehouse-stock-transfers.')
+                                route()
+                                    .current()
+                                    ?.startsWith('warehouse-stock-transfers.')
                                     ? { color: activeTextColor }
                                     : sidebarTextStyle
                             "
@@ -563,9 +572,7 @@
                                     : sidebarTextStyle
                             "
                         ></span>
-                        <span v-show="!isMinimized" class="ml-3"
-                            >Couriers</span
-                        >
+                        <span v-show="!isMinimized" class="ml-3">Couriers</span>
                     </Link>
 
                     <Link
@@ -715,7 +722,7 @@
                         <span v-show="!isMinimized" class="ml-3">Agents</span>
                     </Link>
 
-                    <div
+                    <!-- <div
                         v-if="
                             hasPermission('read projects') ||
                             hasPermission('read project tasks') ||
@@ -777,7 +784,7 @@
                             "
                         ></span>
                         <span v-show="!isMinimized" class="ml-3">Tasks</span>
-                    </Link>
+                    </Link> -->
 
                     <div
                         v-if="

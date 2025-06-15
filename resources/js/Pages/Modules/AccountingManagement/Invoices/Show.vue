@@ -270,8 +270,6 @@ const rejectPayment = async () => {
 const downloadFile = (filePath) => {
     window.open(`/storage/${filePath}`, '_blank');
 };
-
-console.log(modelData.value);
 </script>
 
 <template>
@@ -320,6 +318,7 @@ console.log(modelData.value);
                                 <p class="text-gray-600">Invoice #: <span class="font-semibold">{{ modelData.number }}</span></p>
                                 <p class="text-gray-600">Date: <span class="font-semibold">{{ formatDate(modelData.invoice_date) }}</span></p>
                                 <p class="text-gray-600">Due Date: <span class="font-semibold">{{ modelData.due_date ? formatDate(modelData.due_date) : '-' }}</span></p>
+                                <p class="text-gray-600">Shipping Method: <span class="font-semibold">{{ humanReadable(modelData.shipping_method) }}</span></p>
                                 <p class="text-gray-600">Status: <span class="font-semibold capitalize">{{ humanReadable(modelData.status) }}</span></p>
                             </div>
                         </div>

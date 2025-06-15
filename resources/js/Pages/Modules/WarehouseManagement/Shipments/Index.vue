@@ -19,15 +19,15 @@ const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 // Define Header Actions
 const headerActions = ref([
-    {
-        text: "Create",
-        url: `/${modelName}/create`,
-        inertia: true,
-        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
-        style: computed(() => ({
-            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
-        })),
-    },
+    // {
+    //     text: "Create",
+    //     url: `/${modelName}/create`,
+    //     inertia: true,
+    //     class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
+    //     style: computed(() => ({
+    //         backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
+    //     })),
+    // },
 ]);
 
 // Define Table Columns

@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -41,6 +42,7 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
             'role' => 'required|string|exists:roles,name', // Ensure valid role
+            'company_id' => 'required|exists:companies,id',
         ]);
 
         // Hash the password
@@ -52,6 +54,7 @@ class UserController extends Controller
             'email' => $validated['email'],
             'password' => $validated['password'],
             'avatar' => $validated['avatar'] ?? null,
+            'company_id' => $validated['company_id'],
         ]);
 
         // Assign the role
@@ -80,12 +83,14 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,' . $model->id,
             'avatar' => 'nullable|string',
             'role' => 'required|string|exists:roles,name',
+            'company_id' => 'required|exists:companies,id',
         ]);
 
         $model->update([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'avatar' => $validated['avatar'] ?? null,
+            'company_id' => $validated['company_id'],
         ]);
 
         // Sync the role

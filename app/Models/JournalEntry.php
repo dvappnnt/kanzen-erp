@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class JournalEntry extends Model
 {
@@ -52,5 +54,19 @@ class JournalEntry extends Model
     public function details()
     {
         return $this->hasMany(JournalEntryDetail::class);
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope('company_filter', function (Builder $builder) {
+            $user = Auth::user();
+    
+            if ($user && !$user->hasRole('super-admin')) {
+                $builder->where(function ($query) use ($user) {
+                    $query->where('company_id', $user->company_id)
+                          ->orWhereNull('company_id');
+                });
+            }
+        });
     }
 }

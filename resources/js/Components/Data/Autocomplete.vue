@@ -87,6 +87,14 @@ const props = defineProps({
         type: Function, // Accept a function for button mapping
         required: true,
     },
+    filterResults: {
+        type: Function,
+        default: null,
+    },
+    extraParams: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
 // Define Emits
@@ -117,10 +125,17 @@ const fetchAutocompleteResults = async () => {
     if (searchTerm.value.trim().length > 0) {
         isLoading.value = true;
         try {
-            const response = await axios.get(
-                `${props.searchUrl}?search=${searchTerm.value}`
-            );
-            autocompleteResults.value = response.data.data || [];
+            // Build query string with search and extraParams
+            let params = new URLSearchParams({ search: searchTerm.value });
+            for (const [key, val] of Object.entries(props.extraParams || {})) {
+                if (val !== undefined && val !== null && val !== "") params.append(key, val);
+            }
+            const response = await axios.get(`${props.searchUrl}?${params.toString()}`);
+            let results = response.data.data || [];
+            if (props.filterResults) {
+                results = props.filterResults(results);
+            }
+            autocompleteResults.value = results;
             showResults.value = true;
             await nextTick();
             updateDropdownPosition();

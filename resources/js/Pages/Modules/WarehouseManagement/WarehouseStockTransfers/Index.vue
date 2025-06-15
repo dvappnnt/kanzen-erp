@@ -24,21 +24,21 @@ const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
 
 // Define Header Actions
 const headerActions = ref([
-    {
-        text: "Export",
-        url: `/${modelName}/export`,
-        inertia: true,
-        class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
-    },
-    {
-        text: "Create",
-        url: `/${modelName}/create`,
-        inertia: true,
-        class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
-        style: computed(() => ({
-            backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
-        })),
-    },
+    // {
+    //     text: "Export",
+    //     url: `/${modelName}/export`,
+    //     inertia: true,
+    //     class: "border border-gray-400 hover:bg-gray-100 px-4 py-2 rounded",
+    // },
+    // {
+    //     text: "Create",
+    //     url: `/${modelName}/create`,
+    //     inertia: true,
+    //     class: "hover:bg-opacity-90 text-white px-4 py-2 rounded",
+    //     style: computed(() => ({
+    //         backgroundColor: buttonPrimaryBgColor.value, // Dynamically set background color
+    //     })),
+    // },
 ]);
 
 // Define Table Columns
@@ -51,19 +51,18 @@ const columns = ref([
         icon: "mdi-file-document-outline",
     },
     {
-        label: "Warehouse",
-        value: (row) => row.warehouse.name,
-        uri: (row) => route("warehouses.show", row.warehouse.id),
+        label: "Origin Warehouse",
+        value: (row) => row.origin_warehouse.name,
+        uri: (row) => route("warehouses.show", row.origin_warehouse.id),
         class: "text-green-600 hover:underline",
         icon: "mdi-warehouse",
     },
     {
-        label: "Company",
-        value: (row) => row.company.name,
-    },
-    {
-        label: "Supplier",
-        value: (row) => row.supplier.name,
+        label: "Destination Warehouse",
+        value: (row) => row.destination_warehouse.name,
+        uri: (row) => route("warehouses.show", row.destination_warehouse.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-warehouse",
     },
     {
         label: "Status",
