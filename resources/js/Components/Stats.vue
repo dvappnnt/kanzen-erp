@@ -14,6 +14,7 @@ import {
     Tooltip,
     Legend,
     BarElement,
+    BarController,
 } from "chart.js";
 
 ChartJS.register(
@@ -22,13 +23,11 @@ ChartJS.register(
     PointElement,
     LineElement,
     BarElement,
+    BarController,
     Title,
     Tooltip,
     Legend
 );
-
-// Register mixed chart type
-ChartJS.register('mixed');
 
 const props = defineProps({
     stats: {
