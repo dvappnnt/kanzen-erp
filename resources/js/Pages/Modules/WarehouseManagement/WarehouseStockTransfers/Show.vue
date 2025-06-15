@@ -694,8 +694,8 @@ const handleReturn = async () => {
 
 // Add computed for transfer status
 const transferStatus = computed(() => modelData.value.status);
-const canShowForTransfer = computed(() =>
-    modelData.value.status === "pending" && details.value.length > 0
+const canShowForTransfer = computed(
+    () => modelData.value.status === "pending" && details.value.length > 0
 );
 const showAddProductModal = ref(false);
 
@@ -738,7 +738,8 @@ const addSerialToList = async () => {
         });
         const found = res.data.data;
         if (!found) {
-            serialValidationError.value = "Serial/batch not found, already sold, or does not belong to this product.";
+            serialValidationError.value =
+                "Serial/batch not found, already sold, or does not belong to this product.";
             return;
         }
         if (serialsInputList.value.some((s) => s.serial_number === serial)) {
@@ -814,7 +815,8 @@ const submitTransferDetails = async () => {
                 warehouse_stock_transfer_id: modelData.value.id,
                 origin_warehouse_id: modelData.value.origin_warehouse_id,
                 origin_warehouse_product_id: row.origin_warehouse_product_id,
-                destination_warehouse_id: modelData.value.destination_warehouse_id,
+                destination_warehouse_id:
+                    modelData.value.destination_warehouse_id,
                 quantity: row.transfer_qty,
                 serials: row.product.has_serials ? row.serials : [],
                 remarks: null,
@@ -830,12 +832,14 @@ const submitTransferDetails = async () => {
 };
 
 onMounted(() => {
-    
     // Initialize details from modelData if present
     if (Array.isArray(modelData.value.details)) {
-        details.value = modelData.value.details.map(d => ({
+        details.value = modelData.value.details.map((d) => ({
             ...d,
-            product: d.product || d.origin_warehouse_product?.supplier_product_detail?.product || {},
+            product:
+                d.product ||
+                d.origin_warehouse_product?.supplier_product_detail?.product ||
+                {},
             transfer_qty: d.expected_qty || 1,
             serials: d.serials || [],
             serials_valid: true,
@@ -1073,15 +1077,37 @@ onMounted(() => {
                                         >
                                             Enter Serial/Batch Number(s)
                                         </button>
-                                        <div v-if="row.serials.length" class="text-xs text-gray-500 mt-1">
-                                            <div v-for="s in row.serials" :key="s.serial_number">
-                                                <span>{{ s.serial_number }}</span>
-                                                <span v-if="s.batch_number">Batch: {{ s.batch_number }}</span>
-                                                <span v-if="s.manufactured_at"> | Mfg: {{ s.manufactured_at }}</span>
-                                                <span v-if="s.expired_at"> | Exp: {{ s.expired_at }}</span>
+                                        <div
+                                            v-if="row.serials.length"
+                                            class="text-xs text-gray-500 mt-1"
+                                        >
+                                            <div
+                                                v-for="s in row.serials"
+                                                :key="s.serial_number"
+                                            >
+                                                <span>{{
+                                                    s.serial_number
+                                                }}</span>
+                                                <span v-if="s.batch_number"
+                                                    >Batch:
+                                                    {{ s.batch_number }}</span
+                                                >
+                                                <span v-if="s.manufactured_at">
+                                                    | Mfg:
+                                                    {{
+                                                        s.manufactured_at
+                                                    }}</span
+                                                >
+                                                <span v-if="s.expired_at">
+                                                    | Exp:
+                                                    {{ s.expired_at }}</span
+                                                >
                                             </div>
                                         </div>
-                                        <div v-if="row.serials_error" class="text-xs text-red-500 mt-1">
+                                        <div
+                                            v-if="row.serials_error"
+                                            class="text-xs text-red-500 mt-1"
+                                        >
                                             {{ row.serials_error }}
                                         </div>
                                     </template>
@@ -1116,64 +1142,132 @@ onMounted(() => {
                     <table class="min-w-full divide-y divide-gray-200 mb-4">
                         <thead>
                             <tr>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Expected Qty</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Transferred Qty</th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                    Product
+                                </th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                    SKU
+                                </th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                    Expected Qty
+                                </th>
+                                <th
+                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                    Transferred Qty
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="detail in (modelData.value.details || [])" :key="detail.id">
-                                <td class="px-3 py-2">{{ detail.origin_warehouse_product?.supplier_product_detail?.product?.name || detail.origin_warehouse_product?.name || 'N/A' }}</td>
-                                <td class="px-3 py-2">{{ detail.origin_warehouse_product?.sku || 'N/A' }}</td>
-                                <td class="px-3 py-2">{{ detail.expected_qty }}</td>
-                                <td class="px-3 py-2">{{ detail.transferred_qty }}</td>
+                            <tr
+                                v-for="detail in modelData.value.details || []"
+                                :key="detail.id"
+                            >
+                                <td class="px-3 py-2">
+                                    {{
+                                        detail.origin_warehouse_product
+                                            ?.supplier_product_detail?.product
+                                            ?.name ||
+                                        detail.origin_warehouse_product?.name ||
+                                        "N/A"
+                                    }}
+                                </td>
+                                <td class="px-3 py-2">
+                                    {{
+                                        detail.origin_warehouse_product?.sku ||
+                                        "N/A"
+                                    }}
+                                </td>
+                                <td class="px-3 py-2">
+                                    {{ detail.expected_qty }}
+                                </td>
+                                <td class="px-3 py-2">
+                                    {{ detail.transferred_qty }}
+                                </td>
                             </tr>
-                            <tr v-for="detail in (modelData.value.details || [])" :key="'serials-' + detail.id">
+                            <tr
+                                v-for="detail in modelData.value.details || []"
+                                :key="'serials-' + detail.id"
+                            >
                                 <td colspan="4" class="px-3 py-2 bg-gray-50">
-                                    <div v-if="detail.serials && detail.serials.length">
-                                        <table class="min-w-full divide-y divide-gray-200">
+                                    <div
+                                        v-if="
+                                            detail.serials &&
+                                            detail.serials.length
+                                        "
+                                    >
+                                        <table
+                                            class="min-w-full divide-y divide-gray-200"
+                                        >
                                             <thead>
                                                 <tr>
-                                                    <th class="px-2 py-1 text-xs text-gray-500">Serial Number</th>
-                                                    <th class="px-2 py-1 text-xs text-gray-500">Batch Number</th>
-                                                    <th class="px-2 py-1 text-xs text-gray-500">Manufactured</th>
-                                                    <th class="px-2 py-1 text-xs text-gray-500">Expired</th>
+                                                    <th
+                                                        class="px-2 py-1 text-xs text-gray-500"
+                                                    >
+                                                        Serial Number
+                                                    </th>
+                                                    <th
+                                                        class="px-2 py-1 text-xs text-gray-500"
+                                                    >
+                                                        Batch Number
+                                                    </th>
+                                                    <th
+                                                        class="px-2 py-1 text-xs text-gray-500"
+                                                    >
+                                                        Manufactured
+                                                    </th>
+                                                    <th
+                                                        class="px-2 py-1 text-xs text-gray-500"
+                                                    >
+                                                        Expired
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr v-for="serial in detail.serials" :key="serial.id">
-                                                    <td class="px-2 py-1">{{ serial.serial_number }}</td>
-                                                    <td class="px-2 py-1">{{ serial.batch_number || '-' }}</td>
-                                                    <td class="px-2 py-1">{{ serial.manufactured_at || '-' }}</td>
-                                                    <td class="px-2 py-1">{{ serial.expired_at || '-' }}</td>
+                                                <tr
+                                                    v-for="serial in detail.serials"
+                                                    :key="serial.id"
+                                                >
+                                                    <td class="px-2 py-1">
+                                                        {{
+                                                            serial.serial_number
+                                                        }}
+                                                    </td>
+                                                    <td class="px-2 py-1">
+                                                        {{
+                                                            serial.batch_number ||
+                                                            "-"
+                                                        }}
+                                                    </td>
+                                                    <td class="px-2 py-1">
+                                                        {{
+                                                            serial.manufactured_at ||
+                                                            "-"
+                                                        }}
+                                                    </td>
+                                                    <td class="px-2 py-1">
+                                                        {{
+                                                            serial.expired_at ||
+                                                            "-"
+                                                        }}
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div v-else class="text-xs text-gray-400">No serials for this detail.</div>
+                                    <div v-else class="text-xs text-gray-400">
+                                        No serials for this detail.
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-        <!-- Serial Modal -->
-        <Modal :show="showSerialModal" @close="closeSerialModal">
-            <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 mb-4">
-                    Enter Serial/Batch Number(s)
-                </h2>
-                <div class="mb-2 flex gap-2">
-                    <input
-                        v-model="serialInput"
-                        @keyup.enter="addSerialToList"
-                        :disabled="serialValidationLoading"
-                        placeholder="Serial or batch number..."
-                        class="w-full border rounded px-2 py-1"
-                    />
-                    <button
                 </div>
             </div>
         </div>
@@ -1199,28 +1293,76 @@ onMounted(() => {
                         Add
                     </button>
                 </div>
-                <div v-if="serialValidationError" class="text-red-500 text-xs mb-2">
+            </div>
+        </Modal>
+        <!-- Serial Modal -->
+        <Modal :show="showSerialModal" @close="closeSerialModal">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    Enter Serial/Batch Number(s)
+                </h2>
+                <div class="mb-2 flex gap-2">
+                    <input
+                        v-model="serialInput"
+                        @keyup.enter="addSerialToList"
+                        :disabled="serialValidationLoading"
+                        placeholder="Serial or batch number..."
+                        class="w-full border rounded px-2 py-1"
+                    />
+                    <button
+                        @click="addSerialToList"
+                        :disabled="serialValidationLoading || !serialInput"
+                        class="px-3 py-1 bg-blue-600 text-white rounded"
+                    >
+                        Add
+                    </button>
+                </div>
+                <div
+                    v-if="serialValidationError"
+                    class="text-red-500 text-xs mb-2"
+                >
                     {{ serialValidationError }}
                 </div>
                 <div v-if="serialsInputList.length">
                     <table class="min-w-full divide-y divide-gray-200 mb-2">
                         <thead>
                             <tr>
-                                <th class="px-2 py-1 text-xs text-gray-500">Serial Number</th>
-                                <th class="px-2 py-1 text-xs text-gray-500">Batch Number</th>
-                                <th class="px-2 py-1 text-xs text-gray-500">Manufactured</th>
-                                <th class="px-2 py-1 text-xs text-gray-500">Expired</th>
-                                <th class="px-2 py-1 text-xs text-gray-500">Actions</th>
+                                <th class="px-2 py-1 text-xs text-gray-500">
+                                    Serial Number
+                                </th>
+                                <th class="px-2 py-1 text-xs text-gray-500">
+                                    Batch Number
+                                </th>
+                                <th class="px-2 py-1 text-xs text-gray-500">
+                                    Manufactured
+                                </th>
+                                <th class="px-2 py-1 text-xs text-gray-500">
+                                    Expired
+                                </th>
+                                <th class="px-2 py-1 text-xs text-gray-500">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(s, i) in serialsInputList" :key="i">
                                 <td class="px-2 py-1">{{ s.serial_number }}</td>
-                                <td class="px-2 py-1">{{ s.batch_number || '-' }}</td>
-                                <td class="px-2 py-1">{{ s.manufactured_at || '-' }}</td>
-                                <td class="px-2 py-1">{{ s.expired_at || '-' }}</td>
                                 <td class="px-2 py-1">
-                                    <button @click="serialsInputList.splice(i, 1)" class="text-red-500 text-xs">Remove</button>
+                                    {{ s.batch_number || "-" }}
+                                </td>
+                                <td class="px-2 py-1">
+                                    {{ s.manufactured_at || "-" }}
+                                </td>
+                                <td class="px-2 py-1">
+                                    {{ s.expired_at || "-" }}
+                                </td>
+                                <td class="px-2 py-1">
+                                    <button
+                                        @click="serialsInputList.splice(i, 1)"
+                                        class="text-red-500 text-xs"
+                                    >
+                                        Remove
+                                    </button>
                                 </td>
                             </tr>
                         </tbody>
@@ -1235,7 +1377,11 @@ onMounted(() => {
                     </button>
                     <button
                         @click="saveSerialsToRow"
-                        :disabled="details[serialModalRowIdx]?.product?.has_serials && serialsInputList.length !== details[serialModalRowIdx]?.transfer_qty"
+                        :disabled="
+                            details[serialModalRowIdx]?.product?.has_serials &&
+                            serialsInputList.length !==
+                                details[serialModalRowIdx]?.transfer_qty
+                        "
                         class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
                         Save
