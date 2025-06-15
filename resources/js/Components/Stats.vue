@@ -3,7 +3,7 @@ import { Link } from "@inertiajs/vue3";
 import { formatNumber } from "@/utils/global";
 import { useColors } from "@/Composables/useColors";
 import { computed } from "vue";
-import { Line } from "vue-chartjs";
+import { Chart } from "vue-chartjs";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -26,6 +26,9 @@ ChartJS.register(
     Tooltip,
     Legend
 );
+
+// Register mixed chart type
+ChartJS.register('mixed');
 
 const props = defineProps({
     stats: {
@@ -161,7 +164,12 @@ const chartOptions = {
                     <option>2024</option>
                 </select>
             </div>
-            <Line :data="chartData" :options="chartOptions" class="h-[300px]" />
+            <Chart 
+                type="bar"
+                :data="chartData" 
+                :options="chartOptions" 
+                class="h-[300px]" 
+            />
         </div>
 
         <!-- Right Sidebar -->
