@@ -11,36 +11,33 @@ class Shipment extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'company_id',
         'invoice_id',
-        'courier_id',
-        'tracking_number',
-        'tracking_url',
-        'shipment_date',
-        'delivered_date',
-        'courier_driver_id',
-        'courier_vehicle_id',
+        'number',
+        'status',
         'notes',
+        'created_by_user_id',
         'file_path',
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
     }
 
-    public function courier()
+    public function details()
     {
-        return $this->belongsTo(Courier::class);
+        return $this->hasMany(ShipmentDetail::class);
     }
 
-    public function courierDriver()
+    public function createdByUser()
     {
-        return $this->belongsTo(CourierDriver::class);
-    }
-
-    public function courierVehicle()
-    {
-        return $this->belongsTo(CourierVehicle::class);
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     protected static function booted()

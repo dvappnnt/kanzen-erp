@@ -9,6 +9,12 @@ import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
 import moment from "moment";
 import { useColors } from "@/Composables/useColors";
+import {
+    formatName,
+    formatDate,
+    getStatusPillClass,
+    humanReadable,
+} from "@/utils/global";
 
 const modelName = "shipments";
 const modelData = ref({ data: [], links: [] });
@@ -33,12 +39,44 @@ const headerActions = ref([
 // Define Table Columns
 const columns = ref([
     {
-        label: "Name",
-        value: "name",
-        has_avatar: true,
-        avatar: (row) => (row.avatar ? `/storage/${row.avatar}` : null), // Adjust for your base URL
+        label: "Number",
+        value: "number",
+        uri: (row) => route("shipments.show", row.id),
+        class: "text-green-600 hover:underline",
+        icon: "mdi-file-document-outline",
     },
-    { label: "Address", value: "address" },
+    {
+        label: "Invoice",
+        value: (row) => row.invoice?.number,
+        uri: (row) => route("invoices.show", row.invoice_id),
+        class: "text-blue-600 hover:underline",
+        icon: "mdi-file-document-outline",
+    },
+    {
+        label: "Customer",
+        value: (row) => row.invoice?.customer?.name,
+        class: "text-gray-600",
+        icon: "mdi-domain",
+    },
+    {
+        label: "Shipping Method",
+        value: (row) => humanReadable(row.invoice?.shipping_method),
+        class: "text-gray-600",
+    },
+    {
+        label: "Created By",
+        value: (row) => row.created_by_user?.name,
+        class: "text-gray-600",
+        icon: "mdi-account-outline",
+    },
+    {
+        label: "Status",
+        value: "status",
+        render: (row) => ({
+            text: humanReadable(row.status),
+            class: getStatusPillClass(row.status),
+        }),
+    },
     { label: "Created At", value: (row) => moment(row.created_at).fromNow() },
     { label: "Actions" },
 ]);
@@ -46,8 +84,8 @@ const columns = ref([
 const mapCustomButtons = (row) => ({
     ...row,
     viewUrl: `/${modelName}/${row.id}`,
-    editUrl: `/${modelName}/${row.id}/edit`,
-    deleteUrl: `/api/${modelName}/${row.id}`,
+    // editUrl: `/${modelName}/${row.id}/edit`,
+    // deleteUrl: `/api/${modelName}/${row.id}`,
     restoreUrl: row.deleted_at ? `/api/${modelName}/${row.id}/restore` : null,
     customUrls: [],
 });

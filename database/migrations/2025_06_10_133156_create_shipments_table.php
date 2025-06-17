@@ -13,33 +13,12 @@ return new class extends Migration
     {
         Schema::create('shipments', function (Blueprint $table) {
             $table->id();
-
-            $table->foreignId('invoice_id')
-                ->constrained('invoices')
-                ->onDelete('cascade');
-
-            $table->foreignId('courier_id')
-                ->nullable()
-                ->constrained('couriers')
-                ->nullOnDelete();
-
-            $table->string('tracking_number')->nullable();
-            $table->string('tracking_url')->nullable();
-            $table->date('shipment_date')->nullable();
-            $table->date('delivered_date')->nullable();
-
-            $table->foreignId('courier_driver_id')
-                ->nullable()
-                ->constrained('courier_drivers')
-                ->nullOnDelete();
-
-            $table->foreignId('courier_vehicle_id')
-                ->nullable()
-                ->constrained('courier_vehicles')
-                ->nullOnDelete();
-
+            $table->foreignId('company_id')->nullable()->constrained('companies')->nullOnDelete(); // Which company it belongs to
+            $table->foreignId('invoice_id')->nullable()->constrained('invoices')->nullOnDelete(); // Which invoice it belongs to
+            $table->string('number')->nullable()->unique(); // Unique goods receipt number
             $table->text('notes')->nullable();
-            $table->enum('status', ['pending', 'for-pickup', 'in-transit', 'delivered'])->default('pending');
+            $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete(); // Who created the shipment
+            $table->enum('status', ['pending', 'partially-delivered', 'fully-delivered'])->default('pending');
             $table->text('file_path')->nullable();
             $table->softDeletes();
             $table->timestamps();
