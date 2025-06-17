@@ -59,6 +59,14 @@ const columns = ref([
         }),
     },
     {
+        label: "Shipment Status",
+        value: "shipment_status",
+        render: (row) => ({
+            text: humanReadable(row.shipment_status),
+            class: getStatusPillClass(row.shipment_status),
+        }),
+    },
+    {
         label: "Status",
         value: "status",
         render: (row) => ({

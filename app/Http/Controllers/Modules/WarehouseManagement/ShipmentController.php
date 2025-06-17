@@ -32,10 +32,19 @@ class ShipmentController extends Controller
 
     public function show($id)
     {
-        $model = $this->modelClass::with(['company'])->findOrFail($id);
+        $model = $this->modelClass::with(['company', 'invoice', 'invoice.customer'])->findOrFail($id);
+        $details = $model->details()->with([
+            'courier', 
+            'invoiceDetail', 
+            'invoiceDetail.warehouseProduct', 
+            'invoiceDetail.warehouseProduct.supplierProductDetail', 
+            'invoiceDetail.warehouseProduct.supplierProductDetail.product',
+            'invoiceDetail.warehouseProduct.supplierProductDetail.productVariation'
+        ])->get();
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,
+            'details' => $details,
         ]);
     }
 

@@ -22,6 +22,11 @@ class CourierController extends Controller
         return $this->modelClass::latest()->paginate(perPage: 10);
     }
 
+    public function complete()
+    {
+        return $this->modelClass::latest()->get();
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

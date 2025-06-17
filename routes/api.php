@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferC
 use App\Http\Controllers\Api\Modules\WarehouseManagement\WarehouseStockTransferDetailController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\ShipmentController;
 use App\Http\Controllers\Api\Modules\WarehouseManagement\CourierController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\ShipmentDetailController;
 
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\AccountTypeController;
@@ -178,6 +179,11 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('shipments', ShipmentController::class);
     Route::get('complete/shipments', [ShipmentController::class, 'complete'])->name('shipments.complete');
     Route::get('autocomplete/shipments', [ShipmentController::class, 'autocomplete'])->name('shipments.autocomplete');
+    Route::post('shipment-details/{detail}/for-pickup', [ShipmentDetailController::class, 'forPickup'])->name('shipment-details.for-pickup');
+    Route::post('shipment-details/{detail}/in-transit', [ShipmentDetailController::class, 'inTransit'])->name('shipment-details.in-transit');
+    Route::post('shipment-details/{detail}/delivered', [ShipmentDetailController::class, 'delivered'])->name('shipment-details.delivered');
+
+    Route::apiResource('shipment-details', ShipmentDetailController::class);
 
     Route::apiResource('couriers', CourierController::class);
     Route::get('complete/couriers', [CourierController::class, 'complete'])->name('couriers.complete');

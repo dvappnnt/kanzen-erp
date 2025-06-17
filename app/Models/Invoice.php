@@ -50,7 +50,7 @@ class Invoice extends Model
         'total_amount' => 'decimal:2',
     ];
 
-    protected $appends = ['name'];
+    protected $appends = ['name', 'shipment_status'];
 
     public function getNameAttribute()
     {
@@ -82,15 +82,20 @@ class Invoice extends Model
         return $this->hasMany(InvoiceDetail::class);
     }
 
+    public function getShipmentStatusAttribute()
+    {
+        return $this->shipments()->latest()->first()?->status ?? 'pending';
+    }
+
     protected static function booted()
     {
         static::addGlobalScope('company_filter', function (Builder $builder) {
             $user = Auth::user();
-    
+
             if ($user && !$user->hasRole('super-admin')) {
                 $builder->where(function ($query) use ($user) {
                     $query->where('company_id', $user->company_id)
-                          ->orWhereNull('company_id');
+                        ->orWhereNull('company_id');
                 });
             }
         });
@@ -130,7 +135,29 @@ class Invoice extends Model
         });
 
         static::created(function ($invoice) {
-            $invoice->registerJournalAfterCommit();
+            \DB::afterCommit(function () use ($invoice) {
+                $invoice->registerJournalAfterCommit();
+        
+                // Create Shipment
+                $shipment = Shipment::create([
+                    'company_id' => $invoice->company_id,
+                    'invoice_id' => $invoice->id,
+                    'status' => 'pending',
+                    'created_by_user_id' => $invoice->created_by_user_id,
+                ]);
+        
+                // Reload invoice details to ensure they are available
+                $invoiceDetails = InvoiceDetail::where('invoice_id', $invoice->id)->get();
+        
+                foreach ($invoiceDetails as $detail) {
+                    ShipmentDetail::create([
+                        'shipment_id' => $shipment->id,
+                        'invoice_detail_id' => $detail->id,
+                        'qty' => $detail->qty,
+                        'status' => 'pending',
+                    ]);
+                }
+            });
         });
 
         static::updated(function ($invoice) {

@@ -13,6 +13,16 @@ class ShipmentDetail extends Model
         'shipment_id',
         'invoice_detail_id',
         'qty',
+        'courier_id',
+        'tracking_number',
+        'tracking_url',
+        'shipment_date',
+        'delivered_date',
+        'courier_driver_id',
+        'courier_vehicle_id',
+        'destination',
+        'notes',
+        'status',
     ];
 
     public function shipment()
@@ -23,5 +33,20 @@ class ShipmentDetail extends Model
     public function invoiceDetail()
     {
         return $this->belongsTo(InvoiceDetail::class);
+    }
+
+    public function courier()
+    {
+        return $this->belongsTo(Courier::class);
+    }
+
+    public function courierDriver()
+    {
+        return $this->belongsTo(CourierDriver::class);
+    }
+
+    public function courierVehicle()
+    {
+        return $this->belongsTo(CourierVehicle::class);
     }
 }
