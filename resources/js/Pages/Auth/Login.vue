@@ -120,14 +120,14 @@ const submit = () => {
                     </PrimaryButton>
 
                     <!-- Or Divider -->
-                    <div class="flex items-center gap-4 my-4">
+                    <!-- <div class="flex items-center gap-4 my-4">
                         <hr class="flex-grow border-t border-gray-300" />
                         <span class="text-gray-500 text-sm">or</span>
                         <hr class="flex-grow border-t border-gray-300" />
-                    </div>
+                    </div> -->
 
                     <!-- Google Sign In -->
-                    <button
+                    <!-- <button
                         type="button"
                         class="w-full border border-gray-300 rounded-md py-3 flex items-center justify-center gap-2 text-sm hover:bg-gray-50 transition"
                     >
@@ -147,7 +147,7 @@ const submit = () => {
                         >
                             Sign up
                         </Link>
-                    </p>
+                    </p> -->
                 </form>
             </div>
         </div>
@@ -155,7 +155,7 @@ const submit = () => {
         <!-- Right side - Illustration -->
         <div
             class="hidden md:block bg-cover bg-center"
-            style="background-image: url('/static/auth/logo.jpg')"
+            style="background-image: url('/static/auth/login.jpg')"
         ></div>
     </div>
 </template>
