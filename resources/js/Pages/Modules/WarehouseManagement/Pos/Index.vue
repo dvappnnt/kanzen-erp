@@ -11,6 +11,14 @@
             v-else-if="currentStep === 2"
             class="flex h-[calc(100vh-4rem)] bg-gray-50"
         >
+            <!-- Pre-order Mode Banner -->
+            <div
+                v-if="isPreOrder"
+                class="fixed top-16 left-0 right-0 z-50 bg-orange-500 text-white px-4 py-2 text-center font-medium"
+            >
+                🛒 Pre-Order Mode Active - Quantity and serial checks are disabled
+            </div>
+
             <!-- Left Side - Products Section -->
             <div class="w-2/3 p-6 overflow-hidden flex flex-col">
                 <!-- Search and Categories -->
@@ -24,21 +32,30 @@
                             class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                     </div>
-                    <!-- <div class="flex-1">
-                        <select
-                            v-model="selectedCategory"
-                            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="">All Categories</option>
-                            <option
-                                v-for="category in categories"
-                                :key="category.id"
-                                :value="category.id"
+                    <!-- Pre-order Toggle -->
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                v-model="isPreOrder"
+                                class="sr-only"
+                            />
+                            <div
+                                :class="[
+                                    'w-11 h-6 rounded-full transition-colors duration-200 ease-in-out',
+                                    isPreOrder ? 'bg-blue-600' : 'bg-gray-300'
+                                ]"
                             >
-                                {{ category.name }}
-                            </option>
-                        </select>
-                    </div> -->
+                                <div
+                                    :class="[
+                                        'w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out',
+                                        isPreOrder ? 'translate-x-5' : 'translate-x-0'
+                                    ]"
+                                ></div>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700">Pre Order</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Products Grid -->
@@ -47,9 +64,16 @@
                         <div
                             v-for="product in filteredProducts"
                             :key="product.id"
-                            class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4"
+                            class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 relative"
                             @click="addToCart(product)"
                         >
+                            <!-- Pre-order indicator -->
+                            <div
+                                v-if="isPreOrder"
+                                class="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium"
+                            >
+                                Pre-Order
+                            </div>
                             <div
                                 class="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center"
                             >
@@ -72,6 +96,12 @@
                                     product.supplier_product_detail.product.slug
                                 }}
                             </p>
+                            <p class="text-gray-500 text-sm">
+                                Available: {{ product.qty }} units
+                            </p>
+                            <p v-if="isPreOrder" class="text-orange-600 text-sm font-medium">
+                                Pre-order available
+                            </p>
                             <p class="text-blue-600 font-semibold mt-2">
                                 {{
                                     formatNumber(parseFloat(product.price), {
@@ -92,95 +122,193 @@
                     <h2 class="text-lg font-semibold text-gray-900">
                         Current Cart
                     </h2>
-                    <!-- <p class="text-sm text-gray-500">
-                        Transaction #TRX-{{
-                            new Date().getTime().toString().slice(-6)
-                        }}
-                    </p> -->
+                    <p v-if="hasPreOrderItems" class="text-sm text-orange-600 mt-1">
+                        ⚠️ This cart contains pre-order items
+                    </p>
                 </div>
 
                 <!-- Cart Items -->
                 <div class="flex-1 overflow-y-auto p-6">
                     <div class="space-y-4">
-                        <div
-                            v-for="item in cartItems"
-                            :key="item.id"
-                            class="flex items-center justify-between bg-gray-50 p-4 rounded-lg"
-                        >
-                            <div class="flex items-center space-x-4">
+                        <!-- Regular Items Section -->
+                        <div v-if="regularItems.length > 0">
+                            <h3 class="text-sm font-medium text-gray-700 mb-3">Regular Items</h3>
+                            <div class="space-y-4">
                                 <div
-                                    class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"
+                                    v-for="item in regularItems"
+                                    :key="`regular-${item.id}`"
+                                    class="flex items-center justify-between bg-gray-50 p-4 rounded-lg"
                                 >
-                                    <img
-                                        v-if="item.avatar"
-                                        :src="`/storage/${item.avatar}`"
-                                        :alt="item.name"
-                                        class="h-10 w-10 rounded-full object-cover"
-                                    />
-                                    <span v-else class="text-4xl text-gray-400">📦</span>
-                                </div>
-                                <div>
-                                    <h4 class="font-medium">{{ item.name }}</h4>
-                                    <p class="text-sm text-gray-500">
-                                        {{
-                                            formatNumber(item.price, {
-                                                style: "currency",
-                                                currency: "PHP",
-                                            })
-                                        }}
-                                    </p>
-                                    <p
-                                        v-if="
-                                            item.serials &&
-                                            item.serials.length > 0
-                                        "
-                                        @click="showSerialListModal(item)"
-                                        class="text-sm text-blue-600 cursor-pointer hover:text-blue-800"
-                                    >
-                                        {{ item.serials.length }} serial/batch
-                                        number(s)
-                                    </p>
+                                    <div class="flex items-center space-x-4">
+                                        <div
+                                            class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"
+                                        >
+                                            <img
+                                                v-if="item.avatar"
+                                                :src="`/storage/${item.avatar}`"
+                                                :alt="item.name"
+                                                class="h-10 w-10 rounded-full object-cover"
+                                            />
+                                            <span v-else class="text-4xl text-gray-400">📦</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium">{{ item.name }}</h4>
+                                            <p class="text-sm text-gray-500">
+                                                {{
+                                                    formatNumber(item.price, {
+                                                        style: "currency",
+                                                        currency: "PHP",
+                                                    })
+                                                }}
+                                            </p>
+                                            <p
+                                                v-if="
+                                                    item.serials &&
+                                                    item.serials.length > 0
+                                                "
+                                                @click="showSerialListModal(item)"
+                                                class="text-sm text-blue-600 cursor-pointer hover:text-blue-800"
+                                            >
+                                                {{ item.serials.length }} serial/batch
+                                                number(s)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <template v-if="!item.serials || item.serials.length === 0 || item.is_pre_order">
+                                            <button
+                                                @click="updateQuantity(item, -1)"
+                                                class="text-gray-500 hover:text-gray-700"
+                                            >
+                                                <span class="text-xl">-</span>
+                                            </button>
+                                            <span class="w-8 text-center">{{
+                                                item.quantity
+                                            }}</span>
+                                            <button
+                                                @click="updateQuantity(item, 1)"
+                                                class="text-gray-500 hover:text-gray-700"
+                                            >
+                                                <span class="text-xl">+</span>
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <span class="w-8 text-center">{{ item.serials.length }}</span>
+                                        </template>
+                                        <button
+                                            @click="removeFromCart(item)"
+                                            class="text-red-500 hover:text-red-700 ml-2"
+                                        >
+                                            <svg
+                                                class="w-5 h-5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                ></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <template v-if="!item.serials || item.serials.length === 0">
-                                    <button
-                                        @click="updateQuantity(item, -1)"
-                                        class="text-gray-500 hover:text-gray-700"
-                                    >
-                                        <span class="text-xl">-</span>
-                                    </button>
-                                    <span class="w-8 text-center">{{
-                                        item.quantity
-                                    }}</span>
-                                    <button
-                                        @click="updateQuantity(item, 1)"
-                                        class="text-gray-500 hover:text-gray-700"
-                                    >
-                                        <span class="text-xl">+</span>
-                                    </button>
-                                </template>
-                                <template v-else>
-                                    <span class="w-8 text-center">{{ item.serials.length }}</span>
-                                </template>
-                                <button
-                                    @click="removeFromCart(item)"
-                                    class="text-red-500 hover:text-red-700 ml-2"
+                        </div>
+
+                        <!-- Pre-order Items Section -->
+                        <div v-if="preOrderItems.length > 0">
+                            <h3 class="text-sm font-medium text-orange-700 mb-3">Pre-Order Items</h3>
+                            <div class="space-y-4">
+                                <div
+                                    v-for="item in preOrderItems"
+                                    :key="`preorder-${item.id}`"
+                                    class="flex items-center justify-between bg-orange-50 p-4 rounded-lg border border-orange-200"
                                 >
-                                    <svg
-                                        class="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        ></path>
-                                    </svg>
-                                </button>
+                                    <div class="flex items-center space-x-4">
+                                        <div
+                                            class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center"
+                                        >
+                                            <img
+                                                v-if="item.avatar"
+                                                :src="`/storage/${item.avatar}`"
+                                                :alt="item.name"
+                                                class="h-10 w-10 rounded-full object-cover"
+                                            />
+                                            <span v-else class="text-4xl text-orange-400">📦</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium">{{ item.name }}</h4>
+                                            <p class="text-sm text-gray-500">
+                                                {{
+                                                    formatNumber(item.price, {
+                                                        style: "currency",
+                                                        currency: "PHP",
+                                                    })
+                                                }}
+                                            </p>
+                                            <!-- Pre-order Label -->
+                                            <span
+                                                class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full"
+                                            >
+                                                Pre Order
+                                            </span>
+                                            <p
+                                                v-if="
+                                                    item.serials &&
+                                                    item.serials.length > 0
+                                                "
+                                                @click="showSerialListModal(item)"
+                                                class="text-sm text-blue-600 cursor-pointer hover:text-blue-800"
+                                            >
+                                                {{ item.serials.length }} serial/batch
+                                                number(s)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <template v-if="!item.serials || item.serials.length === 0 || item.is_pre_order">
+                                            <button
+                                                @click="updateQuantity(item, -1)"
+                                                class="text-gray-500 hover:text-gray-700"
+                                            >
+                                                <span class="text-xl">-</span>
+                                            </button>
+                                            <span class="w-8 text-center">{{
+                                                item.quantity
+                                            }}</span>
+                                            <button
+                                                @click="updateQuantity(item, 1)"
+                                                class="text-gray-500 hover:text-gray-700"
+                                            >
+                                                <span class="text-xl">+</span>
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <span class="w-8 text-center">{{ item.serials.length }}</span>
+                                        </template>
+                                        <button
+                                            @click="removeFromCart(item)"
+                                            class="text-red-500 hover:text-red-700 ml-2"
+                                        >
+                                            <svg
+                                                class="w-5 h-5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                ></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1033,6 +1161,12 @@
                                     class="text-lg font-medium leading-6 text-gray-900 mb-4"
                                 >
                                     Enter Serial/Batch Number
+                                    <span
+                                        v-if="isPreOrder"
+                                        class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2"
+                                    >
+                                        Pre Order
+                                    </span>
                                 </DialogTitle>
 
                                 <div class="space-y-4">
@@ -1048,7 +1182,7 @@
                                             v-model="serialNumber"
                                             @keyup.enter="checkAndAddSerial"
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Enter or scan serial/batch number"
+                                            :placeholder="isPreOrder ? 'Enter or scan serial/batch number (Pre-order)' : 'Enter or scan serial/batch number'"
                                             ref="serialInput"
                                             autofocus
                                         />
@@ -1061,6 +1195,9 @@
                                                     ?.supplier_product_detail
                                                     .product.name
                                             }}
+                                        </p>
+                                        <p v-if="isPreOrder" class="text-orange-600 mt-1">
+                                            Pre-order mode: Serial validation will be skipped
                                         </p>
                                     </div>
                                 </div>
@@ -1076,7 +1213,7 @@
                                         @click="checkAndAddSerial"
                                         class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
                                     >
-                                        Add to Cart
+                                        {{ isPreOrder ? 'Add to Cart (Pre-order)' : 'Add to Cart' }}
                                     </button>
                                 </div>
                             </DialogPanel>
@@ -1125,6 +1262,12 @@
                                 >
                                     Serial/Batch Numbers for
                                     {{ selectedItem?.name }}
+                                    <span
+                                        v-if="selectedItem?.is_pre_order"
+                                        class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2"
+                                    >
+                                        Pre Order
+                                    </span>
                                 </DialogTitle>
 
                                 <div class="space-y-2 max-h-96 overflow-y-auto">
@@ -1211,6 +1354,7 @@ const categories = ref([]);
 
 // Cart State
 const cartItems = ref([]);
+const isPreOrder = ref(false);
 const taxRate = ref(12);
 const tempTaxRate = ref(12);
 const tempTaxAmount = ref(0);
@@ -1302,6 +1446,18 @@ const filteredProducts = computed(() => {
     return products.value;
 });
 
+const hasPreOrderItems = computed(() => {
+    return cartItems.value.some(item => item.is_pre_order);
+});
+
+const regularItems = computed(() => {
+    return cartItems.value.filter(item => !item.is_pre_order);
+});
+
+const preOrderItems = computed(() => {
+    return cartItems.value.filter(item => item.is_pre_order);
+});
+
 // Methods
 const handleCustomerSelection = (data) => {
     customerInfo.value = data.customer;
@@ -1342,13 +1498,36 @@ const handleSearch = debounce(async () => {
 }, 300);
 
 const addToCart = (product) => {
+    // If pre-order is enabled, skip quantity and serial checks
+    if (isPreOrder.value) {
+        // For pre-order items, we need to find existing pre-order items of the same product
+        const existingItem = cartItems.value.find((item) => item.id === product.id && item.is_pre_order);
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cartItems.value.push({
+                id: product.id,
+                name: product.supplier_product_detail.product.name,
+                price: parseFloat(product.price),
+                quantity: 1,
+                serials: [],
+                warehouse_id: selectedWarehouseId.value,
+                avatar: product.supplier_product_detail.product.avatar,
+                is_pre_order: true
+            });
+        }
+        return;
+    }
+
+    // Regular flow for non-pre-order items
     if (product.has_serials) {
         selectedProduct.value = product;
         showSerialModal.value = true;
         return;
     }
 
-    const existingItem = cartItems.value.find((item) => item.id === product.id);
+    // For non-pre-order items, we need to find existing non-pre-order items of the same product
+    const existingItem = cartItems.value.find((item) => item.id === product.id && !item.is_pre_order);
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
@@ -1359,12 +1538,25 @@ const addToCart = (product) => {
             quantity: 1,
             serials: [],
             warehouse_id: selectedWarehouseId.value,
-            avatar: product.supplier_product_detail.product.avatar
+            avatar: product.supplier_product_detail.product.avatar,
+            is_pre_order: false
         });
     }
 };
 
 const updateQuantity = (item, change) => {
+    // Allow quantity changes for pre-order items regardless of serials
+    if (item.is_pre_order) {
+        const newQuantity = item.quantity + change;
+        if (newQuantity > 0) {
+            item.quantity = newQuantity;
+        } else {
+            removeFromCart(item);
+        }
+        return;
+    }
+
+    // For non-pre-order items, don't allow quantity changes if they have serials
     if (item.serials && item.serials.length > 0) {
         return; // Don't allow quantity changes for serialized items
     }
@@ -1448,6 +1640,7 @@ const startNewTransaction = () => {
     selectedWarehouseId.value = null;
     currentStep.value = 1;
     cartItems.value = [];
+    isPreOrder.value = false;
     taxRate.value = 12;
     discountType.value = "percentage";
     discountValue.value = 0;
@@ -1608,7 +1801,8 @@ const proceedToReview = () => {
             qty: item.quantity,
             price: item.price,
             total: item.price * item.quantity,
-            serials: item.serials || []
+            serials: item.serials || [],
+            is_pre_order: item.is_pre_order || false
         }))
     };
 
@@ -1648,6 +1842,32 @@ const checkAndAddSerial = async () => {
         return;
     }
 
+    // If pre-order is enabled, skip serial validation
+    if (isPreOrder.value) {
+        // For pre-order items, we need to find existing pre-order items of the same product
+        const existingItem = cartItems.value.find(
+            (item) => item.id === selectedProduct.value.id && item.is_pre_order
+        );
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cartItems.value.push({
+                id: selectedProduct.value.id,
+                name: selectedProduct.value.supplier_product_detail.product.name,
+                price: parseFloat(selectedProduct.value.price),
+                quantity: 1,
+                serials: [serialNumber.value],
+                warehouse_id: selectedWarehouseId.value,
+                avatar: selectedProduct.value.supplier_product_detail.product.avatar,
+                is_pre_order: true
+            });
+        }
+
+        serialNumber.value = "";
+        showSerialModal.value = false;
+        return;
+    }
+
     try {
         const response = await axios.get(
             "/api/serial-check/warehouse-products",
@@ -1665,8 +1885,9 @@ const checkAndAddSerial = async () => {
             return;
         }
 
+        // For non-pre-order items, we need to find existing non-pre-order items of the same product
         const existingItem = cartItems.value.find(
-            (item) => item.id === selectedProduct.value.id
+            (item) => item.id === selectedProduct.value.id && !item.is_pre_order
         );
         if (existingItem) {
             if (existingItem.serials.includes(serialNumber.value)) {
@@ -1683,7 +1904,8 @@ const checkAndAddSerial = async () => {
                 quantity: 1,
                 serials: [serialNumber.value],
                 warehouse_id: selectedWarehouseId.value,
-                avatar: selectedProduct.value.supplier_product_detail.product.avatar
+                avatar: selectedProduct.value.supplier_product_detail.product.avatar,
+                is_pre_order: false
             });
         }
 
@@ -1711,7 +1933,11 @@ const removeSerial = (item, serial) => {
     const index = item.serials.indexOf(serial);
     if (index > -1) {
         item.serials.splice(index, 1);
-        item.quantity -= 1;
+        
+        // For pre-order items, don't reduce quantity when removing serials
+        if (!item.is_pre_order) {
+            item.quantity -= 1;
+        }
 
         if (item.quantity === 0) {
             removeFromCart(item);

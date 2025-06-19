@@ -20,64 +20,142 @@
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <h3 class="text-lg font-semibold mb-4">Order Items</h3>
                         <div class="space-y-4">
-                            <div
-                                v-for="item in cartItems"
-                                :key="item.id"
-                                class="flex items-center justify-between py-3 border-b last:border-0"
-                            >
-                                <div class="flex items-center gap-4">
+                            <!-- Regular Items Section -->
+                            <div v-if="regularItems.length > 0">
+                                <h4 class="text-sm font-medium text-gray-700 mb-3">Regular Items</h4>
+                                <div class="space-y-4">
                                     <div
-                                        class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center"
+                                        v-for="item in regularItems"
+                                        :key="`regular-${item.id}`"
+                                        class="flex items-center justify-between py-3 border-b last:border-0"
                                     >
-                                        <img
-                                            v-if="item.avatar"
-                                            :src="`/storage/${item.avatar}`"
-                                            :alt="item.name"
-                                            class="h-10 w-10 rounded-full object-cover"
-                                        />
-                                        <span
-                                            v-else
-                                            class="text-4xl text-gray-400"
-                                            >📦</span
-                                        >
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium">
-                                            {{ item.name }}
-                                        </h4>
-                                        <p class="text-sm text-gray-500">
-                                            Qty: {{ item.quantity }}
-                                        </p>
-                                        <p class="text-sm text-gray-500">
-                                            Price:
-                                            {{
-                                                formatNumber(item.price, {
-                                                    style: "currency",
-                                                    currency: "PHP",
-                                                })
-                                            }}
-                                        </p>
-                                        <p
-                                            v-if="
-                                                item.serials &&
-                                                item.serials.length > 0
-                                            "
-                                            @click="showSerialListModal(item)"
-                                            class="text-sm text-blue-600 cursor-pointer hover:text-blue-800"
-                                        >
-                                            {{
-                                                item.serials.length
-                                            }}
-                                            serial/batch number(s)
-                                        </p>
+                                        <div class="flex items-center gap-4">
+                                            <div
+                                                class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center"
+                                            >
+                                                <img
+                                                    v-if="item.avatar"
+                                                    :src="`/storage/${item.avatar}`"
+                                                    :alt="item.name"
+                                                    class="h-10 w-10 rounded-full object-cover"
+                                                />
+                                                <span
+                                                    v-else
+                                                    class="text-4xl text-gray-400"
+                                                    >📦</span
+                                                >
+                                            </div>
+                                            <div>
+                                                <h4 class="font-medium">
+                                                    {{ item.name }}
+                                                </h4>
+                                                <p class="text-sm text-gray-500">
+                                                    Qty: {{ item.quantity }}
+                                                </p>
+                                                <p class="text-sm text-gray-500">
+                                                    Price:
+                                                    {{
+                                                        formatNumber(item.price, {
+                                                            style: "currency",
+                                                            currency: "PHP",
+                                                        })
+                                                    }}
+                                                </p>
+                                                <p
+                                                    v-if="
+                                                        item.serials &&
+                                                        item.serials.length > 0
+                                                    "
+                                                    @click="showSerialListModal(item)"
+                                                    class="text-sm text-blue-600 cursor-pointer hover:text-blue-800"
+                                                >
+                                                    {{
+                                                        item.serials.length
+                                                    }}
+                                                    serial/batch number(s)
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span class="font-medium">{{
+                                            formatNumber(item.price * item.quantity, {
+                                                style: "currency",
+                                                currency: "PHP",
+                                            })
+                                        }}</span>
                                     </div>
                                 </div>
-                                <span class="font-medium">{{
-                                    formatNumber(item.price * item.quantity, {
-                                        style: "currency",
-                                        currency: "PHP",
-                                    })
-                                }}</span>
+                            </div>
+
+                            <!-- Pre-order Items Section -->
+                            <div v-if="preOrderItems.length > 0">
+                                <h4 class="text-sm font-medium text-orange-700 mb-3">Pre-Order Items</h4>
+                                <div class="space-y-4">
+                                    <div
+                                        v-for="item in preOrderItems"
+                                        :key="`preorder-${item.id}`"
+                                        class="flex items-center justify-between py-3 border-b last:border-0 bg-orange-50 p-4 rounded-lg"
+                                    >
+                                        <div class="flex items-center gap-4">
+                                            <div
+                                                class="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center"
+                                            >
+                                                <img
+                                                    v-if="item.avatar"
+                                                    :src="`/storage/${item.avatar}`"
+                                                    :alt="item.name"
+                                                    class="h-10 w-10 rounded-full object-cover"
+                                                />
+                                                <span
+                                                    v-else
+                                                    class="text-4xl text-orange-400"
+                                                    >📦</span
+                                                >
+                                            </div>
+                                            <div>
+                                                <h4 class="font-medium">
+                                                    {{ item.name }}
+                                                </h4>
+                                                <p class="text-sm text-gray-500">
+                                                    Qty: {{ item.quantity }}
+                                                </p>
+                                                <!-- Pre-order Label -->
+                                                <span
+                                                    class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full"
+                                                >
+                                                    Pre Order
+                                                </span>
+                                                <p class="text-sm text-gray-500">
+                                                    Price:
+                                                    {{
+                                                        formatNumber(item.price, {
+                                                            style: "currency",
+                                                            currency: "PHP",
+                                                        })
+                                                    }}
+                                                </p>
+                                                <p
+                                                    v-if="
+                                                        item.serials &&
+                                                        item.serials.length > 0
+                                                    "
+                                                    @click="showSerialListModal(item)"
+                                                    class="text-sm text-blue-600 cursor-pointer hover:text-blue-800"
+                                                >
+                                                    {{
+                                                        item.serials.length
+                                                    }}
+                                                    serial/batch number(s)
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span class="font-medium">{{
+                                            formatNumber(item.price * item.quantity, {
+                                                style: "currency",
+                                                currency: "PHP",
+                                            })
+                                        }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -373,6 +451,12 @@
                             >
                                 Serial/Batch Numbers for
                                 {{ selectedItem?.name }}
+                                <span
+                                    v-if="selectedItem?.is_pre_order"
+                                    class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2"
+                                >
+                                    Pre Order
+                                </span>
                             </DialogTitle>
 
                             <div class="space-y-2 max-h-96 overflow-y-auto">
@@ -499,7 +583,7 @@
 
 <script setup>
 import { formatNumber } from "@/utils/global";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import {
     Dialog,
     DialogPanel,
@@ -565,6 +649,14 @@ const props = defineProps({
 // Serial list modal state
 const showSerialListModalFlag = ref(false);
 const selectedItem = ref(null);
+
+const regularItems = computed(() => {
+    return props.cartItems.filter(item => !item.is_pre_order);
+});
+
+const preOrderItems = computed(() => {
+    return props.cartItems.filter(item => item.is_pre_order);
+});
 
 const showSerialListModal = (item) => {
     selectedItem.value = item;

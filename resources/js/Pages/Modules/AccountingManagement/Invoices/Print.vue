@@ -49,6 +49,14 @@ const formatSerialNumbers = (serials) => {
     });
 };
 
+const preOrderItemsCount = computed(() => {
+    return (modelData.value.details || []).filter(detail => detail.is_pre_order).length;
+});
+
+const regularItemsCount = computed(() => {
+    return (modelData.value.details || []).filter(detail => !detail.is_pre_order).length;
+});
+
 onMounted(() => {
     window.print();
 });
@@ -114,6 +122,21 @@ onMounted(() => {
         </div>
 
         <!-- Items Table -->
+        <div class="mb-4 flex gap-4 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-600">Total Items:</span>
+                <span class="font-medium">{{ modelData.details?.length || 0 }}</span>
+            </div>
+            <div v-if="regularItemsCount > 0" class="flex items-center gap-2">
+                <span class="text-gray-600">Regular Items:</span>
+                <span class="font-medium">{{ regularItemsCount }}</span>
+            </div>
+            <div v-if="preOrderItemsCount > 0" class="flex items-center gap-2">
+                <span class="text-orange-600">Pre-Order Items:</span>
+                <span class="font-medium text-orange-600">{{ preOrderItemsCount }}</span>
+            </div>
+        </div>
+        
         <table class="w-full mt-8">
             <thead>
                 <tr class="text-left border-b-2 border-gray-200">
@@ -154,6 +177,13 @@ onMounted(() => {
                                 detail.warehouse_product
                                     ?.supplier_product_detail?.product?.name
                             }}
+                            <!-- Pre-order indicator -->
+                            <span
+                                v-if="detail.is_pre_order"
+                                class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2"
+                            >
+                                Pre Order
+                            </span>
                         </p>
                         <div v-if="detail.invoice_serials?.length" class="text-sm text-gray-500 mt-2 space-y-1">
                             <div v-for="(serial, index) in formatSerialNumbers(detail.invoice_serials)" :key="index" class="pl-4 border-l border-gray-200">
@@ -226,6 +256,11 @@ onMounted(() => {
                             humanReadable(modelData.status)
                         }}</span>
                     </p>
+                    <!-- Pre-order note -->
+                    <div v-if="preOrderItemsCount > 0" class="mt-3 p-2 bg-orange-50 border border-orange-200 rounded text-sm">
+                        <p class="text-orange-800 font-medium">⚠️ Pre-Order Notice</p>
+                        <p class="text-orange-700">This invoice contains {{ preOrderItemsCount }} pre-order item(s) that will be fulfilled when stock becomes available.</p>
+                    </div>
                 </div>
             </div>
 

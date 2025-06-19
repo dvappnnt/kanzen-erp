@@ -120,6 +120,7 @@ class InvoiceController extends Controller
             'items.*.price' => 'required|numeric|min:0',
             'items.*.total' => 'required|numeric|min:0',
             'items.*.serials' => 'nullable|array',
+            'items.*.is_pre_order' => 'boolean',
         ]);
 
         try {
@@ -180,19 +181,20 @@ class InvoiceController extends Controller
                     'qty' => $item['qty'],
                     'price' => $item['price'],
                     'total' => $item['total'],
-                    'currency' => 'PHP'
+                    'currency' => 'PHP',
+                    'is_pre_order' => $item['is_pre_order'] ?? false
                 ]);
 
-                // Only deduct quantity from warehouse_product if status is fully-paid
-                if ($validated['status'] === 'fully-paid') {
+                // Only deduct quantity from warehouse_product if status is fully-paid AND not a pre-order
+                if ($validated['status'] === 'fully-paid' && !($item['is_pre_order'] ?? false)) {
                     $warehouseProduct = WarehouseProduct::find($item['warehouse_product_id']);
                     if ($warehouseProduct) {
                         $warehouseProduct->decrement('qty', $item['qty']);
                     }
                 }
 
-                // Handle serials if present
-                if (isset($item['serials']) && !empty($item['serials'])) {
+                // Handle serials if present (only for non-pre-order items)
+                if (isset($item['serials']) && !empty($item['serials']) && !($item['is_pre_order'] ?? false)) {
                     foreach ($item['serials'] as $serialNumber) {
                         $serial = WarehouseProductSerial::where('serial_number', $serialNumber)
                             ->where('warehouse_product_id', $item['warehouse_product_id'])

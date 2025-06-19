@@ -25,6 +25,8 @@ class InvoiceDetail extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'total' => 'decimal:2',
+        'is_pre_order' => 'boolean',
+        'is_delivered' => 'boolean',
     ];
 
     public function invoice()
