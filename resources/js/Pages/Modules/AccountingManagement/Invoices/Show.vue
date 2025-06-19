@@ -111,6 +111,14 @@ const remainingBalance = computed(() => {
     return isNaN(total) ? 0 : total;
 });
 
+const preOrderItemsCount = computed(() => {
+    return (modelData.value.details || []).filter(detail => detail.is_pre_order).length;
+});
+
+const regularItemsCount = computed(() => {
+    return (modelData.value.details || []).filter(detail => !detail.is_pre_order).length;
+});
+
 const validatePaymentAmount = (amount) => {
     if (amount > remainingBalance.value) {
         toast.error(`Payment amount cannot exceed the remaining balance of ${formatNumber(remainingBalance.value, { style: 'currency', currency: 'PHP' })}`);
@@ -343,6 +351,22 @@ const downloadFile = (filePath) => {
 
                     <!-- Items Table -->
                     <div class="py-8 border-b border-gray-200">
+                        <!-- Items Summary -->
+                        <div class="mb-4 flex gap-4 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-600">Total Items:</span>
+                                <span class="font-medium">{{ modelData.details?.length || 0 }}</span>
+                            </div>
+                            <div v-if="regularItemsCount > 0" class="flex items-center gap-2">
+                                <span class="text-gray-600">Regular Items:</span>
+                                <span class="font-medium">{{ regularItemsCount }}</span>
+                            </div>
+                            <div v-if="preOrderItemsCount > 0" class="flex items-center gap-2">
+                                <span class="text-orange-600">Pre-Order Items:</span>
+                                <span class="font-medium text-orange-600">{{ preOrderItemsCount }}</span>
+                            </div>
+                        </div>
+                        
                         <table class="w-full">
                             <thead>
                                 <tr class="text-left">
@@ -358,6 +382,13 @@ const downloadFile = (filePath) => {
                                     <td class="py-4">
                                         <p class="font-medium text-gray-800">
                                             {{ detail.warehouse_product?.supplier_product_detail?.product?.name }}
+                                            <!-- Pre-order indicator -->
+                                            <span
+                                                v-if="detail.is_pre_order"
+                                                class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2"
+                                            >
+                                                Pre Order
+                                            </span>
                                         </p>
                                         <div v-if="detail.invoice_serials?.length" class="text-sm text-gray-500 mt-2 space-y-1">
                                             <div v-for="(serial, index) in formatSerialNumbers(detail.invoice_serials)" :key="index" class="pl-4 border-l-2 border-gray-200">
@@ -379,6 +410,12 @@ const downloadFile = (filePath) => {
                     <div class="py-8">
                         <div class="flex justify-end">
                             <div class="w-80 space-y-3">
+                                <!-- Pre-order notice -->
+                                <div v-if="preOrderItemsCount > 0" class="p-3 bg-orange-50 border border-orange-200 rounded text-sm">
+                                    <p class="text-orange-800 font-medium">⚠️ Pre-Order Notice</p>
+                                    <p class="text-orange-700">This invoice contains {{ preOrderItemsCount }} pre-order item(s) that will be fulfilled when stock becomes available.</p>
+                                </div>
+                                
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Subtotal:</span>
                                     <span class="font-medium">{{ formatNumber(modelData.subtotal, { style: 'currency', currency: 'PHP' }) }}</span>

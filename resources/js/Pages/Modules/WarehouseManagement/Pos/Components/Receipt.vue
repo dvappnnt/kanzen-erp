@@ -204,6 +204,13 @@ console.log(props.invoice);
                                 <td class="py-2">
                                     <div class="font-medium text-gray-800">
                                         {{ detail.warehouse_product?.supplier_product_detail?.product?.name || detail.warehouse_product?.slug || 'Unknown Product' }}
+                                        <!-- Pre-order indicator -->
+                                        <span
+                                            v-if="detail.is_pre_order"
+                                            class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2"
+                                        >
+                                            Pre Order
+                                        </span>
                                     </div>
                                     <!-- Show serials if they exist -->
                                     <div v-if="detail.invoice_serials?.length" class="text-xs text-gray-500 mt-1 pl-4 border-l-2 border-gray-200">

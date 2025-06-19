@@ -38,6 +38,7 @@ const formData = ref({
     tax_rate: 12,
     tax_amount: 0,
     shipping_cost: 0,
+    shipping_method: 'pickup',
     subtotal: 0,
     total_amount: 0,
     currency: 'PHP',
@@ -57,6 +58,9 @@ const formData = ref({
     },
     items: []
 });
+
+// Pre-order toggle
+const isPreOrder = ref(false);
 
 // Selected entities
 const selectedCompany = ref(null);
@@ -180,6 +184,19 @@ const totalAmount = computed(() => {
     return subtotal.value + taxAmount.value - discountAmount.value + formData.value.shipping_cost;
 });
 
+// Separate regular and pre-order items
+const regularItems = computed(() => {
+    return formData.value.items.filter(item => !item.is_pre_order);
+});
+
+const preOrderItems = computed(() => {
+    return formData.value.items.filter(item => item.is_pre_order);
+});
+
+const hasPreOrderItems = computed(() => {
+    return formData.value.items.some(item => item.is_pre_order);
+});
+
 // Watch for changes in computed values
 watch([subtotal, taxAmount, discountAmount, totalAmount], () => {
     formData.value.subtotal = subtotal.value;
@@ -215,6 +232,33 @@ const selectProduct = async (product) => {
     }
 
     try {
+        // If pre-order is enabled, skip serial validation
+        if (isPreOrder.value) {
+            // For pre-order items, we need to find existing pre-order items of the same product
+            const existingItem = formData.value.items.find(item => 
+                item.warehouse_product_id === product.id && item.is_pre_order
+            );
+            if (existingItem) {
+                existingItem.qty += 1;
+                existingItem.total = existingItem.price * existingItem.qty;
+            } else {
+                formData.value.items.push({
+                    warehouse_product_id: product.id,
+                    name: product.supplier_product_detail.product.name,
+                    price: parseFloat(product.price),
+                    qty: 1,
+                    total: parseFloat(product.price),
+                    has_serials: false,
+                    serials: [],
+                    is_pre_order: true
+                });
+            }
+            
+            searchQuery.value = '';
+            showSearchResults.value = false;
+            return;
+        }
+
         // Check if product has serials
         const response = await axios.get('/api/search/warehouse-products', {
             params: {
@@ -235,7 +279,9 @@ const selectProduct = async (product) => {
         }
 
         // If no serials, add directly to cart
-        const existingItem = formData.value.items.find(item => item.warehouse_product_id === product.id);
+        const existingItem = formData.value.items.find(item => 
+            item.warehouse_product_id === product.id && !item.is_pre_order
+        );
         if (existingItem) {
             existingItem.qty += 1;
             existingItem.total = existingItem.price * existingItem.qty;
@@ -247,7 +293,8 @@ const selectProduct = async (product) => {
                 qty: 1,
                 total: parseFloat(product.price),
                 has_serials: false,
-                serials: []
+                serials: [],
+                is_pre_order: false
             });
         }
         
@@ -263,6 +310,46 @@ const selectProduct = async (product) => {
 const handleSerialSubmit = async () => {
     if (!serialNumber.value) {
         serialError.value = 'Please enter a serial number';
+        return;
+    }
+
+    // If pre-order is enabled, skip serial validation
+    if (isPreOrder.value) {
+        // For pre-order items, we need to find existing pre-order items of the same product
+        const existingItem = formData.value.items.find(item => 
+            item.warehouse_product_id === currentProduct.value.id && item.is_pre_order
+        );
+        if (existingItem) {
+            if (existingItem.serials.includes(serialNumber.value)) {
+                serialError.value = 'This serial number is already in your cart';
+                return;
+            }
+            existingItem.serials.push(serialNumber.value);
+            existingItem.qty += 1;
+            existingItem.total = existingItem.price * existingItem.qty;
+        } else {
+            formData.value.items.push({
+                warehouse_product_id: currentProduct.value.id,
+                name: currentProduct.value.supplier_product_detail.product.name,
+                price: parseFloat(currentProduct.value.price),
+                qty: 1,
+                total: parseFloat(currentProduct.value.price),
+                has_serials: true,
+                serials: [serialNumber.value],
+                is_pre_order: true
+            });
+        }
+
+        // Clear input but keep modal open for more serial entries
+        serialNumber.value = '';
+        serialError.value = '';
+        
+        // Focus back on the input for next serial
+        nextTick(() => {
+            if (serialInput.value) {
+                serialInput.value.focus();
+            }
+        });
         return;
     }
 
@@ -282,7 +369,9 @@ const handleSerialSubmit = async () => {
         }
 
         // Check if serial is already in cart
-        const existingItem = formData.value.items.find(item => item.warehouse_product_id === currentProduct.value.id);
+        const existingItem = formData.value.items.find(item => 
+            item.warehouse_product_id === currentProduct.value.id && !item.is_pre_order
+        );
         if (existingItem) {
             if (existingItem.serials.includes(serialNumber.value)) {
                 serialError.value = 'This serial number is already in your cart';
@@ -299,7 +388,8 @@ const handleSerialSubmit = async () => {
                 qty: 1,
                 total: parseFloat(currentProduct.value.price),
                 has_serials: true,
-                serials: [serialNumber.value]
+                serials: [serialNumber.value],
+                is_pre_order: false
             });
         }
 
@@ -328,6 +418,18 @@ const closeSerialModal = () => {
 };
 
 const updateItemQuantity = async (item, change) => {
+    // Allow quantity changes for pre-order items regardless of serials
+    if (item.is_pre_order) {
+        const newQty = item.qty + change;
+        if (newQty > 0) {
+            item.qty = newQty;
+            item.total = item.price * newQty;
+        } else {
+            removeItem(item);
+        }
+        return;
+    }
+
     if (change > 0 && item.has_serials) {
         // For increment with serials, show serial modal
         currentProduct.value = {
@@ -376,6 +478,7 @@ const validateForm = () => {
     if (!formData.value.company_id) errors.company_id = 'Company is required';
     if (!formData.value.customer_id) errors.customer_id = 'Customer is required';
     if (!formData.value.warehouse_id) errors.warehouse_id = 'Warehouse is required';
+    if (!formData.value.shipping_method) errors.shipping_method = 'Shipping method is required';
     if (formData.value.items.length === 0) errors.items = 'At least one item is required';
 
     // Only validate payment details if not credit and is sales invoice
@@ -416,6 +519,7 @@ const submitForm = async () => {
             tax_rate: formData.value.tax_rate,
             tax_amount: formData.value.tax_amount,
             shipping_cost: formData.value.shipping_cost,
+            shipping_method: formData.value.shipping_method,
             subtotal: formData.value.subtotal,
             total_amount: formData.value.total_amount,
             status: formData.value.is_credit ? 'unpaid' : 'fully-paid',
@@ -426,7 +530,8 @@ const submitForm = async () => {
                 qty: item.qty,
                 price: item.price,
                 total: item.total,
-                serials: item.serials || []
+                serials: item.serials || [],
+                is_pre_order: item.is_pre_order || false
             }))
         };
 
@@ -461,6 +566,7 @@ const submitForm = async () => {
                 formDataObj.append(`items[${index}][qty]`, item.qty);
                 formDataObj.append(`items[${index}][price]`, item.price);
                 formDataObj.append(`items[${index}][total]`, item.total);
+                formDataObj.append(`items[${index}][is_pre_order]`, item.is_pre_order ? '1' : '0');
 
                 // Handle serials array
                 if (item.serials && Array.isArray(item.serials)) {
@@ -526,6 +632,7 @@ const saveAsDraft = async () => {
             tax_rate: formData.value.tax_rate,
             tax_amount: formData.value.tax_amount,
             shipping_cost: formData.value.shipping_cost,
+            shipping_method: formData.value.shipping_method,
             subtotal: formData.value.subtotal,
             total_amount: formData.value.total_amount,
             status: 'draft',
@@ -536,7 +643,8 @@ const saveAsDraft = async () => {
                 qty: item.qty,
                 price: item.price,
                 total: item.total,
-                serials: item.serials || []
+                serials: item.serials || [],
+                is_pre_order: item.is_pre_order || false
             }))
         };
 
@@ -571,6 +679,7 @@ const saveAsDraft = async () => {
                 formDataObj.append(`items[${index}][qty]`, item.qty);
                 formDataObj.append(`items[${index}][price]`, item.price);
                 formDataObj.append(`items[${index}][total]`, item.total);
+                formDataObj.append(`items[${index}][is_pre_order]`, item.is_pre_order ? '1' : '0');
 
                 // Handle serials array
                 if (item.serials && Array.isArray(item.serials)) {
@@ -786,36 +895,77 @@ const removeSerial = (item, serial) => {
                     <!-- Product Search and Table -->
                     <div class="space-y-4">
                         <!-- Product Search with Autocomplete -->
-                        <div class="relative">
-                            <input
-                                type="text"
-                                v-model="searchQuery"
-                                @input="searchProducts"
-                                @focus="showSearchResults = true"
-                                placeholder="Search products..."
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                            <!-- Search Results Dropdown -->
-                            <div
-                                v-if="showSearchResults && searchResults.length > 0"
-                                class="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200"
-                            >
-                                <ul class="max-h-60 overflow-auto py-1">
-                                    <li
-                                        v-for="product in searchResults"
-                                        :key="product.id"
-                                        @click="selectProduct(product)"
-                                        class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        <div class="flex gap-4 items-center">
+                            <div class="flex-1 relative">
+                                <input
+                                    type="text"
+                                    v-model="searchQuery"
+                                    @input="searchProducts"
+                                    @focus="showSearchResults = true"
+                                    placeholder="Search products..."
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <!-- Search Results Dropdown -->
+                                <div
+                                    v-if="showSearchResults && searchResults.length > 0"
+                                    class="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200"
+                                >
+                                    <ul class="max-h-60 overflow-auto py-1">
+                                        <li
+                                            v-for="product in searchResults"
+                                            :key="product.id"
+                                            @click="selectProduct(product)"
+                                            class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                        >
+                                            <div class="font-medium">
+                                                {{ product.supplier_product_detail?.product?.name }}
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                SKU: {{ product.supplier_product_detail?.product?.slug }}
+                                                | Price: {{ formatNumber(product.price, { style: 'currency', currency: 'PHP' }) }}
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Pre-order Toggle -->
+                            <div class="flex items-center gap-2">
+                                <label class="flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        v-model="isPreOrder"
+                                        class="sr-only"
+                                    />
+                                    <div
+                                        :class="[
+                                            'w-11 h-6 rounded-full transition-colors duration-200 ease-in-out',
+                                            isPreOrder ? 'bg-orange-600' : 'bg-gray-300'
+                                        ]"
                                     >
-                                        <div class="font-medium">
-                                            {{ product.supplier_product_detail?.product?.name }}
-                                        </div>
-                                        <div class="text-sm text-gray-500">
-                                            SKU: {{ product.supplier_product_detail?.product?.slug }}
-                                            | Price: {{ formatNumber(product.price, { style: 'currency', currency: 'PHP' }) }}
-                                        </div>
-                                    </li>
-                                </ul>
+                                        <div
+                                            :class="[
+                                                'w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out',
+                                                isPreOrder ? 'translate-x-5' : 'translate-x-0'
+                                            ]"
+                                        ></div>
+                                    </div>
+                                    <span class="ml-2 text-sm font-medium text-gray-700">Pre Order</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Pre-order Mode Banner -->
+                        <div
+                            v-if="isPreOrder"
+                            class="bg-orange-50 border border-orange-200 rounded-lg p-3"
+                        >
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-orange-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-orange-800 font-medium">Pre-Order Mode Active</span>
+                                <span class="text-orange-700 ml-2">Quantity and serial checks are disabled</span>
                             </div>
                         </div>
 
@@ -832,30 +982,102 @@ const removeSerial = (item, serial) => {
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="item in formData.items" :key="item.warehouse_product_id">
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            <div>{{ item.name }}</div>
-                                            <div v-if="item.has_serials" class="mt-1">
-                                                <button 
-                                                    @click="showSerialListModal(item)"
-                                                    class="text-xs text-blue-600 hover:text-blue-800"
-                                                >
-                                                    Serial Numbers:
-                                                    <span v-for="serial in item.serials" 
-                                                        :key="serial" 
-                                                        class="mr-1"
+                                    <!-- Regular Items Section -->
+                                    <template v-if="regularItems.length > 0">
+                                        <tr class="bg-gray-50">
+                                            <td colspan="5" class="px-6 py-2">
+                                                <h4 class="text-sm font-medium text-gray-700">Regular Items</h4>
+                                            </td>
+                                        </tr>
+                                        <tr v-for="item in regularItems" :key="`regular-${item.warehouse_product_id}`">
+                                            <td class="px-6 py-4 text-sm text-gray-900">
+                                                <div>{{ item.name }}</div>
+                                                <div v-if="item.has_serials" class="mt-1">
+                                                    <button 
+                                                        @click="showSerialListModal(item)"
+                                                        class="text-xs text-blue-600 hover:text-blue-800"
                                                     >
-                                                        {{ serial }}{{ item.serials.indexOf(serial) < item.serials.length - 1 ? ',' : '' }}
-                        </span>
+                                                        Serial Numbers:
+                                                        <span v-for="serial in item.serials" 
+                                                            :key="serial" 
+                                                            class="mr-1"
+                                                        >
+                                                            {{ serial }}{{ item.serials.indexOf(serial) < item.serials.length - 1 ? ',' : '' }}
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                                {{ formatNumber(item.price, { style: 'currency', currency: 'PHP' }) }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                                <div class="flex items-center justify-end space-x-2">
+                                                    <template v-if="!item.has_serials">
+                                                        <button 
+                                                            @click="updateItemQuantity(item, -1)" 
+                                                            class="text-gray-500 hover:text-gray-700"
+                                                        >
+                                                            <span class="text-xl">-</span>
+                                                        </button>
+                                                        <span class="w-8 text-center">{{ item.qty }}</span>
+                                                        <button 
+                                                            @click="updateItemQuantity(item, 1)" 
+                                                            class="text-gray-500 hover:text-gray-700"
+                                                        >
+                                                            <span class="text-xl">+</span>
+                                                        </button>
+                                                    </template>
+                                                    <template v-else>
+                                                        <span class="w-8 text-center">{{ item.serials.length }}</span>
+                                                    </template>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                                {{ formatNumber(item.total, { style: 'currency', currency: 'PHP' }) }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button @click="removeItem(item)" class="text-red-600 hover:text-red-900">
+                                                    Remove
                                                 </button>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                                            {{ formatNumber(item.price, { style: 'currency', currency: 'PHP' }) }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                                            <div class="flex items-center justify-end space-x-2">
-                                                <template v-if="!item.has_serials">
+                                            </td>
+                                        </tr>
+                                    </template>
+
+                                    <!-- Pre-order Items Section -->
+                                    <template v-if="preOrderItems.length > 0">
+                                        <tr class="bg-orange-50">
+                                            <td colspan="5" class="px-6 py-2">
+                                                <h4 class="text-sm font-medium text-orange-700">Pre-Order Items</h4>
+                                            </td>
+                                        </tr>
+                                        <tr v-for="item in preOrderItems" :key="`preorder-${item.warehouse_product_id}`" class="bg-orange-50">
+                                            <td class="px-6 py-4 text-sm text-gray-900">
+                                                <div class="flex items-center gap-2">
+                                                    <span>{{ item.name }}</span>
+                                                    <span class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                                        Pre Order
+                                                    </span>
+                                                </div>
+                                                <div v-if="item.has_serials" class="mt-1">
+                                                    <button 
+                                                        @click="showSerialListModal(item)"
+                                                        class="text-xs text-blue-600 hover:text-blue-800"
+                                                    >
+                                                        Serial Numbers:
+                                                        <span v-for="serial in item.serials" 
+                                                            :key="serial" 
+                                                            class="mr-1"
+                                                        >
+                                                            {{ serial }}{{ item.serials.indexOf(serial) < item.serials.length - 1 ? ',' : '' }}
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                                {{ formatNumber(item.price, { style: 'currency', currency: 'PHP' }) }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                                <div class="flex items-center justify-end space-x-2">
                                                     <button 
                                                         @click="updateItemQuantity(item, -1)" 
                                                         class="text-gray-500 hover:text-gray-700"
@@ -868,22 +1090,20 @@ const removeSerial = (item, serial) => {
                                                         class="text-gray-500 hover:text-gray-700"
                                                     >
                                                         <span class="text-xl">+</span>
-                    </button>
-                </template>
-                                                <template v-else>
-                                                    <span class="w-8 text-center">{{ item.serials.length }}</span>
-                                                </template>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                                            {{ formatNumber(item.total, { style: 'currency', currency: 'PHP' }) }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button @click="removeItem(item)" class="text-red-600 hover:text-red-900">
-                                                Remove
-                                            </button>
-                                        </td>
-                                    </tr>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                                {{ formatNumber(item.total, { style: 'currency', currency: 'PHP' }) }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button @click="removeItem(item)" class="text-red-600 hover:text-red-900">
+                                                    Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+
                                     <tr v-if="formData.items.length === 0">
                                         <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
                                             No items added yet. Use the search box above to add products.
@@ -914,6 +1134,22 @@ const removeSerial = (item, serial) => {
                                     >
                                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                 </label>
+                            </div>
+
+                            <!-- Shipping Method -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Shipping Method
+                                    <span class="text-red-500">*</span>
+                                </label>
+                                <select
+                                    v-model="formData.shipping_method"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">Select shipping method</option>
+                                    <option value="pickup">Pickup</option>
+                                    <option value="delivery">Delivery</option>
+                                </select>
                             </div>
 
                             <!-- Payment Method Selection (only show if not credit and is sales invoice) -->
@@ -965,6 +1201,12 @@ const removeSerial = (item, serial) => {
                         <!-- Totals Breakdown -->
                         <div class="bg-gray-50 p-6 rounded-lg space-y-4">
                             <h4 class="font-medium text-gray-900">Invoice Summary</h4>
+                            
+                            <!-- Pre-order notice -->
+                            <div v-if="hasPreOrderItems" class="p-3 bg-orange-50 border border-orange-200 rounded text-sm">
+                                <p class="text-orange-800 font-medium">⚠️ Pre-Order Notice</p>
+                                <p class="text-orange-700">This invoice contains {{ preOrderItems.length }} pre-order item(s) that will be fulfilled when stock becomes available.</p>
+                            </div>
                             
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-600">Subtotal</span>
@@ -1097,6 +1339,12 @@ const removeSerial = (item, serial) => {
                             <DialogPanel class="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
                                 <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900 mb-4">
                                     Enter Serial Number
+                                    <span
+                                        v-if="isPreOrder"
+                                        class="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2"
+                                    >
+                                        Pre Order
+                                    </span>
                                 </DialogTitle>
 
                                 <div class="mt-4">
@@ -1116,6 +1364,9 @@ const removeSerial = (item, serial) => {
                                             <p class="text-xs text-blue-600">
                                                 {{ formData.items.find(i => i.warehouse_product_id === currentProduct?.id)?.serials?.length || 0 }} serial/batch number(s)
                                             </p>
+                                            <p v-if="isPreOrder" class="text-xs text-orange-600 mt-1">
+                                                Pre-order mode: Serial validation will be skipped
+                                            </p>
                                         </div>
                                     </div>
 
@@ -1127,7 +1378,7 @@ const removeSerial = (item, serial) => {
                                                 v-model="serialNumber"
                                                 @keyup.enter="handleSerialSubmit"
                                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                placeholder="Enter or scan serial number"
+                                                :placeholder="isPreOrder ? 'Enter or scan serial number (Pre-order)' : 'Enter or scan serial number'"
                                                 ref="serialInput"
                                                 autofocus
                                             />
@@ -1147,7 +1398,7 @@ const removeSerial = (item, serial) => {
                                         @click="handleSerialSubmit"
                                         class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
                                     >
-                                        Add Serial
+                                        {{ isPreOrder ? 'Add Serial (Pre-order)' : 'Add Serial' }}
                                     </button>
                                 </div>
                             </DialogPanel>
