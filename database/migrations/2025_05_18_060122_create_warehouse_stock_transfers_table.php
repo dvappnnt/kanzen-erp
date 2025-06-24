@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('origin_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
             $table->foreignId('destination_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
 
-            $table->enum('status', ['pending', 'for-transfer', 'partially-transferred', 'fully-transferred', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'for-transfer', 'approved', 'rejected', 'completed', 'partially-transferred', 'fully-transferred', 'cancelled'])->default('pending');
             $table->text('remarks')->nullable();
             $table->foreignId('created_by_user_id')->constrained('users')->onDelete('cascade');
 

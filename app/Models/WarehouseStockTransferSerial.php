@@ -17,15 +17,25 @@ class WarehouseStockTransferSerial extends Model
         'manufactured_at',
         'expired_at',
         'is_sold',
+        'is_received',
+        'received_at'
     ];
 
-    public function warehouseStockTransfer()
+    protected $casts = [
+        'is_sold' => 'boolean',
+        'is_received' => 'boolean',
+        'manufactured_at' => 'datetime',
+        'expired_at' => 'datetime',
+        'received_at' => 'datetime'
+    ];
+
+    public function transfer()
     {
-        return $this->belongsTo(WarehouseStockTransfer::class);
+        return $this->belongsTo(WarehouseStockTransfer::class, 'warehouse_stock_transfer_id');
     }
 
-    public function warehouseStockTransferDetail()
+    public function detail()
     {
-        return $this->belongsTo(WarehouseStockTransferDetail::class);
+        return $this->belongsTo(WarehouseStockTransferDetail::class, 'warehouse_stock_transfer_detail_id');
     }
 }

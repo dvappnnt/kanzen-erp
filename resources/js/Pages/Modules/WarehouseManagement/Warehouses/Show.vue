@@ -15,6 +15,7 @@ import { useToast } from "vue-toastification";
 import { Link } from "@inertiajs/vue3";
 import _ from "lodash";
 import Autocomplete from "@/Components/Data/Autocomplete.vue";
+import Modal from "@/Components/Modal.vue";
 
 const modelName = "warehouses";
 const page = usePage();
@@ -120,7 +121,10 @@ const showStockTransferModal = ref(false);
 const transferForm = ref({
     quantity: 0,
     remarks: '',
-    destination_warehouse: null
+    destination_warehouse: null,
+    serials: [],
+    serials_valid: true,
+    serials_error: ''
 });
 
 const showStockTransferHistoryModal = ref(false);
@@ -138,6 +142,12 @@ const barcodeForm = ref({
     barcode: '',
     sku: ''
 });
+
+const serialInput = ref('');
+const serialValidationLoading = ref(false);
+const serialValidationError = ref('');
+
+const warehouses = ref([]);
 
 const loadWarehouseProducts = async (page = 1) => {
     try {
@@ -356,7 +366,10 @@ const openStockTransferModal = (product) => {
     transferForm.value = {
         quantity: 0,
         remarks: '',
-        destination_warehouse: null
+        destination_warehouse: null,
+        serials: [],
+        serials_valid: true,
+        serials_error: ''
     };
     showStockTransferModal.value = true;
 };
@@ -367,26 +380,89 @@ const closeStockTransferModal = () => {
     transferForm.value = {
         quantity: 0,
         remarks: '',
-        destination_warehouse: null
+        destination_warehouse: null,
+        serials: [],
+        serials_valid: true,
+        serials_error: ''
     };
 };
 
 const handleWarehouseSelect = (response) => {
     if (response?.data?.[0]) {
-        transferForm.value.destination_warehouse = response.data[0];
+        transferForm.value.destination_warehouse = {
+            id: response.data[0].id,
+            name: response.data[0].name,
+            company: response.data[0].company
+        };
     }
+};
+
+// Add watch for serials to update quantity
+watch(() => transferForm.value.serials, (newSerials) => {
+    if (selectedProduct.value?.has_serials) {
+        transferForm.value.quantity = newSerials.length;
+    }
+}, { deep: true });
+
+const validateSerial = async (serial) => {
+    if (!serial || !selectedProduct.value) return;
+
+    try {
+        serialValidationLoading.value = true;
+        serialValidationError.value = '';
+
+        const response = await axios.get('/api/serial-check/warehouse-products', {
+            params: {
+                warehouse_id: modelData.value.id,
+                serial_number: serial,
+                product_id: selectedProduct.value.id
+            }
+        });
+
+        if (response.data.data) {
+            // Add serial to the list if not already present
+            if (!transferForm.value.serials.some(s => s.serial_number === serial)) {
+                transferForm.value.serials.push({
+                    serial_number: serial,
+                    batch_number: response.data.data.batch_number,
+                    manufactured_at: response.data.data.manufactured_at,
+                    expired_at: response.data.data.expired_at
+                });
+            }
+            serialInput.value = ''; // Clear input after successful addition
+        } else {
+            serialValidationError.value = 'Invalid serial number';
+        }
+    } catch (error) {
+        serialValidationError.value = error.response?.data?.message || 'Failed to validate serial number';
+    } finally {
+        serialValidationLoading.value = false;
+    }
+};
+
+const removeSerial = (idx) => {
+    transferForm.value.serials.splice(idx, 1);
 };
 
 const saveStockTransfer = async () => {
     try {
         isLoading.value = true;
         
+        // Validate serials if product requires them
+        if (selectedProduct.value.has_serials && transferForm.value.serials.length !== transferForm.value.quantity) {
+            toast.error('Please enter all required serial numbers');
+            return;
+        }
+        
         const formData = {
             origin_warehouse_id: modelData.value.id,
-            origin_warehouse_product_id: selectedProduct.value.id,
             destination_warehouse_id: transferForm.value.destination_warehouse.id,
-            quantity: parseInt(transferForm.value.quantity),
-            remarks: transferForm.value.remarks
+            transfer_date: new Date().toISOString().split('T')[0],
+            details: [{
+                origin_warehouse_product_id: selectedProduct.value.id,
+                expected_qty: parseInt(transferForm.value.quantity),
+                serials: transferForm.value.serials
+            }]
         };
 
         await axios.post(`/api/warehouse-stock-transfers`, formData);
@@ -473,8 +549,18 @@ const saveBarcodeSku = async () => {
     }
 };
 
+const loadWarehouses = async () => {
+    try {
+        const response = await axios.get('/api/warehouses');
+        warehouses.value = response.data.data.filter(w => w.id !== modelData.value.id);
+    } catch (error) {
+        console.error('Error loading warehouses:', error);
+    }
+};
+
 onMounted(() => {
     loadWarehouseProducts();
+    loadWarehouses();
 });
 </script>
 
@@ -1181,80 +1267,139 @@ onMounted(() => {
         </div>
 
         <!-- Stock Transfer Modal -->
-        <div v-if="showStockTransferModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">Stock Transfer</h3>
-                    <button @click="closeStockTransferModal" class="text-gray-400 hover:text-gray-500">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+        <Modal :show="showStockTransferModal" @close="closeStockTransferModal">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    Transfer Stock
+                </h2>
 
-                <div class="space-y-4">
-                    <div v-if="selectedProduct">
                         <div class="mb-4 p-4 bg-gray-50 rounded-lg">
                             <h4 class="text-sm font-medium text-gray-900 mb-2">Product Details</h4>
-                            <p class="text-sm text-gray-600">{{ selectedProduct.supplierProductDetail?.product?.name }}</p>
-                            <p class="text-sm text-gray-500">Current Stock: {{ formatNumber(selectedProduct.qty) }}</p>
-                        </div>
+                    <p class="text-sm text-gray-600">{{ selectedProduct?.supplier_product_detail?.product?.name }}</p>
+                    <p class="text-sm text-gray-500">Current Stock: {{ formatNumber(selectedProduct?.qty) }}</p>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Destination Warehouse</label>
-                        <Autocomplete
-                            search-url="/api/autocomplete/warehouses"
-                            model-name="warehouses"
-                            placeholder="Search warehouse..."
-                            :map-custom-buttons="(row) => row"
-                            @select="handleWarehouseSelect"
-                        />
-                        <div v-if="transferForm.destination_warehouse" class="mt-2 p-2 bg-gray-50 rounded text-sm">
-                            Selected: {{ transferForm.destination_warehouse.name }}
-                        </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Destination Warehouse</label>
+                    <select
+                        v-model="transferForm.destination_warehouse"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    >
+                        <option value="" disabled>Select a warehouse</option>
+                        <option v-for="warehouse in warehouses" :key="warehouse.id" :value="warehouse">
+                            {{ warehouse.name }}
+                        </option>
+                    </select>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Quantity to Transfer</label>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Quantity</label>
                         <input 
                             type="number" 
-                            v-model.number="transferForm.quantity"
-                            :max="selectedProduct?.qty"
+                        v-model="transferForm.quantity"
                             min="1"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        :max="selectedProduct?.qty"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        :disabled="selectedProduct?.has_serials"
                         />
+                    <p v-if="selectedProduct?.has_serials" class="mt-1 text-sm text-gray-500">
+                        Quantity is automatically set based on the number of serial numbers entered
+                    </p>
                     </div>
 
-                    <div>
+                <!-- Serial Numbers Section (if product has serials) -->
+                <div v-if="selectedProduct?.has_serials" class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Serial Numbers</label>
+                    <div class="mt-1">
+                        <div class="flex items-center space-x-2">
+                            <input
+                                type="text"
+                                v-model="serialInput"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                placeholder="Enter serial number"
+                                @keyup.enter="validateSerial(serialInput)"
+                                :disabled="serialValidationLoading"
+                            />
+                            <button
+                                type="button"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                @click="validateSerial(serialInput)"
+                                :disabled="serialValidationLoading || !serialInput"
+                            >
+                                Add
+                            </button>
+                        </div>
+
+                        <p v-if="serialValidationError" class="mt-2 text-sm text-red-600">
+                            {{ serialValidationError }}
+                        </p>
+
+                        <!-- List of added serials -->
+                        <div v-if="transferForm.serials.length" class="mt-4">
+                            <h4 class="text-sm font-medium text-gray-900 mb-2">Added Serial Numbers</h4>
+                            <div class="space-y-2">
+                                <div
+                                    v-for="(serial, idx) in transferForm.serials"
+                                    :key="idx"
+                                    class="flex items-center justify-between p-2 bg-gray-50 rounded-md"
+                                >
+                                    <div class="text-sm">
+                                        <span class="font-medium">{{ serial.serial_number }}</span>
+                                        <span v-if="serial.batch_number" class="text-gray-500 ml-2">
+                                            Batch: {{ serial.batch_number }}
+                                        </span>
+                                        <span v-if="serial.manufactured_at" class="text-gray-500 ml-2">
+                                            Mfg: {{ serial.manufactured_at }}
+                                        </span>
+                                        <span v-if="serial.expired_at" class="text-gray-500 ml-2">
+                                            Exp: {{ serial.expired_at }}
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="text-red-600 hover:text-red-900"
+                                        @click="removeSerial(idx)"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p v-if="transferForm.quantity > 0 && transferForm.serials.length !== transferForm.quantity" class="mt-2 text-sm text-yellow-600">
+                            Please enter {{ transferForm.quantity }} serial numbers ({{ transferForm.serials.length }} added)
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Remarks</label>
                         <textarea 
                             v-model="transferForm.remarks"
                             rows="3"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            placeholder="Enter any remarks..."
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                         ></textarea>
-                    </div>
                 </div>
 
                 <div class="mt-6 flex justify-end space-x-3">
                     <button 
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         @click="closeStockTransferModal"
-                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        :disabled="isLoading"
                     >
                         Cancel
                     </button>
                     <button 
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         @click="saveStockTransfer"
-                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                        :disabled="isLoading || !transferForm.destination_warehouse || !transferForm.quantity || transferForm.quantity > selectedProduct?.qty"
+                        :disabled="isLoading || !transferForm.destination_warehouse || !transferForm.quantity || (selectedProduct?.has_serials && transferForm.serials.length !== transferForm.quantity)"
                     >
-                        Transfer Stock
+                        {{ isLoading ? 'Saving...' : 'Save Transfer' }}
                     </button>
                 </div>
             </div>
-        </div>
+        </Modal>
 
         <!-- Stock Transfer History Modal -->
         <div v-if="showStockTransferHistoryModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">

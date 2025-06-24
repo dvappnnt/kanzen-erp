@@ -39,17 +39,29 @@ export function formatName(modelName) {
 }
 
 export function formatDate(format, dateString) {
-    const date = new Date(dateString);
+    if (!dateString) return '—';
+    
+    try {
+        const date = new Date(dateString);
+        
+        // Check if date is invalid
+        if (isNaN(date.getTime())) {
+            return '—';
+        }
 
-    const map = {
-        Y: date.getFullYear(),                         // Full year (2025)
-        y: String(date.getFullYear()).slice(-2),        // Last two digits of year (25)
-        m: String(date.getMonth() + 1).padStart(2, "0"), // Month (01–12)
-        M: new Intl.DateTimeFormat('en', { month: 'short' }).format(date), // Short month name (Jan, Feb)
-        d: String(date.getDate()).padStart(2, "0"),     // Day (01–31)
-    };
+        const map = {
+            Y: date.getFullYear(),                         // Full year (2025)
+            y: String(date.getFullYear()).slice(-2),        // Last two digits of year (25)
+            m: String(date.getMonth() + 1).padStart(2, "0"), // Month (01–12)
+            M: new Intl.DateTimeFormat('en', { month: 'short' }).format(date), // Short month name (Jan, Feb)
+            d: String(date.getDate()).padStart(2, "0"),     // Day (01–31)
+        };
 
-    return format.split('').map(char => map[char] ?? char).join('');
+        return format.split('').map(char => map[char] ?? char).join('');
+    } catch (error) {
+        console.warn('Invalid date:', dateString);
+        return '—';
+    }
 }
 
 export function formatTime(timeString, format = '12h') {

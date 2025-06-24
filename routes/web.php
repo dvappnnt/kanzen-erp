@@ -113,8 +113,6 @@ Route::middleware([
     Route::resource('couriers', CourierController::class)->only(['index', 'show', 'edit', 'create']);
     Route::resource('warehouse-stock-transfers', WarehouseStockTransferController::class)->only(['index', 'show', 'edit', 'create']);
 
-    Route::resource('advertisements', AdvertisementController::class)->only(['index', 'show', 'edit', 'create']);
-
     Route::get('categories/export', [CategoryController::class, 'export'])->name('categories.export');
     Route::get('categories/import', [CategoryController::class, 'import'])->name('categories.import');
     Route::resource('categories', CategoryController::class)->only(['index', 'show', 'edit', 'create']);

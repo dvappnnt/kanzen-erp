@@ -37,6 +37,12 @@ class WarehouseStockTransferController extends Controller
             'originWarehouse.company',
             'destinationWarehouse',
             'destinationWarehouse.company',
+            'details.originWarehouseProduct',
+            'details.originWarehouseProduct.supplierProductDetail',
+            'details.originWarehouseProduct.supplierProductDetail.productVariation',
+            'details.destinationWarehouseProduct',
+            'details.destinationWarehouseProduct.supplierProductDetail',
+            'details.destinationWarehouseProduct.supplierProductDetail.productVariation',
             'createdByUser',
             'details',
             'details.serials'

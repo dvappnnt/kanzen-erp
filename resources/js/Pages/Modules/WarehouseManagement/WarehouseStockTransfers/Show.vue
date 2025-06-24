@@ -1,51 +1,127 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
-import HeaderActions from "@/Components/HeaderActions.vue";
-import { ref, computed, onMounted } from "vue";
+import { Link } from "@inertiajs/vue3";
+import { ref, computed, onMounted, watch } from "vue";
 import { usePage } from "@inertiajs/vue3";
-import moment from "moment";
-import HeaderInformation from "@/Components/Sections/HeaderInformation.vue";
-import DetailedProfileCard from "@/Components/Sections/DetailedProfileCard.vue";
-import DisplayInformation from "@/Components/Sections/DisplayInformation.vue";
-import {
-    singularizeAndFormat,
-    getStatusPillClass,
-    humanReadable,
-} from "@/utils/global";
-import { useColors } from "@/Composables/useColors";
-import QRCode from "qrcode.vue";
-import { router } from "@inertiajs/vue3";
 import { useToast } from "vue-toastification";
-import { formatNumber, formatDate } from "@/utils/global";
-import Autocomplete from "@/Components/Data/Autocomplete.vue";
+import {
+    formatDate,
+    humanReadable,
+    getStatusPillClass,
+    formatNumber,
+    singularizeAndFormat,
+} from "@/utils/global";
 import Modal from "@/Components/Modal.vue";
-import axios from "@/axios";
+import DetailedProfileCard from "@/Components/Sections/DetailedProfileCard.vue";
+import Autocomplete from "@/Components/Data/Autocomplete.vue";
+import { useColors } from "@/Composables/useColors";
+import { useForm } from "@inertiajs/vue3";
+import axios from "axios";
+import DialogModal from "@/Components/DialogModal.vue";
+import SecondaryButton from "@/Components/SecondaryButton.vue";
+import PrimaryButton from "@/Components/PrimaryButton.vue";
+import DangerButton from "@/Components/DangerButton.vue";
 
 const modelName = "warehouse-stock-transfers";
 const page = usePage();
+const toast = useToast();
 
-const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
+const props = defineProps({
+    modelData: {
+        type: Object,
+        required: true,
+    },
+});
 
-const profileDetails = [
-    { label: "Number", value: "number", class: "text-xl font-bold" },
-    {
-        label: "Company",
-        value: (row) => row.origin_warehouse?.company?.name || "—",
-        class: "text-gray-500",
+// Base data
+const modelData = computed(() => page.props.modelData);
+const originWarehouseId = computed(() => modelData.value?.origin_warehouse_id);
+const details = ref([]);
+
+// Watch for modelData changes
+watch(
+    modelData,
+    (newVal) => {
+        if (newVal?.details && Array.isArray(newVal.details)) {
+            details.value = newVal.details.map((d) => ({
+                ...d,
+                product:
+                    d.origin_warehouse_product?.supplier_product_detail
+                        ?.product || {},
+                transferred_qty: d.transferred_qty || 0,
+                serials: d.serials || [],
+            }));
+        }
     },
+    { immediate: true }
+);
+const items = ref([]);
+const supplierProducts = ref([]);
+
+// Loading states
+const isLoading = ref(false);
+const isLoadingProducts = ref(false);
+const hasLoadedProducts = ref(false);
+
+// Modal states
+const showSerialModal = ref(false);
+const showEditModal = ref(false);
+const showRemarksModal = ref(false);
+const showActionRemarksModal = ref(false);
+const showConfirmModal = ref(false);
+const showReceiveModal = ref(false);
+const showReturnModal = ref(false);
+const showActionModal = ref(false);
+
+// Form and input states
+const serialModalRowIdx = ref(null);
+const serialInput = ref("");
+const serialsInputList = ref([]);
+const serialValidationLoading = ref(false);
+const serialValidationError = ref("");
+const selectedProduct = ref(null);
+const itemForm = ref({});
+const purchaseOrderDetails = ref([]);
+const editingDetail = ref(null);
+const actionType = ref("");
+const remarks = ref("");
+const confirmAction = ref("");
+const confirmMessage = ref("");
+const approvalLevels = ref([]);
+const approvalRemarks = ref([]);
+const selectedRemarks = ref([]);
+const selectedDetail = ref(null);
+const actionNotes = ref("");
+
+// Form objects
+const submitting = ref(false);
+const error = ref("");
+const flash = (message, type = "success") => {
+    const event = new CustomEvent("flash", {
+        detail: { message, type },
+    });
+    window.dispatchEvent(event);
+};
+
+const receiveForm = ref({
+    received_qty: 0,
+    serials: [],
+});
+
+const returnForm = ref({
+    return_qty: 0,
+    serials: [],
+    remarks: "",
+});
+
+const bulkManufacturedDate = ref("");
+const bulkExpiryDate = ref("");
+
+// Profile details configuration
+const profileDetails = computed(() => [
     {
-        label: "Origin Warehouse",
-        value: (row) => row.origin_warehouse?.name || "—",
-        class: "text-gray-600 font-semibold",
-    },
-    {
-        label: "Destination Warehouse",
-        value: (row) => row.destination_warehouse?.name || "—",
-        class: "text-gray-600 font-semibold",
-    },
-    {
-        label: "Status",
-        value: (row) => humanReadable(row.status),
+        label: "Transfer Number",
+        value: (row) => row.number,
         class: "text-gray-600 font-semibold",
     },
     {
@@ -54,418 +130,104 @@ const profileDetails = [
             row.transfer_date ? formatDate("M d Y", row.transfer_date) : "—",
         class: "text-gray-600 font-semibold",
     },
-];
+    {
+        label: "Status",
+        value: (row) => humanReadable(row.status),
+        class: "text-gray-600 font-semibold",
+    },
+    {
+        label: "Created By",
+        value: (row) => row.created_by_user?.name || "—",
+        class: "text-gray-600 font-semibold",
+    },
+    {
+        label: "Created At",
+        value: (row) =>
+            row.created_at ? formatDate("M d Y", row.created_at) : "—",
+        class: "text-gray-600 font-semibold",
+    },
+]);
 
-const modelData = computed(() => page.props.modelData || {});
-const originWarehouseId = computed(() => modelData.value.origin_warehouse_id);
-const details = ref([]);
-const showSerialModal = ref(false);
-const serialModalRowIdx = ref(null);
-const serialInput = ref("");
-const serialsInputList = ref([]);
-const serialValidationLoading = ref(false);
-const serialValidationError = ref("");
-
-const toast = useToast();
-const items = ref([]);
-const supplierProducts = ref([]);
-const isLoading = ref(false);
-const isLoadingProducts = ref(false);
-const hasLoadedProducts = ref(false);
-const selectedProduct = ref(null);
-const itemForm = ref({});
-const purchaseOrderDetails = ref([]);
-const showEditModal = ref(false);
-const editingDetail = ref(null);
-const showRemarksModal = ref(false);
-const showActionRemarksModal = ref(false);
-const actionType = ref("");
-const remarks = ref("");
-const showConfirmModal = ref(false);
-const confirmAction = ref("");
-const confirmMessage = ref("");
-const approvalLevels = ref([]);
-const approvalRemarks = ref([]);
-const selectedRemarks = ref([]);
-const showReceiveModal = ref(false);
-const showReturnModal = ref(false);
-const selectedDetail = ref(null);
-const receiveForm = ref({
-    received_qty: 0,
-    has_serials: false,
-    type: "serial_numbers",
-    serials: [],
-});
-const returnForm = ref({
-    return_qty: 0,
-    serials: [],
-});
-const bulkManufacturedDate = ref("");
-const bulkExpiryDate = ref("");
-
-const hasDetails = computed(() => {
-    return purchaseOrderDetails.value.length > 0;
-});
-
-const calculateOrderTotal = computed(() => {
+// Computed properties
+const isFullyReceived = computed(() => {
     return (
-        purchaseOrderDetails.value?.reduce((sum, detail) => {
-            const total = Number(detail.total) || 0;
-            return sum + total;
-        }, 0) || 0
+        modelData?.details?.every(
+            (detail) => detail.expected_qty === detail.transferred_qty
+        ) || false
     );
 });
 
-// Add computed properties for totals
-const subtotal = computed(() => {
-    return purchaseOrderDetails.value.reduce((sum, detail) => {
-        return sum + (Number(detail.total) || 0);
-    }, 0);
-});
+const canReceive = computed(() => modelData?.status === "approved");
 
-const taxAmount = computed(() => {
-    return (subtotal.value * (modelData.value?.tax_rate || 0)) / 100;
-});
-
-const totalAmount = computed(() => {
-    return (
-        subtotal.value +
-        taxAmount.value +
-        (Number(modelData.value?.shipping_cost) || 0)
+const canReturn = computed(() => {
+    return ["approved", "partially_received", "fully_received"].includes(
+        props.modelData.status
     );
 });
 
-const loadSupplierProducts = async () => {
-    if (!modelData.value?.supplier_id) {
-        toast.error("Supplier ID not found");
-        return;
-    }
+const canComplete = computed(() => {
+    return props.modelData.status === "fully_received";
+});
 
-    try {
-        isLoadingProducts.value = true;
-        const response = await axios.get(
-            `/api/suppliers/${modelData.value.supplier_id}/products`
-        );
-        const productsData = response.data || [];
+const canAddDetails = computed(
+    () => modelData?.status === "pending" && details.value.length > 0
+);
 
-        if (Array.isArray(productsData) && productsData.length > 0) {
-            supplierProducts.value = productsData;
-            hasLoadedProducts.value = true;
-        } else {
-            toast.error("No products available for this supplier");
-            supplierProducts.value = [];
-        }
-    } catch (error) {
-        console.error("Error loading supplier products:", error);
-        toast.error("Failed to load supplier products");
-        supplierProducts.value = [];
-    } finally {
-        isLoadingProducts.value = false;
-    }
-};
+const actionTitle = computed(() => {
+    const action =
+        actionType.value.charAt(0).toUpperCase() + actionType.value.slice(1);
+    return `${action} Stock Transfer`;
+});
 
-const handleProductSelect = (response) => {
-    const product = response?.data?.[0];
-    if (!product) return;
-    // Prevent duplicate
-    if (
-        details.value.some(
-            (row) => row.origin_warehouse_product_id === product.id
-        )
-    ) {
-        toast.error("Product already added.");
-        return;
-    }
-    details.value.push({
-        origin_warehouse_product_id: product.id,
-        product,
-        transfer_qty: 1,
+// Modal handlers
+const openReceiveModal = (detail) => {
+    selectedDetail.value = detail;
+    receiveForm.value = {
+        received_qty: 0,
         serials: [],
-        serials_valid: true,
-        serials_error: "",
-    });
-};
-
-const mapWarehouseProductData = (data) => {
-    // Accepts the API response and returns the product object
-    return data.data || data;
-};
-
-const fetchWarehouseProductAutocomplete = async (search) => {
-    // Used by Autocomplete to fetch with warehouse_id param
-    if (!originWarehouseId.value) return [];
-    const res = await axios.get(
-        `/api/autocomplete/warehouse-products?search=${encodeURIComponent(
-            search
-        )}&warehouse_id=${originWarehouseId.value}`
-    );
-    return res.data.data || [];
-};
-
-const handleVariationSelect = (item) => {
-    if (!item.product_id || !item.variation_id) {
-        item.price = 0;
-        item.supplier_product_detail_id = null;
-        return;
-    }
-
-    const product = supplierProducts.value.find(
-        (p) => p.id === parseInt(item.product_id)
-    );
-    if (product) {
-        const detail = product.supplier_product_details.find(
-            (d) => d.product_variation_id === parseInt(item.variation_id)
-        );
-        if (detail) {
-            item.price = detail.price;
-            item.supplier_product_detail_id = detail.id;
-        }
-    }
-};
-
-const addNewRow = async () => {
-    if (!hasLoadedProducts.value) {
-        await loadSupplierProducts();
-    }
-
-    if (supplierProducts.value.length === 0) {
-        toast.error("No products available for this supplier");
-        return;
-    }
-
-    items.value.push({
-        id: Date.now(),
-        product_id: "",
-        variation_id: "",
-        supplier_product_detail_id: null,
-        qty: 1,
-        free_qty: 0,
-        discount: 0,
-        price: 0,
-        total: 0,
-        notes: "",
-    });
-};
-
-const removeRow = (idx) => {
-    details.value.splice(idx, 1);
-};
-
-const saveAllRows = async () => {
-    if (items.value.length === 0) {
-        return;
-    }
-
-    try {
-        isLoading.value = true;
-
-        // Save all rows in the table
-        for (const item of items.value) {
-            if (!item.supplier_product_detail_id) {
-                toast.error("Please select both product and variation");
-                continue;
-            }
-
-            const payload = {
-                supplier_product_detail_id: item.supplier_product_detail_id,
-                qty: item.qty,
-                free_qty: item.free_qty || 0,
-                discount: item.discount || 0,
-                price: item.price,
-                total: calculateTotal(item),
-                notes: item.notes,
-            };
-
-            await axios.post(
-                `/api/warehouse-products/${modelData.value.id}/details`,
-                payload
-            );
-        }
-
-        toast.success("Items added successfully");
-        items.value = []; // Clear the items
-        await loadPurchaseOrderDetails(); // Reload the details
-    } catch (error) {
-        console.error("Error saving items:", error);
-        toast.error(error.response?.data?.message || "Failed to save items");
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const handleKeyDown = async (event, item) => {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        await saveAllRows();
-    }
-};
-
-const getProductVariations = (productId) => {
-    if (!productId) return [];
-    const product = supplierProducts.value.find(
-        (p) => p.id === parseInt(productId)
-    );
-    if (!product || !product.supplier_product_details) return [];
-
-    return product.supplier_product_details.map((detail) => ({
-        id: detail.product_variation_id,
-        name:
-            product.variations.find((v) => v.id === detail.product_variation_id)
-                ?.name || "Unknown Variation",
-        price: detail.price,
-    }));
-};
-
-// Add computed total
-const calculateTotal = (item) => {
-    return (item.price || 0) * (item.qty || 0);
-};
-
-// Watch for changes in price or quantity to update total
-const updateTotal = (item) => {
-    item.total = calculateTotal(item);
-};
-
-const startEdit = (detail) => {
-    editingDetail.value = {
-        ...detail,
-        supplier_product_detail_id: detail.supplier_product_detail_id,
-        qty: detail.qty,
-        free_qty: detail.free_qty,
-        price: detail.price,
-        discount: detail.discount,
     };
-    showEditModal.value = true;
+    serialInput.value = "";
+    serialValidationError.value = "";
+    error.value = "";
+    submitting.value = false;
+    showReceiveModal.value = true;
 };
 
-const closeEditModal = () => {
-    showEditModal.value = false;
-    editingDetail.value = null;
-};
-
-const saveEdit = async () => {
-    try {
-        isLoading.value = true;
-        const payload = {
-            supplier_product_detail_id:
-                editingDetail.value.supplier_product_detail_id,
-            qty: editingDetail.value.qty,
-            free_qty: editingDetail.value.free_qty,
-            price: editingDetail.value.price,
-            discount: editingDetail.value.discount,
-            total: calculateTotal(editingDetail.value),
-        };
-
-        await axios.put(
-            `/api/warehouse-products/${modelData.value.id}/details/${editingDetail.value.id}`,
-            payload
-        );
-
-        toast.success("Item updated successfully");
-        await loadPurchaseOrderDetails();
-        closeEditModal();
-    } catch (error) {
-        console.error("Error updating item:", error);
-        toast.error(error.response?.data?.message || "Failed to update item");
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const deleteDetail = async (detailId) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-
-    try {
-        isLoading.value = true;
-        await axios.delete(
-            `/api/warehouse-products/${modelData.value.id}/details/${detailId}`
-        );
-        toast.success("Item deleted successfully");
-        await loadPurchaseOrderDetails();
-    } catch (error) {
-        console.error("Error deleting item:", error);
-        toast.error("Failed to delete item");
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const loadWarehouseStockTransferDetails = async () => {
-    try {
-        const [detailsResponse, orderResponse] = await Promise.all([
-            axios.get(`/api/warehouse-products/${modelData.value.id}`),
-        ]);
-        warehouseStockTransferDetails.value = detailsResponse.data.data || [];
-        Object.assign(modelData.value, orderResponse.data);
-    } catch (error) {
-        console.error("Error loading warehouse stock transfer details:", error);
-        toast.error("Failed to load warehouse stock transfer details");
-    }
-};
-
-const handlePending = async () => {
-    try {
-        isLoading.value = true;
-        await axios.post(
-            `/api/warehouse-products/${modelData.value.id}/pending`
-        );
-        toast.success("Purchase order marked as pending");
-        window.location.reload();
-    } catch (error) {
-        console.error("Error marking purchase order as pending:", error);
-        toast.error(
-            error.response?.data?.message || "Failed to mark as pending"
-        );
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const handleOrder = async () => {
-    try {
-        isLoading.value = true;
-
-        // Call the order endpoint which will handle GR creation
-        const response = await axios.post(
-            `/api/warehouse-products/${modelData.value.id}/order`
-        );
-
-        toast.success("Order processed successfully");
-
-        // Redirect to the newly created goods receipt if available
-        if (response.data?.data?.goods_receipt_id) {
-            router.visit(
-                `/goods-receipts/${response.data.data.goods_receipt_id}`
-            );
-        } else {
-            window.location.reload();
-        }
-    } catch (error) {
-        console.error("Error processing order:", error);
-        toast.error(error.response?.data?.message || "Failed to process order");
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const handlePrint = () => {
-    // Open the print window
-    const printWindow = window.open(
-        `${window.location.origin}/warehouse-products/${modelData.value.id}/print`,
-        "_blank"
-    );
-
-    // Wait for the window to load and trigger print
-    printWindow.onload = function () {
-        printWindow.print();
+const closeReceiveModal = () => {
+    showReceiveModal.value = false;
+    selectedDetail.value = null;
+    receiveForm.value = {
+        received_qty: 0,
+        has_serials: false,
+        serials: [],
+        remarks: "",
     };
+    serialInput.value = "";
+    serialValidationError.value = "";
 };
 
-const openRemarksViewModal = (remarks) => {
-    console.log("openRemarksViewModal called with:", remarks); // Debug log
-    selectedRemarks.value = remarks;
-    showRemarksModal.value = true;
-    console.log("Modal state after opening:", showRemarksModal.value); // Debug log
+const openReturnModal = (detail) => {
+    selectedDetail.value = detail;
+    returnForm.value = {
+        return_qty: 0,
+        serials: [],
+        remarks: "",
+    };
+    serialInput.value = "";
+    serialValidationError.value = "";
+    error.value = "";
+    submitting.value = false;
+    showReturnModal.value = true;
+};
+
+const closeReturnModal = () => {
+    showReturnModal.value = false;
+    selectedDetail.value = null;
+    returnForm.value = {
+        return_qty: 0,
+        serials: [],
+        remarks: "",
+    };
 };
 
 const openActionRemarksModal = (type) => {
@@ -480,163 +242,172 @@ const closeActionRemarksModal = () => {
     remarks.value = "";
 };
 
-const handleAction = async () => {
+const openActionModal = (type) => {
+    actionType.value = type;
+    actionNotes.value = "";
+    showActionModal.value = true;
+};
+
+const closeActionModal = () => {
+    showActionModal.value = false;
+    actionType.value = "";
+    actionNotes.value = "";
+};
+
+// Serial handling
+const validateSerial = async (serial) => {
+    if (!serial || !selectedDetail.value) return;
+
     try {
-        isLoading.value = true;
-        let endpoint = "";
-        let successMessage = "";
+        serialValidationLoading.value = true;
+        serialValidationError.value = "";
 
-        switch (actionType.value) {
-            case "approve":
-                endpoint = "approve";
-                successMessage = "Purchase order approved successfully";
-                break;
-            case "reject":
-                endpoint = "reject";
-                successMessage = "Purchase order rejected successfully";
-                break;
-            case "cancel":
-                endpoint = "cancel";
-                successMessage = "Purchase order cancelled successfully";
-                break;
-        }
-
-        // First, create the approval remark if remarks exist
-        if (remarks.value.trim()) {
-            await axios.post("/api/approval-remarks", {
-                model_type: "PurchaseOrder",
-                model_id: modelData.value.id,
-                purchase_order_id: modelData.value.id,
-                status: actionType.value,
-                remarks: remarks.value,
-            });
-        }
-
-        // Then update the purchase order status
-        await axios.post(
-            `/api/warehouse-products/${modelData.value.id}/${endpoint}`
+        const response = await axios.get(
+            "/api/warehouse-stock-transfers/validate-serial",
+            {
+                params: {
+                    warehouse_stock_transfer_id: props.modelData.id,
+                    warehouse_product_id:
+                        selectedDetail.value.origin_warehouse_product_id,
+                    serial_number: serial,
+                },
+            }
         );
 
-        toast.success(successMessage);
-        closeActionRemarksModal();
+        if (response.data.valid) {
+            if (
+                receiveForm.value.serials.some(
+                    (s) => s.serial_number === serial
+                )
+            ) {
+                serialValidationError.value = "Serial number already scanned";
+            } else {
+                receiveForm.value.serials.push({
+                    serial_number: serial,
+                    batch_number: response.data.data.batch_number,
+                    manufactured_at: response.data.data.manufactured_at,
+                    expired_at: response.data.data.expired_at,
+                });
+                serialInput.value = "";
+                // Update received_qty based on serials count
+                receiveForm.value.received_qty =
+                    receiveForm.value.serials.length;
+            }
+        } else {
+            serialValidationError.value = response.data.message;
+        }
+    } catch (error) {
+        console.error("Serial validation error:", error);
+        serialValidationError.value =
+            error.response?.data?.message || "Failed to validate serial";
+    } finally {
+        serialValidationLoading.value = false;
+    }
+};
+
+const removeSerial = (index) => {
+    receiveForm.value.serials.splice(index, 1);
+};
+
+// Action handlers
+const handleReceive = async () => {
+    if (isLoading.value || !selectedDetail.value) return;
+
+    if (
+        receiveForm.value.has_serials &&
+        receiveForm.value.serials.length !== receiveForm.value.received_qty
+    ) {
+        toast.error("Please scan all required serial numbers");
+        return;
+    }
+
+    try {
+        isLoading.value = true;
+        await axios.post(
+            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/receive`,
+            receiveForm.value
+        );
+        toast.success("Items received successfully");
         window.location.reload();
     } catch (error) {
-        console.error(`Error ${actionType.value}ing purchase order:`, error);
-        toast.error(
-            error.response?.data?.message ||
-                `Failed to ${actionType.value} purchase order`
-        );
+        toast.error(error.response?.data?.message || "Failed to receive items");
     } finally {
         isLoading.value = false;
+        closeReceiveModal();
     }
 };
 
-// Update the button click handlers
-const handleApprove = () => openActionRemarksModal("approve");
-const handleReject = () => openActionRemarksModal("reject");
-const handleCancel = () => openActionRemarksModal("cancel");
+const handleReturn = async () => {
+    if (isLoading.value || !selectedDetail.value) return;
 
-const loadApprovalLevels = async () => {
-    try {
-        const response = await axios.get(
-            `/api/warehouse-products/${modelData.value.id}/approval-levels`
-        );
-        approvalLevels.value = response.data.data || [];
-    } catch (error) {
-        console.error("Error loading approval levels:", error);
-        toast.error("Failed to load approval levels");
+    if (
+        selectedDetail.value.origin_warehouse_product?.has_serials &&
+        returnForm.value.serials.length !== returnForm.value.return_qty
+    ) {
+        toast.error("Please scan all serial numbers to return");
+        return;
     }
-};
 
-const openConfirmModal = (action) => {
-    confirmAction.value = action;
-    switch (action) {
-        case "submit":
-            confirmMessage.value =
-                "Are you sure you want to submit this purchase order for approval?";
-            break;
-        case "process":
-            confirmMessage.value =
-                "Are you sure you want to process this order? This will create a goods receipt and supplier invoice.";
-            break;
-    }
-    showConfirmModal.value = true;
-};
-
-const handleConfirmAction = async () => {
     try {
         isLoading.value = true;
-        switch (confirmAction.value) {
-            case "submit":
-                await handlePending();
-                break;
-            case "process":
-                await handleOrder();
-                break;
-        }
-        showConfirmModal.value = false;
-    } catch (error) {
-        console.error(`Error in ${confirmAction.value}:`, error);
-        toast.error(
-            error.response?.data?.message || `Failed to ${confirmAction.value}`
+        await axios.post(
+            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/return`,
+            returnForm.value
         );
+        toast.success("Items returned successfully");
+        window.location.reload();
+    } catch (error) {
+        toast.error(error.response?.data?.message || "Failed to return items");
+    } finally {
+        isLoading.value = false;
+        closeReturnModal();
+    }
+};
+
+const handleAction = async () => {
+    if (!modelData.value?.id) return;
+
+    try {
+        isLoading.value = true;
+        const response = await axios.post(
+            `/api/warehouse-stock-transfers/${modelData.value.id}/${actionType.value}`,
+            {
+                notes: actionNotes.value,
+            }
+        );
+
+        toast.success(response.data.message);
+        closeActionModal();
+        window.location.reload();
+    } catch (error) {
+        toast.error(error.response?.data?.message || "An error occurred");
     } finally {
         isLoading.value = false;
     }
 };
 
-// Update the existing button click handlers
-const handleSubmitForApproval = () => openConfirmModal("submit");
-const handleProcessOrder = () => openConfirmModal("process");
-
-const loadApprovalRemarks = async () => {
+const handleComplete = async () => {
     try {
-        const response = await axios.get(
-            `/api/warehouse-products/${modelData.value.id}/approval-remarks`
+        submitting.value = true;
+        error.value = "";
+
+        await axios.post(
+            `/api/warehouse-stock-transfers/${props.modelData.id}/complete`
         );
-        console.log("Approval remarks response:", response.data); // Debug log
-        approvalRemarks.value = Array.isArray(response.data)
-            ? response.data
-            : response.data.data || [];
-    } catch (error) {
-        console.error("Error loading approval remarks:", error);
-        toast.error("Failed to load approval remarks");
+
+        // Update local status
+        props.modelData.status = "completed";
+
+        flash("Transfer completed successfully", "success");
+    } catch (e) {
+        error.value =
+            e.response?.data?.message || "Failed to complete transfer";
+    } finally {
+        submitting.value = false;
     }
 };
 
-const openReceiveModal = (detail) => {
-    selectedDetail.value = detail;
-    receiveForm.value = {
-        received_qty: detail.expected_qty - detail.transferred_qty,
-        has_serials: detail.origin_warehouse_product.has_serials,
-        type: "serial_numbers",
-        serials: [],
-    };
-    showReceiveModal.value = true;
-};
-const closeReceiveModal = () => {
-    showReceiveModal.value = false;
-    selectedDetail.value = null;
-    receiveForm.value = {
-        received_qty: 0,
-        has_serials: false,
-        type: "serial_numbers",
-        serials: [],
-    };
-};
-const openReturnModal = (detail) => {
-    selectedDetail.value = detail;
-    returnForm.value = {
-        return_qty: detail.transferred_qty,
-        serials: [],
-    };
-    showReturnModal.value = true;
-};
-const closeReturnModal = () => {
-    showReturnModal.value = false;
-    selectedDetail.value = null;
-    returnForm.value = { return_qty: 0, serials: [] };
-};
+// Bulk date handling
 const applyBulkDates = () => {
     receiveForm.value.serials = receiveForm.value.serials.map((serial) => ({
         ...serial,
@@ -644,6 +415,7 @@ const applyBulkDates = () => {
         expired_at: bulkExpiryDate.value || serial.expired_at,
     }));
 };
+
 const addSerialRow = () => {
     if (receiveForm.value.serials.length < receiveForm.value.received_qty) {
         receiveForm.value.serials.push({
@@ -654,741 +426,1085 @@ const addSerialRow = () => {
         });
     }
 };
+
 const removeSerialRow = (idx) => {
     receiveForm.value.serials.splice(idx, 1);
 };
-const handleReceive = async () => {
-    if (isLoading.value) return;
-    isLoading.value = true;
-    try {
-        await axios.post(
-            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/receive`,
-            receiveForm.value
-        );
-        toast.success("Received successfully");
-        window.location.reload();
-    } catch (e) {
-        toast.error(e.response?.data?.message || "Failed to receive");
-    } finally {
-        isLoading.value = false;
-        closeReceiveModal();
-    }
-};
-const handleReturn = async () => {
-    if (isLoading.value) return;
-    isLoading.value = true;
-    try {
-        await axios.post(
-            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/return`,
-            returnForm.value
-        );
-        toast.success("Returned successfully");
-        window.location.reload();
-    } catch (e) {
-        toast.error(e.response?.data?.message || "Failed to return");
-    } finally {
-        isLoading.value = false;
-        closeReturnModal();
-    }
-};
 
-// Add computed for transfer status
-const transferStatus = computed(() => modelData.value.status);
-const canShowForTransfer = computed(
-    () => modelData.value.status === "pending" && details.value.length > 0
-);
-const showAddProductModal = ref(false);
+const handleSerialScan = async (event) => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        const serial = serialInput.value.trim();
+        if (!serial) return;
 
-function openAddProductModal() {
-    showAddProductModal.value = true;
-}
-function closeAddProductModal() {
-    showAddProductModal.value = false;
-}
-
-const openSerialModal = (rowIdx) => {
-    serialModalRowIdx.value = rowIdx;
-    serialsInputList.value = [...(details.value[rowIdx].serials || [])];
-    serialInput.value = "";
-    serialValidationError.value = "";
-    showSerialModal.value = true;
-};
-const closeSerialModal = () => {
-    showSerialModal.value = false;
-    serialModalRowIdx.value = null;
-    serialsInputList.value = [];
-    serialInput.value = "";
-    serialValidationError.value = "";
-};
-const addSerialToList = async () => {
-    const serial = serialInput.value.trim();
-    if (!serial) return;
-    serialValidationLoading.value = true;
-    serialValidationError.value = "";
-    try {
-        const row = details.value[serialModalRowIdx.value];
-        const product = row.product;
-        // Use the correct API for serial check
-        const res = await axios.get("/api/serial-check/warehouse-products", {
-            params: {
-                warehouse_id: modelData.value.origin_warehouse_id,
-                serial_number: serial,
-                product_id: product.id,
-            },
-        });
-        const found = res.data.data;
-        if (!found) {
+        if (
+            receiveForm.value.serials.length >=
+            selectedDetail.value.expected_qty -
+                selectedDetail.value.transferred_qty
+        ) {
             serialValidationError.value =
-                "Serial/batch not found, already sold, or does not belong to this product.";
+                "All required serials have been scanned";
             return;
         }
-        if (serialsInputList.value.some((s) => s.serial_number === serial)) {
-            serialValidationError.value = "Serial already added.";
-            return;
+
+        await validateSerialField(serial);
+    }
+};
+
+const isAllSerialsValidated = computed(() => {
+    if (!selectedDetail.value?.origin_warehouse_product?.has_serials)
+        return false;
+    const requiredCount =
+        selectedDetail.value.expected_qty -
+        selectedDetail.value.transferred_qty;
+    return (
+        receiveForm.value.serials.length === requiredCount &&
+        receiveForm.value.serials.every((s) => s.validated)
+    );
+});
+
+const canSubmitReceive = computed(() => {
+    if (!selectedDetail.value) return false;
+
+    if (selectedDetail.value.origin_warehouse_product?.has_serials) {
+        return (
+            receiveForm.value.serials.length > 0 &&
+            receiveForm.value.serials.every((s) => s.validated) &&
+            receiveForm.value.serials.length <=
+                selectedDetail.value.expected_qty -
+                    selectedDetail.value.transferred_qty
+        );
+    }
+
+    return (
+        receiveForm.value.received_qty > 0 &&
+        receiveForm.value.received_qty <=
+            selectedDetail.value.expected_qty -
+                selectedDetail.value.transferred_qty
+    );
+});
+
+const validateSerialField = async (serial) => {
+    if (!serial) return;
+
+    try {
+        serialValidationLoading.value = true;
+        serialValidationError.value = "";
+
+        const response = await axios.get(
+            "/api/warehouse-stock-transfers/validate-serial",
+            {
+                params: {
+                    warehouse_stock_transfer_id: props.modelData.id,
+                    warehouse_product_id:
+                        selectedDetail.value.origin_warehouse_product_id,
+                    serial_number: serial,
+                },
+            }
+        );
+
+        if (response.data.valid) {
+            // Check if serial is already in the list
+            const existingIndex = receiveForm.value.serials.findIndex(
+                (s) => s.serial_number === serial
+            );
+
+            if (existingIndex !== -1) {
+                serialValidationError.value = "Serial number already scanned";
+            } else {
+                receiveForm.value.serials.push({
+                    serial_number: serial,
+                    batch_number: response.data.data.batch_number,
+                    manufactured_at: response.data.data.manufactured_at,
+                    expired_at: response.data.data.expired_at,
+                    validated: true,
+                });
+                serialInput.value = "";
+            }
+        } else {
+            serialValidationError.value = response.data.message;
         }
-        serialsInputList.value.push({
-            serial_number: serial,
-            batch_number: found.batch_number,
-            manufactured_at: found.manufactured_at,
-            expired_at: found.expired_at,
-        });
-        serialInput.value = "";
-    } catch (e) {
-        serialValidationError.value = "Error validating serial/batch.";
+    } catch (error) {
+        serialValidationError.value =
+            error.response?.data?.message || "Failed to validate serial";
     } finally {
         serialValidationLoading.value = false;
     }
 };
-const saveSerialsToRow = () => {
-    if (serialModalRowIdx.value !== null) {
-        details.value[serialModalRowIdx.value].serials = [
-            ...serialsInputList.value,
-        ];
-        details.value[serialModalRowIdx.value].serials_valid =
-            serialsInputList.value.length ===
-            details.value[serialModalRowIdx.value].transfer_qty;
-        details.value[serialModalRowIdx.value].serials_error = details.value[
-            serialModalRowIdx.value
-        ].serials_valid
-            ? ""
-            : "Serial count must match transfer qty.";
-    }
-    closeSerialModal();
-};
-
-const updateTransferQty = (row, val) => {
-    row.transfer_qty = Math.max(1, parseInt(val) || 1);
-    // Only require serial count to match qty if product has serials
-    if (row.product.has_serials) {
-        row.serials_valid = row.serials.length === row.transfer_qty;
-        row.serials_error = row.serials_valid
-            ? ""
-            : "Serial count must match transfer qty.";
-    } else {
-        row.serials_valid = true;
-        row.serials_error = "";
-    }
-};
-
-const canSubmit = computed(() => {
-    return (
-        details.value.length > 0 &&
-        details.value.every((row) => {
-            if (row.product.has_serials) {
-                return (
-                    row.serials_valid && row.serials.length === row.transfer_qty
-                );
-            }
-            return row.transfer_qty > 0;
-        })
-    );
-});
-
-const submitTransferDetails = async () => {
-    if (!canSubmit.value) {
-        toast.error("Please complete all product details and serials.");
-        return;
-    }
-    try {
-        for (const row of details.value) {
-            await axios.post("/api/warehouse-stock-transfer-details", {
-                warehouse_stock_transfer_id: modelData.value.id,
-                origin_warehouse_id: modelData.value.origin_warehouse_id,
-                origin_warehouse_product_id: row.origin_warehouse_product_id,
-                destination_warehouse_id:
-                    modelData.value.destination_warehouse_id,
-                quantity: row.transfer_qty,
-                serials: row.product.has_serials ? row.serials : [],
-                remarks: null,
-            });
-        }
-        toast.success("Transfer details saved.");
-        window.location.reload();
-    } catch (e) {
-        toast.error(
-            e.response?.data?.message || "Failed to save transfer details."
-        );
-    }
-};
 
 onMounted(() => {
-    // Initialize details from modelData if present
-    if (Array.isArray(modelData.value.details)) {
+    if (modelData.value?.details && Array.isArray(modelData.value.details)) {
         details.value = modelData.value.details.map((d) => ({
             ...d,
             product:
-                d.product ||
                 d.origin_warehouse_product?.supplier_product_detail?.product ||
                 {},
-            transfer_qty: d.expected_qty || 1,
+            transferred_qty: d.transferred_qty || 0,
             serials: d.serials || [],
-            serials_valid: true,
-            serials_error: "",
         }));
     }
+});
+
+// Watch for changes in return_qty to validate against max allowed
+watch(
+    () => returnForm.value.return_qty,
+    (newVal) => {
+        if (!selectedDetail.value) return;
+
+        if (newVal > selectedDetail.value.transferred_qty) {
+            returnForm.value.return_qty = selectedDetail.value.transferred_qty;
+        }
+    }
+);
+
+// Update the submit method to set received_qty based on serials
+const submitReceiveForm = async () => {
+    try {
+        submitting.value = true;
+        error.value = "";
+
+        // For serialized items, set received_qty to number of serials
+        if (selectedDetail.value.origin_warehouse_product?.has_serials) {
+            receiveForm.value.received_qty = receiveForm.value.serials.length;
+        }
+
+        // Validate received quantity
+        if (
+            !receiveForm.value.received_qty ||
+            receiveForm.value.received_qty < 1
+        ) {
+            if (selectedDetail.value.origin_warehouse_product?.has_serials) {
+                error.value = "Please scan at least one serial number";
+            } else {
+                error.value = "Please enter a valid quantity";
+            }
+            return;
+        }
+
+        // Validate max quantity
+        const remainingQty =
+            selectedDetail.value.expected_qty -
+            selectedDetail.value.transferred_qty;
+        if (receiveForm.value.received_qty > remainingQty) {
+            error.value = `Cannot receive more than ${remainingQty} items`;
+            return;
+        }
+
+        // For serialized items, validate that we have the correct number of serials
+        if (
+            selectedDetail.value.origin_warehouse_product?.has_serials &&
+            receiveForm.value.serials.length !== receiveForm.value.received_qty
+        ) {
+            error.value = `Number of scanned serials must match the quantity to receive`;
+            return;
+        }
+
+        // Add origin warehouse product info to the payload
+        const originProduct = selectedDetail.value.origin_warehouse_product;
+        receiveForm.value.origin_warehouse_product = {
+            supplier_product_detail_id:
+                originProduct.supplier_product_detail_id,
+            sku: originProduct.sku,
+            barcode: originProduct.barcode,
+            critical_level_qty: originProduct.critical_level_qty,
+            price: originProduct.price,
+            last_cost: originProduct.last_cost,
+            average_cost: originProduct.average_cost,
+            has_serials: originProduct.has_serials,
+        };
+
+        await axios.post(
+            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/receive`,
+            receiveForm.value
+        );
+
+        // Refresh the data
+        const detail = props.modelData.details.find(
+            (d) => d.id === selectedDetail.value.id
+        );
+        if (detail) {
+            detail.transferred_qty =
+                detail.transferred_qty + receiveForm.value.received_qty;
+        }
+
+        showReceiveModal.value = false;
+        selectedDetail.value = null;
+
+        flash("Items received successfully", "success");
+    } catch (e) {
+        error.value = e.response?.data?.message || "Failed to receive items";
+    } finally {
+        submitting.value = false;
+    }
+};
+
+// Add return submit handler
+const submitReturnForm = async () => {
+    try {
+        submitting.value = true;
+        error.value = "";
+
+        // For serialized items, set return_qty to number of serials
+        if (selectedDetail.value.origin_warehouse_product?.has_serials) {
+            returnForm.value.return_qty = returnForm.value.serials.length;
+        }
+
+        // Validate return quantity
+        if (!returnForm.value.return_qty || returnForm.value.return_qty < 1) {
+            if (selectedDetail.value.origin_warehouse_product?.has_serials) {
+                error.value = "Please scan at least one serial number";
+            } else {
+                error.value = "Please enter a valid quantity";
+            }
+            return;
+        }
+
+        // Validate max quantity (can't return more than transferred)
+        if (
+            returnForm.value.return_qty > selectedDetail.value.transferred_qty
+        ) {
+            error.value = `Cannot return more than ${selectedDetail.value.transferred_qty} items`;
+            return;
+        }
+
+        // For serialized items, validate that we have the correct number of serials
+        if (
+            selectedDetail.value.origin_warehouse_product?.has_serials &&
+            returnForm.value.serials.length !== returnForm.value.return_qty
+        ) {
+            error.value = `Number of scanned serials must match the quantity to return`;
+            return;
+        }
+
+        // Add destination warehouse product info to the payload
+        const destinationProduct =
+            selectedDetail.value.destination_warehouse_product;
+        returnForm.value.destination_warehouse_product = {
+            supplier_product_detail_id:
+                destinationProduct.supplier_product_detail_id,
+            sku: destinationProduct.sku,
+            barcode: destinationProduct.barcode,
+            critical_level_qty: destinationProduct.critical_level_qty,
+            price: destinationProduct.price,
+            last_cost: destinationProduct.last_cost,
+            average_cost: destinationProduct.average_cost,
+            has_serials: destinationProduct.has_serials,
+        };
+
+        await axios.post(
+            `/api/warehouse-stock-transfer-details/${selectedDetail.value.id}/return`,
+            returnForm.value
+        );
+
+        // Update the local data
+        const detail = props.modelData.details.find(
+            (d) => d.id === selectedDetail.value.id
+        );
+        if (detail) {
+            detail.transferred_qty =
+                detail.transferred_qty - returnForm.value.return_qty;
+        }
+
+        showReturnModal.value = false;
+        selectedDetail.value = null;
+
+        flash("Items returned successfully", "success");
+    } catch (e) {
+        error.value = e.response?.data?.message || "Failed to return items";
+    } finally {
+        submitting.value = false;
+    }
+};
+
+// Add computed property for return form validation
+const canSubmitReturn = computed(() => {
+    if (!selectedDetail.value) return false;
+
+    if (selectedDetail.value.origin_warehouse_product?.has_serials) {
+        return (
+            returnForm.value.serials.length > 0 &&
+            returnForm.value.serials.every((s) => s.validated) &&
+            returnForm.value.serials.length <=
+                selectedDetail.value.transferred_qty
+        );
+    }
+
+    return (
+        returnForm.value.return_qty > 0 &&
+        returnForm.value.return_qty <= selectedDetail.value.transferred_qty
+    );
 });
 </script>
 
 <template>
-    <AppLayout :title="`${singularizeAndFormat(modelName)} Details`">
+    <AppLayout :title="singularizeAndFormat(modelName) + ' Details'">
         <template #header>
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     {{ singularizeAndFormat(modelName) }} Details
                 </h2>
-                <HeaderActions :actions="[]" />
-            </div>
-        </template>
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow rounded p-6">
-                <div class="mb-6">
-                    <DetailedProfileCard
-                        :modelData="modelData"
-                        :columns="profileDetails"
-                        :columnsPerRow="3"
-                    />
-                </div>
-                <!-- Action Buttons (approve/reject/cancel etc.) -->
-                <div class="flex flex-wrap gap-2 mb-6">
+                <div class="flex items-center space-x-2">
                     <button
-                        v-if="['for-transfer'].includes(modelData.status)"
-                        :disabled="isLoading"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        v-if="modelData?.status === 'pending'"
+                        @click="() => openActionModal('approve')"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 focus:bg-green-700 active:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 mr-2"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                        Submit for Approval
-                    </button>
-
-                    <button
-                        v-if="['for-transfer'].includes(modelData.status)"
-                        @click="handleApprove"
-                        :disabled="isLoading"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 mr-2"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
                         Approve
                     </button>
-
                     <button
-                        v-if="['for-transfer'].includes(modelData.status)"
-                        @click="handleReject"
-                        :disabled="isLoading"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        v-if="modelData?.status === 'pending'"
+                        @click="() => openActionModal('reject')"
+                        class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 mr-2"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
                         Reject
                     </button>
-
                     <button
-                        v-if="['pending'].includes(modelData.status)"
-                        @click="handleCancel"
-                        :disabled="isLoading"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        v-if="modelData?.status === 'pending'"
+                        @click="() => openActionModal('cancel')"
+                        class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 mr-2"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
                         Cancel
                     </button>
-
                     <button
-                        v-if="modelData.status === 'fully-approved'"
-                        @click="handleProcessOrder"
-                        :disabled="isLoading"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        v-if="modelData?.status === 'fully-transferred'"
+                        @click="handleComplete"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 mr-2"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                        Process Order
-                    </button>
-
-                    <button
-                        v-if="
-                            modelData.status === 'partially-approved' ||
-                            modelData.status === 'received' ||
-                            modelData.status === 'ordered'
-                        "
-                        @click="handlePrint"
-                        :disabled="isLoading"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 mr-2"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                        Print
+                        Complete
                     </button>
                 </div>
-                <div class="mb-4">
-                    <Autocomplete
-                        :search-url="'/api/autocomplete/warehouse-products'"
-                        :placeholder="'Search warehouse products...'"
-                        :model-name="'warehouse-products'"
-                        :map-custom-buttons="mapWarehouseProductData"
-                        @select="handleProductSelect"
-                        :extra-params="{ warehouse_id: originWarehouseId }"
-                    />
-                </div>
-                <div v-if="details.length" class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+            </div>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <!-- Main Details Card -->
+                <div
+                    class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-6"
+                >
+                    <div class="p-6 bg-white border-b border-gray-200">
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        >
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    NUMBER
+                                </h3>
+                                <p
+                                    class="mt-1 text-lg font-semibold text-gray-900"
                                 >
-                                    Product
-                                </th>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                    {{ modelData?.number }}
+                                </p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    COMPANY
+                                </h3>
+                                <p
+                                    class="mt-1 text-lg font-semibold text-gray-900"
                                 >
-                                    SKU
-                                </th>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                    Qty
-                                </th>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                    Serials
-                                </th>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="(row, idx) in details"
-                                :key="row.origin_warehouse_product_id"
-                            >
-                                <td class="px-3 py-2">
                                     {{
-                                        row.product?.supplier_product_detail
-                                            ?.product?.name || row.product?.name
+                                        modelData?.origin_warehouse?.company
+                                            ?.name
                                     }}
-                                </td>
-                                <td class="px-3 py-2">
-                                    {{ row.product?.sku }}
-                                </td>
-                                <td class="px-3 py-2">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        :value="row.transfer_qty"
-                                        @input="
-                                            (e) =>
-                                                updateTransferQty(
-                                                    row,
-                                                    e.target.value
-                                                )
-                                        "
-                                        class="w-20 border rounded px-2 py-1"
-                                    />
-                                </td>
-                                <td class="px-3 py-2">
-                                    <template v-if="row.product.has_serials">
-                                        <button
-                                            class="px-2 py-1 bg-blue-100 rounded"
-                                            @click="openSerialModal(idx)"
-                                        >
-                                            Enter Serial/Batch Number(s)
-                                        </button>
+                                </p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    ORIGIN WAREHOUSE
+                                </h3>
+                                <p
+                                    class="mt-1 text-lg font-semibold text-gray-900"
+                                >
+                                    {{ modelData?.origin_warehouse?.name }}
+                                </p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    DESTINATION WAREHOUSE
+                                </h3>
+                                <p
+                                    class="mt-1 text-lg font-semibold text-gray-900"
+                                >
+                                    {{ modelData?.destination_warehouse?.name }}
+                                </p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    STATUS
+                                </h3>
+                                <p
+                                    class="mt-1 text-lg font-semibold"
+                                    :class="{
+                                        'text-yellow-600':
+                                            modelData?.status === 'pending',
+                                        'text-green-600':
+                                            modelData?.status === 'approved',
+                                        'text-red-600':
+                                            modelData?.status === 'rejected',
+                                        'text-gray-600':
+                                            modelData?.status === 'cancelled',
+                                    }"
+                                >
+                                    {{ humanReadable(modelData?.status) }}
+                                </p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    TRANSFER DATE
+                                </h3>
+                                <p
+                                    class="mt-1 text-lg font-semibold text-gray-900"
+                                >
+                                    {{
+                                        modelData?.transfer_date
+                                            ? formatDate(
+                                                  "M d Y",
+                                                  modelData.transfer_date
+                                              )
+                                            : "—"
+                                    }}
+                                </p>
+                            </div>
+                            <div v-if="modelData?.remarks">
+                                <h3 class="text-sm font-medium text-gray-500">
+                                    REMARKS
+                                </h3>
+                                <p
+                                    class="mt-1 text-lg font-semibold text-gray-900"
+                                >
+                                    {{ modelData.remarks }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Table -->
+                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+                    <!-- Transfer Details Table -->
+                    <div
+                        v-if="modelData?.details?.length > 0"
+                        class="bg-white overflow-hidden shadow-xl sm:rounded-lg"
+                    >
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th
+                                        scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        Product
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        QTY
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        Serials
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr
+                                    v-for="detail in modelData?.details"
+                                    :key="detail.id"
+                                >
+                                    <td class="px-6 py-4 whitespace-nowrap">
                                         <div
-                                            v-if="row.serials.length"
-                                            class="text-xs text-gray-500 mt-1"
+                                            class="text-sm font-medium text-gray-900"
+                                        >
+                                            {{
+                                                detail.origin_warehouse_product
+                                                    ?.supplier_product_detail
+                                                    ?.product?.name
+                                            }}
+                                        </div>
+                                        <div class="text-sm text-gray-900">
+                                            {{
+                                                detail.origin_warehouse_product
+                                                    ?.sku
+                                            }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            {{
+                                                detail.origin_warehouse_product
+                                                    ?.barcode
+                                            }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">
+                                            {{ detail.transferred_qty || 0 }} /
+                                            {{ detail.expected_qty }}
+                                            <span
+                                                v-if="
+                                                    detail.transferred_qty > 0
+                                                "
+                                                class="ml-1 text-xs text-green-600"
+                                            >
+                                                ({{
+                                                    (
+                                                        (detail.transferred_qty /
+                                                            detail.expected_qty) *
+                                                        100
+                                                    ).toFixed(0)
+                                                }}%)
+                                            </span>
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            Available:
+                                            {{
+                                                detail.origin_warehouse_product
+                                                    ?.qty
+                                            }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div
+                                            v-if="
+                                                detail.serials &&
+                                                detail.serials.length > 0
+                                            "
+                                            class="text-sm text-gray-900"
                                         >
                                             <div
-                                                v-for="s in row.serials"
-                                                :key="s.serial_number"
+                                                v-for="serial in detail.serials"
+                                                :key="serial.id"
+                                                class="flex items-center space-x-2"
                                             >
                                                 <span>{{
-                                                    s.serial_number
+                                                    serial.serial_number
                                                 }}</span>
-                                                <span v-if="s.batch_number"
-                                                    >Batch:
-                                                    {{ s.batch_number }}</span
+                                                <svg
+                                                    class="h-4 w-4 text-green-500"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 20 20"
+                                                    fill="currentColor"
                                                 >
-                                                <span v-if="s.manufactured_at">
-                                                    | Mfg:
-                                                    {{
-                                                        s.manufactured_at
-                                                    }}</span
-                                                >
-                                                <span v-if="s.expired_at">
-                                                    | Exp:
-                                                    {{ s.expired_at }}</span
-                                                >
+                                                    <path
+                                                        fill-rule="evenodd"
+                                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                        clip-rule="evenodd"
+                                                    />
+                                                </svg>
                                             </div>
                                         </div>
                                         <div
-                                            v-if="row.serials_error"
-                                            class="text-xs text-red-500 mt-1"
+                                            v-else
+                                            class="text-sm text-gray-500"
                                         >
-                                            {{ row.serials_error }}
+                                            No serials
                                         </div>
-                                    </template>
-                                    <template v-else>
-                                        <span class="text-gray-400">N/A</span>
-                                    </template>
-                                </td>
-                                <td class="px-3 py-2">
-                                    <button
-                                        class="text-red-600 hover:text-red-900"
-                                        @click="removeRow(idx)"
-                                    >
-                                        Remove
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <button
-                        @click="submitTransferDetails"
-                        :disabled="!canSubmit"
-                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                        Save Transfer Details
-                    </button>
-                </div>
-                <!-- After Save Transfer Details, show details table -->
-                <div v-if="(modelData.value.details || []).length" class="mt-8">
-                    <h3 class="text-lg font-semibold mb-2">Transfer Details</h3>
-                    <table class="min-w-full divide-y divide-gray-200 mb-4">
-                        <thead>
-                            <tr>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                    Product
-                                </th>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                    SKU
-                                </th>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                    Expected Qty
-                                </th>
-                                <th
-                                    class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                    Transferred Qty
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="detail in modelData.value.details || []"
-                                :key="detail.id"
-                            >
-                                <td class="px-3 py-2">
-                                    {{
-                                        detail.origin_warehouse_product
-                                            ?.supplier_product_detail?.product
-                                            ?.name ||
-                                        detail.origin_warehouse_product?.name ||
-                                        "N/A"
-                                    }}
-                                </td>
-                                <td class="px-3 py-2">
-                                    {{
-                                        detail.origin_warehouse_product?.sku ||
-                                        "N/A"
-                                    }}
-                                </td>
-                                <td class="px-3 py-2">
-                                    {{ detail.expected_qty }}
-                                </td>
-                                <td class="px-3 py-2">
-                                    {{ detail.transferred_qty }}
-                                </td>
-                            </tr>
-                            <tr
-                                v-for="detail in modelData.value.details || []"
-                                :key="'serials-' + detail.id"
-                            >
-                                <td colspan="4" class="px-3 py-2 bg-gray-50">
-                                    <div
-                                        v-if="
-                                            detail.serials &&
-                                            detail.serials.length
-                                        "
-                                    >
-                                        <table
-                                            class="min-w-full divide-y divide-gray-200"
-                                        >
-                                            <thead>
-                                                <tr>
-                                                    <th
-                                                        class="px-2 py-1 text-xs text-gray-500"
-                                                    >
-                                                        Serial Number
-                                                    </th>
-                                                    <th
-                                                        class="px-2 py-1 text-xs text-gray-500"
-                                                    >
-                                                        Batch Number
-                                                    </th>
-                                                    <th
-                                                        class="px-2 py-1 text-xs text-gray-500"
-                                                    >
-                                                        Manufactured
-                                                    </th>
-                                                    <th
-                                                        class="px-2 py-1 text-xs text-gray-500"
-                                                    >
-                                                        Expired
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr
-                                                    v-for="serial in detail.serials"
-                                                    :key="serial.id"
-                                                >
-                                                    <td class="px-2 py-1">
-                                                        {{
-                                                            serial.serial_number
-                                                        }}
-                                                    </td>
-                                                    <td class="px-2 py-1">
-                                                        {{
-                                                            serial.batch_number ||
-                                                            "-"
-                                                        }}
-                                                    </td>
-                                                    <td class="px-2 py-1">
-                                                        {{
-                                                            serial.manufactured_at ||
-                                                            "-"
-                                                        }}
-                                                    </td>
-                                                    <td class="px-2 py-1">
-                                                        {{
-                                                            serial.expired_at ||
-                                                            "-"
-                                                        }}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div v-else class="text-xs text-gray-400">
-                                        No serials for this detail.
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex space-x-2">
+                                            <!-- Receive Button -->
+                                            <button
+                                                v-if="
+                                                    modelData.status ===
+                                                        'approved' &&
+                                                    detail.transferred_qty <
+                                                        detail.expected_qty
+                                                "
+                                                @click="
+                                                    openReceiveModal(detail)
+                                                "
+                                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            >
+                                                Receive
+                                            </button>
+
+                                            <!-- Return Button -->
+                                            <button
+                                                v-if="
+                                                    canReturn &&
+                                                    detail.transferred_qty > 0
+                                                "
+                                                @click="openReturnModal(detail)"
+                                                class="text-indigo-600 hover:text-indigo-900"
+                                            >
+                                                Return
+                                            </button>
+
+                                            <!-- Status Display -->
+                                            <span
+                                                v-if="
+                                                    detail.transferred_qty ===
+                                                    detail.expected_qty
+                                                "
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-green-100 text-green-800"
+                                            >
+                                                Completed
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-        <!-- Serial Modal -->
-        <Modal :show="showSerialModal" @close="closeSerialModal">
+
+        <!-- Action Remarks Modal -->
+        <Modal :show="showActionRemarksModal" @close="closeActionRemarksModal">
             <div class="p-6">
                 <h2 class="text-lg font-medium text-gray-900 mb-4">
-                    Enter Serial/Batch Number(s)
+                    {{ actionTitle }}
                 </h2>
-                <div class="mb-2 flex gap-2">
-                    <input
-                        v-model="serialInput"
-                        @keyup.enter="addSerialToList"
-                        :disabled="serialValidationLoading"
-                        placeholder="Serial or batch number..."
-                        class="w-full border rounded px-2 py-1"
-                    />
-                    <button
-                        @click="addSerialToList"
-                        :disabled="serialValidationLoading || !serialInput"
-                        class="px-3 py-1 bg-blue-600 text-white rounded"
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700"
+                        >Remarks</label
                     >
-                        Add
-                    </button>
+                    <textarea
+                        v-model="remarks"
+                        rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    ></textarea>
                 </div>
-            </div>
-        </Modal>
-        <!-- Serial Modal -->
-        <Modal :show="showSerialModal" @close="closeSerialModal">
-            <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 mb-4">
-                    Enter Serial/Batch Number(s)
-                </h2>
-                <div class="mb-2 flex gap-2">
-                    <input
-                        v-model="serialInput"
-                        @keyup.enter="addSerialToList"
-                        :disabled="serialValidationLoading"
-                        placeholder="Serial or batch number..."
-                        class="w-full border rounded px-2 py-1"
-                    />
+                <div class="mt-6 flex justify-end space-x-3">
                     <button
-                        @click="addSerialToList"
-                        :disabled="serialValidationLoading || !serialInput"
-                        class="px-3 py-1 bg-blue-600 text-white rounded"
-                    >
-                        Add
-                    </button>
-                </div>
-                <div
-                    v-if="serialValidationError"
-                    class="text-red-500 text-xs mb-2"
-                >
-                    {{ serialValidationError }}
-                </div>
-                <div v-if="serialsInputList.length">
-                    <table class="min-w-full divide-y divide-gray-200 mb-2">
-                        <thead>
-                            <tr>
-                                <th class="px-2 py-1 text-xs text-gray-500">
-                                    Serial Number
-                                </th>
-                                <th class="px-2 py-1 text-xs text-gray-500">
-                                    Batch Number
-                                </th>
-                                <th class="px-2 py-1 text-xs text-gray-500">
-                                    Manufactured
-                                </th>
-                                <th class="px-2 py-1 text-xs text-gray-500">
-                                    Expired
-                                </th>
-                                <th class="px-2 py-1 text-xs text-gray-500">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(s, i) in serialsInputList" :key="i">
-                                <td class="px-2 py-1">{{ s.serial_number }}</td>
-                                <td class="px-2 py-1">
-                                    {{ s.batch_number || "-" }}
-                                </td>
-                                <td class="px-2 py-1">
-                                    {{ s.manufactured_at || "-" }}
-                                </td>
-                                <td class="px-2 py-1">
-                                    {{ s.expired_at || "-" }}
-                                </td>
-                                <td class="px-2 py-1">
-                                    <button
-                                        @click="serialsInputList.splice(i, 1)"
-                                        class="text-red-500 text-xs"
-                                    >
-                                        Remove
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-4 flex justify-end gap-2">
-                    <button
-                        @click="closeSerialModal"
-                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        @click="closeActionRemarksModal"
                     >
                         Cancel
                     </button>
                     <button
-                        @click="saveSerialsToRow"
-                        :disabled="
-                            details[serialModalRowIdx]?.product?.has_serials &&
-                            serialsInputList.length !==
-                                details[serialModalRowIdx]?.transfer_qty
-                        "
-                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        @click="handleAction"
+                        :disabled="isLoading"
                     >
-                        Save
+                        {{ isLoading ? "Processing..." : "Confirm" }}
                     </button>
                 </div>
             </div>
         </Modal>
-        <!-- ...preserved action modals (approve/reject/cancel/remarks/confirm) go here... -->
+
+        <!-- Receive Modal -->
+        <DialogModal :show="showReceiveModal" @close="showReceiveModal = false">
+            <template #title> Receive Items </template>
+
+            <template #content>
+                <div class="space-y-4">
+                    <!-- Non-serialized products -->
+                    <div
+                        v-if="
+                            selectedDetail &&
+                            !selectedDetail.origin_warehouse_product
+                                ?.has_serials
+                        "
+                    >
+                        <label class="block text-sm font-medium text-gray-700">
+                            Quantity to Receive (Max:
+                            {{
+                                selectedDetail.expected_qty -
+                                selectedDetail.transferred_qty
+                            }})
+                        </label>
+                        <input
+                            type="number"
+                            v-model="receiveForm.received_qty"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            :max="
+                                selectedDetail.expected_qty -
+                                selectedDetail.transferred_qty
+                            "
+                            min="1"
+                        />
+                    </div>
+
+                    <!-- Serialized products -->
+                    <div
+                        v-if="
+                            selectedDetail?.origin_warehouse_product
+                                ?.has_serials
+                        "
+                    >
+                        <div class="flex justify-between items-center mb-2">
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                                >Serial Numbers</label
+                            >
+                            <span class="text-sm text-gray-500">
+                                {{ receiveForm.serials.length }} of
+                                {{
+                                    selectedDetail.expected_qty -
+                                    selectedDetail.transferred_qty
+                                }}
+                                required
+                            </span>
+                        </div>
+
+                        <!-- Scanner input -->
+                        <div class="mt-1">
+                            <div class="flex space-x-2">
+                                <div class="flex-1">
+                                    <input
+                                        type="text"
+                                        v-model="serialInput"
+                                        @keydown.enter.prevent="
+                                            handleSerialScan
+                                        "
+                                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Scan or enter serial number"
+                                        :disabled="
+                                            receiveForm.serials.length >=
+                                            selectedDetail.expected_qty -
+                                                selectedDetail.transferred_qty
+                                        "
+                                    />
+                                </div>
+                            </div>
+                            <p
+                                v-if="serialValidationError"
+                                class="mt-1 text-sm text-red-600"
+                            >
+                                {{ serialValidationError }}
+                            </p>
+                        </div>
+
+                        <!-- Scanned Serials Table -->
+                        <div v-if="receiveForm.serials.length > 0" class="mt-4">
+                            <div
+                                class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg"
+                            >
+                                <table
+                                    class="min-w-full divide-y divide-gray-200"
+                                >
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th
+                                                scope="col"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                            >
+                                                Serial Number
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                            >
+                                                Batch Number
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                class="relative px-6 py-3"
+                                            >
+                                                <span class="sr-only"
+                                                    >Actions</span
+                                                >
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody
+                                        class="bg-white divide-y divide-gray-200"
+                                    >
+                                        <tr
+                                            v-for="(
+                                                serial, index
+                                            ) in receiveForm.serials"
+                                            :key="index"
+                                        >
+                                            <td
+                                                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                            >
+                                                {{ serial.serial_number }}
+                                            </td>
+                                            <td
+                                                class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                                            >
+                                                {{ serial.batch_number || "-" }}
+                                            </td>
+                                            <td
+                                                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                                            >
+                                                <button
+                                                    @click="
+                                                        receiveForm.serials.splice(
+                                                            index,
+                                                            1
+                                                        )
+                                                    "
+                                                    class="text-red-600 hover:text-red-900"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template #footer>
+                <div class="flex items-center justify-between">
+                    <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+                    <div class="flex">
+                        <SecondaryButton @click="showReceiveModal = false"
+                            >Cancel</SecondaryButton
+                        >
+                        <PrimaryButton
+                            class="ml-3"
+                            @click="submitReceiveForm"
+                            :disabled="!canSubmitReceive || submitting"
+                            :loading="submitting"
+                        >
+                            Receive
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </template>
+        </DialogModal>
+
+        <!-- Return Modal -->
+        <DialogModal :show="showReturnModal" @close="showReturnModal = false">
+            <template #title> Return Items </template>
+
+            <template #content>
+                <div class="space-y-4">
+                    <!-- Non-serialized products -->
+                    <div
+                        v-if="
+                            selectedDetail &&
+                            !selectedDetail.origin_warehouse_product
+                                ?.has_serials
+                        "
+                    >
+                        <label class="block text-sm font-medium text-gray-700">
+                            Quantity to Return (Max:
+                            {{ selectedDetail.transferred_qty }})
+                        </label>
+                        <input
+                            type="number"
+                            v-model="returnForm.return_qty"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            :max="selectedDetail.transferred_qty"
+                            min="1"
+                        />
+                    </div>
+
+                    <!-- Serialized products -->
+                    <div
+                        v-if="
+                            selectedDetail?.origin_warehouse_product
+                                ?.has_serials
+                        "
+                    >
+                        <div class="flex justify-between items-center mb-2">
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                                >Serial Numbers</label
+                            >
+                            <span class="text-sm text-gray-500">
+                                {{ returnForm.serials.length }} of
+                                {{ selectedDetail.transferred_qty }} available
+                            </span>
+                        </div>
+
+                        <!-- Scanner input -->
+                        <div class="mt-1">
+                            <div class="flex space-x-2">
+                                <div class="flex-1">
+                                    <input
+                                        type="text"
+                                        v-model="serialInput"
+                                        @keydown.enter.prevent="
+                                            handleSerialScan
+                                        "
+                                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Scan or enter serial number"
+                                        :disabled="
+                                            returnForm.serials.length >=
+                                            selectedDetail.transferred_qty
+                                        "
+                                    />
+                                </div>
+                            </div>
+                            <p
+                                v-if="serialValidationError"
+                                class="mt-1 text-sm text-red-600"
+                            >
+                                {{ serialValidationError }}
+                            </p>
+                        </div>
+
+                        <!-- Scanned Serials Table -->
+                        <div v-if="returnForm.serials.length > 0" class="mt-4">
+                            <div
+                                class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg"
+                            >
+                                <table
+                                    class="min-w-full divide-y divide-gray-200"
+                                >
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th
+                                                scope="col"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                            >
+                                                Serial Number
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                            >
+                                                Batch Number
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                class="relative px-6 py-3"
+                                            >
+                                                <span class="sr-only"
+                                                    >Actions</span
+                                                >
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody
+                                        class="bg-white divide-y divide-gray-200"
+                                    >
+                                        <tr
+                                            v-for="(
+                                                serial, index
+                                            ) in returnForm.serials"
+                                            :key="index"
+                                        >
+                                            <td
+                                                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                            >
+                                                {{ serial.serial_number }}
+                                            </td>
+                                            <td
+                                                class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                                            >
+                                                {{ serial.batch_number || "-" }}
+                                            </td>
+                                            <td
+                                                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                                            >
+                                                <button
+                                                    @click="
+                                                        returnForm.serials.splice(
+                                                            index,
+                                                            1
+                                                        )
+                                                    "
+                                                    class="text-red-600 hover:text-red-900"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Remarks -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            Remarks
+                        </label>
+                        <textarea
+                            v-model="returnForm.remarks"
+                            rows="3"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="Enter any remarks about the return"
+                        ></textarea>
+                    </div>
+                </div>
+            </template>
+
+            <template #footer>
+                <div class="flex items-center justify-between">
+                    <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+                    <div class="flex">
+                        <SecondaryButton @click="showReturnModal = false"
+                            >Cancel</SecondaryButton
+                        >
+                        <PrimaryButton
+                            class="ml-3"
+                            @click="submitReturnForm"
+                            :disabled="!canSubmitReturn || submitting"
+                            :loading="submitting"
+                        >
+                            Return
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </template>
+        </DialogModal>
+
+        <!-- Action Modal -->
+        <Modal :show="showActionModal" @close="closeActionModal">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    {{ actionTitle }}
+                </h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700"
+                        >Notes (Optional)</label
+                    >
+                    <textarea
+                        v-model="actionNotes"
+                        rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        :placeholder="
+                            'Add any notes about this ' +
+                            actionType +
+                            ' action...'
+                        "
+                    ></textarea>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        @click="closeActionModal"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white"
+                        :class="{
+                            'bg-green-600 hover:bg-green-700 focus:ring-green-500':
+                                actionType === 'approve',
+                            'bg-red-600 hover:bg-red-700 focus:ring-red-500':
+                                actionType === 'reject',
+                            'bg-gray-600 hover:bg-gray-700 focus:ring-gray-500':
+                                actionType === 'cancel',
+                        }"
+                        @click="handleAction"
+                        :disabled="isLoading"
+                    >
+                        {{
+                            isLoading
+                                ? "Processing..."
+                                : "Confirm " +
+                                  actionType.charAt(0).toUpperCase() +
+                                  actionType.slice(1)
+                        }}
+                    </button>
+                </div>
+            </div>
+        </Modal>
     </AppLayout>
 </template>
