@@ -44,7 +44,13 @@ class WarehouseStockTransfer extends Model
     {
         static::creating(function ($wst) {
             if (empty($wst->number)) {
-                $company = \App\Models\Company::find($wst->origin_warehouse->company_id);
+                // First get the warehouse
+                $originWarehouse = \App\Models\Warehouse::find($wst->origin_warehouse_id);
+                if (!$originWarehouse) {
+                    throw new \Exception('Origin warehouse not found');
+                }
+
+                $company = \App\Models\Company::find($originWarehouse->company_id);
 
                 if ($company) {
                     // Extract base prefix
@@ -67,7 +73,7 @@ class WarehouseStockTransfer extends Model
                     }
 
                     // Count WSTs for this company
-                    $count = self::where('company_id', $wst->company_id)->withTrashed()->count() + 1;
+                    $count = self::where('origin_warehouse_id', $wst->origin_warehouse_id)->withTrashed()->count() + 1;
                     $wst->number = sprintf('%s-WST-%06d', $finalPrefix, $count);
                 } else {
                     $wst->number = 'UNK-WST-' . sprintf('%06d', rand(1, 999999));

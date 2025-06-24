@@ -9,6 +9,7 @@ use App\Models\WarehouseStockTransfer;
 use App\Models\WarehouseProduct;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\WarehouseProductSerial;
 
 class WarehouseStockTransferDetailController extends Controller
 {
@@ -178,94 +179,185 @@ class WarehouseStockTransferDetailController extends Controller
 
     public function receive(Request $request, $detailId)
     {
-        $detail = WarehouseStockTransferDetail::findOrFail($detailId);
+        $detail = WarehouseStockTransferDetail::with(['warehouseStockTransfer', 'originWarehouseProduct', 'serials'])->findOrFail($detailId);
         $originProduct = $detail->originWarehouseProduct;
         $hasSerials = $originProduct->has_serials;
 
         $validated = $request->validate([
             'received_qty' => 'required|integer|min:1',
-            'has_serials' => 'boolean',
-            'type' => 'nullable|string',
-            'serials' => 'nullable|array',
-            'serials.*.serial_number' => 'nullable|string',
-            'serials.*.batch_number' => 'nullable|string',
-            'serials.*.manufactured_at' => 'nullable|date',
-            'serials.*.expired_at' => 'nullable|date',
+            'serials' => $hasSerials ? 'required|array' : 'nullable|array',
+            'serials.*.serial_number' => $hasSerials ? 'required|string' : 'nullable|string',
         ]);
 
-        if ($hasSerials && (empty($validated['serials']) || count($validated['serials']) != $validated['received_qty'])) {
-            return response()->json(['message' => 'Serials are required and must match the received quantity.'], 422);
+        // Validate transfer status
+        if ($detail->warehouseStockTransfer->status !== 'approved') {
+            return response()->json(['message' => 'Transfer must be approved before receiving items.'], 400);
+        }
+
+        // Validate quantity
+        $remainingQty = $detail->expected_qty - $detail->transferred_qty;
+        if ($validated['received_qty'] > $remainingQty) {
+            return response()->json([
+                'message' => 'Cannot receive more than the remaining quantity. Remaining: ' . $remainingQty
+            ], 400);
+        }
+
+        // For serialized products, validate serials
+        if ($hasSerials) {
+            if (count($validated['serials']) !== $validated['received_qty']) {
+                return response()->json([
+                    'message' => 'Number of serials must match received quantity'
+                ], 400);
+            }
+
+            // Get all expected serials for this detail
+            $expectedSerials = $detail->serials()
+                ->pluck('serial_number')
+                ->toArray();
+
+            // Validate each serial
+            foreach ($validated['serials'] as $serial) {
+                // Check if serial is part of the transfer
+                if (!in_array($serial['serial_number'], $expectedSerials)) {
+                    return response()->json([
+                        'message' => "Serial number {$serial['serial_number']} is not part of this transfer"
+                    ], 400);
+                }
+
+                // Check if serial exists in origin warehouse
+                $exists = WarehouseProductSerial::where('warehouse_product_id', $originProduct->id)
+                    ->where('serial_number', $serial['serial_number'])
+                    ->exists();
+
+                if (!$exists) {
+                    return response()->json([
+                        'message' => "Serial number {$serial['serial_number']} not found in origin warehouse"
+                    ], 400);
+                }
+            }
         }
 
         DB::beginTransaction();
         try {
-            // Update transferred qty
+            // Update transferred quantity
             $detail->transferred_qty += $validated['received_qty'];
             $detail->save();
 
-            // Create serials if needed
-            if ($hasSerials && !empty($validated['serials'])) {
-                foreach ($validated['serials'] as $serial) {
-                    \App\Models\WarehouseStockTransferSerial::create([
-                        'warehouse_stock_transfer_id' => $detail->warehouse_stock_transfer_id,
-                        'warehouse_stock_transfer_detail_id' => $detail->id,
-                        'serial_number' => $serial['serial_number'] ?? null,
-                        'batch_number' => $serial['batch_number'] ?? null,
-                        'manufactured_at' => $serial['manufactured_at'] ?? null,
-                        'expired_at' => $serial['expired_at'] ?? null,
-                        'is_sold' => 0,
-                    ]);
-                }
+            // Update transfer status
+            $transfer = $detail->warehouseStockTransfer;
+            
+            // Check if all details are fully received
+            $allDetailsComplete = $transfer->details()
+                ->get()
+                ->every(function($d) {
+                    return $d->transferred_qty >= $d->expected_qty;
+                });
+
+            if ($allDetailsComplete) {
+                $transfer->status = 'fully-transferred';
+            } else {
+                $transfer->status = 'partially-transferred';
             }
+            $transfer->save();
 
             DB::commit();
-            return response()->json(['message' => 'Stock transfer received successfully.']);
+            return response()->json([
+                'message' => 'Items received successfully',
+                'data' => $detail->fresh(['warehouseStockTransfer', 'serials'])
+            ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to receive stock transfer.', 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Failed to receive items',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
     public function return(Request $request, $detailId)
     {
-        $detail = WarehouseStockTransferDetail::findOrFail($detailId);
+        $detail = WarehouseStockTransferDetail::with(['warehouseStockTransfer', 'originWarehouseProduct', 'serials'])->findOrFail($detailId);
         $originProduct = $detail->originWarehouseProduct;
         $hasSerials = $originProduct->has_serials;
 
         $validated = $request->validate([
             'return_qty' => 'required|integer|min:1',
-            'serials' => 'nullable|array',
-            'serials.*.serial_number' => 'nullable|string',
+            'serials' => $hasSerials ? 'required|array' : 'nullable|array',
+            'serials.*.serial_number' => $hasSerials ? 'required|string' : 'nullable|string',
         ]);
 
-        if ($hasSerials && (empty($validated['serials']) || count($validated['serials']) != $validated['return_qty'])) {
-            return response()->json(['message' => 'Serials are required and must match the return quantity.'], 422);
+        // Validate transfer status
+        if (!in_array($detail->warehouseStockTransfer->status, ['approved', 'partially-transferred'])) {
+            return response()->json(['message' => 'Can only return items from approved or partially received transfers.'], 400);
+        }
+
+        // Validate return quantity
+        if ($validated['return_qty'] > $detail->transferred_qty) {
+            return response()->json([
+                'message' => 'Cannot return more than the transferred quantity. Transferred: ' . $detail->transferred_qty
+            ], 400);
+        }
+
+        // For serialized products, validate serials
+        if ($hasSerials) {
+            if (count($validated['serials']) !== $validated['return_qty']) {
+                return response()->json([
+                    'message' => 'Number of serials must match return quantity'
+                ], 400);
+            }
+
+            // Get all serials for this detail
+            $detailSerials = $detail->serials()
+                ->pluck('serial_number')
+                ->toArray();
+
+            // Validate each serial
+            foreach ($validated['serials'] as $serial) {
+                if (!in_array($serial['serial_number'], $detailSerials)) {
+                    return response()->json([
+                        'message' => "Serial number {$serial['serial_number']} is not part of this transfer"
+                    ], 400);
+                }
+            }
         }
 
         DB::beginTransaction();
         try {
-            // Update transferred qty
+            // Update transferred quantity
             $detail->transferred_qty -= $validated['return_qty'];
-            if ($detail->transferred_qty < 0) $detail->transferred_qty = 0;
+            if ($detail->transferred_qty < 0) {
+                $detail->transferred_qty = 0;
+            }
             $detail->save();
 
-            // Remove serials if needed
-            if ($hasSerials && !empty($validated['serials'])) {
-                foreach ($validated['serials'] as $serial) {
-                    $serialModel = \App\Models\WarehouseStockTransferSerial::where('warehouse_stock_transfer_detail_id', $detail->id)
-                        ->where('serial_number', $serial['serial_number'] ?? null)
-                        ->first();
-                    if ($serialModel) {
-                        $serialModel->delete();
-                    }
-                }
+            // Update transfer status
+            $transfer = $detail->warehouseStockTransfer;
+            
+            // Check if any items are still transferred
+            $anyTransferred = $transfer->details()
+                ->where('transferred_qty', '>', 0)
+                ->exists();
+
+            if (!$anyTransferred) {
+                $transfer->status = 'approved'; // Reset to approved if all items returned
+            } else {
+                $transfer->status = 'partially-transferred';
             }
+            $transfer->save();
 
             DB::commit();
-            return response()->json(['message' => 'Stock transfer returned successfully.']);
+            return response()->json([
+                'message' => 'Items returned successfully',
+                'data' => $detail->fresh(['warehouseStockTransfer', 'serials'])
+            ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to return stock transfer.', 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Failed to return items',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

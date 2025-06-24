@@ -19,7 +19,6 @@ use App\Http\Controllers\Api\Modules\ProjectManagement\ProjectColumnController;
 
 use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\CustomerController;
 use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\AgentController;
-use App\Http\Controllers\Api\Modules\CustomerRelationshipManagement\AdvertisementController;
 
 use App\Http\Controllers\Api\Modules\AccountingManagement\BankController;
 use App\Http\Controllers\Api\Modules\AccountingManagement\CompanyAccountController;
@@ -100,10 +99,6 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class);
     Route::get('complete/customers', [CustomerController::class, 'complete'])->name('customers.complete');
     Route::get('autocomplete/customers', [CustomerController::class, 'autocomplete'])->name('customers.autocomplete');
-
-    Route::apiResource('advertisements', AdvertisementController::class);
-    Route::get('complete/advertisements', [AdvertisementController::class, 'complete'])->name('advertisements.complete');
-    Route::get('autocomplete/advertisements', [AdvertisementController::class, 'autocomplete'])->name('advertisements.autocomplete');
 
     Route::apiResource('agents', AgentController::class);
     Route::get('autocomplete/agents', [AgentController::class, 'autocomplete'])->name('agents.autocomplete');
@@ -203,10 +198,16 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('warehouse-stock-adjustments', WarehouseStockAdjustmentController::class);
     Route::get('autocomplete/warehouse-stock-adjustments', [WarehouseStockAdjustmentController::class, 'autocomplete'])->name('warehouse-stock-adjustments.autocomplete');
 
+    Route::get('warehouse-stock-transfers/validate-serial', [WarehouseStockTransferController::class, 'validateSerial'])->name('warehouse-stock-transfers.validate-serial');
     Route::apiResource('warehouse-stock-transfers', WarehouseStockTransferController::class);
     Route::get('autocomplete/warehouse-stock-transfers', [WarehouseStockTransferController::class, 'autocomplete'])->name('warehouse-stock-transfers.autocomplete');
     Route::post('warehouse-stock-transfer-details/{detail}/receive', [WarehouseStockTransferDetailController::class, 'receive'])->name('warehouse-stock-transfer-details.receive');
     Route::post('warehouse-stock-transfer-details/{detail}/return', [WarehouseStockTransferDetailController::class, 'return'])->name('warehouse-stock-transfer-details.return');
+
+    Route::post('warehouse-stock-transfers/{warehouseStockTransfer}/approve', [WarehouseStockTransferController::class, 'approve'])->name('warehouse-stock-transfers.approve');
+    Route::post('warehouse-stock-transfers/{warehouseStockTransfer}/reject', [WarehouseStockTransferController::class, 'reject'])->name('warehouse-stock-transfers.reject');
+    Route::post('warehouse-stock-transfers/{warehouseStockTransfer}/cancel', [WarehouseStockTransferController::class, 'cancel'])->name('warehouse-stock-transfers.cancel');
+    Route::post('warehouse-stock-transfers/{warehouseStockTransfer}/complete', [WarehouseStockTransferController::class, 'complete'])->name('warehouse-stock-transfers.complete');
 
     Route::apiResource('warehouse-stock-transfer-details', WarehouseStockTransferDetailController::class);
     Route::get('autocomplete/warehouse-stock-transfer-details', [WarehouseStockTransferDetailController::class, 'autocomplete'])->name('warehouse-stock-transfer-details.autocomplete');
