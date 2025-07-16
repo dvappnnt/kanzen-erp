@@ -56,6 +56,13 @@ const fields = ref([
         placeholder: "Upload app logo",
         required: false,
     },
+    {
+        id: "receive_with_serial",
+        label: "Enable Serial Receiving",
+        model: "receive_with_serial",
+        type: "toggle", // 👈 this uses your existing toggle implementation
+        required: false,
+    },
 ]);
 
 onMounted(() => {

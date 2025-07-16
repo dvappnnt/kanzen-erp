@@ -18,6 +18,7 @@ import { router } from "@inertiajs/vue3";
 import { useToast } from "vue-toastification";
 import { formatDate, humanReadable } from "@/utils/global";
 import Autocomplete from "@/Components/Data/Autocomplete.vue";
+import ConfirmationModal from "@/Components/ConfirmationModal.vue";
 
 const modelName = "goods-receipts";
 const page = usePage();
@@ -25,6 +26,9 @@ const modelData = computed(() => page.props.modelData || {});
 const details = ref(modelData.value?.details || []);
 
 const { buttonPrimaryBgColor, buttonPrimaryTextColor } = useColors();
+const receiveWithSerial = computed(
+    () => page.props.appSettings?.receive_with_serial ?? false
+);
 
 const profileDetails = [
     { label: "Number", value: "number", class: "text-xl font-bold" },
@@ -219,10 +223,18 @@ const startReceive = (detail) => {
     selectedDetail.value = detail;
     receiveForm.value = {
         received_qty: detail.expected_qty - detail.received_qty,
-        has_serials: false,
+        // has_serials: false,
+        has_serials: receiveWithSerial.value,
         type: "serial_numbers",
         serials: [],
     };
+    console.log(
+        "receive_with_serial from backend:",
+        page.props.appSettings?.receive_with_serial
+    );
+    if (receiveWithSerial.value) {
+        addSerial();
+    }
     showReceiveModal.value = true;
 };
 
@@ -526,24 +538,44 @@ const isFullyReceived = computed(() => {
 });
 
 // Add this method after other methods
-const handleTransfer = async () => {
-    if (!confirm("Are you sure you want to transfer these items to warehouse?"))
-        return;
+// const handleTransfer = async () => {
+//     if (!confirm("Are you sure you want to transfer these items to warehouse?"))
+//         return;
 
-    try {
-        isLoading.value = true;
-        await axios.post(`/api/${modelName}/${modelData.value.id}/transfer`);
-        toast.success("Items transferred to warehouse successfully");
-        window.location.reload();
-    } catch (error) {
-        console.error("Error transferring items:", error);
-        toast.error(
-            error.response?.data?.message || "Failed to transfer items"
-        );
-    } finally {
-        isLoading.value = false;
-    }
+//     try {
+//         isLoading.value = true;
+//         await axios.post(`/api/${modelName}/${modelData.value.id}/transfer`);
+//         toast.success("Items transferred to warehouse successfully");
+//         window.location.reload();
+//     } catch (error) {
+//         console.error("Error transferring items:", error);
+//         toast.error(
+//             error.response?.data?.message || "Failed to transfer items"
+//         );
+//     } finally {
+//         isLoading.value = false;
+//     }
+// };
+const handleTransfer = () => {
+    confirmationMessage.value = "Are you sure you want to transfer these items to warehouse?";
+    showConfirmationModal.value = true;
+
+    confirmAction.value = async () => {
+        try {
+            isLoading.value = true;
+            await axios.post(`/api/${modelName}/${modelData.value.id}/transfer`);
+            toast.success("Items transferred to warehouse successfully");
+            window.location.reload();
+        } catch (error) {
+            console.error("Error transferring items:", error);
+            toast.error(error.response?.data?.message || "Failed to transfer items");
+        } finally {
+            isLoading.value = false;
+            showConfirmationModal.value = false;
+        }
+    };
 };
+
 
 const startEditSerial = (serial) => {
     editingSerial.value = {
@@ -596,25 +628,55 @@ const handlePrintSerials = () => {
         printWindow.print();
     };
 };
+const showConfirmationModal = ref(false);
+const confirmationMessage = ref('');
+const confirmAction = ref(() => {});
 
-const handleSync = async (detail) => {
-    try {
-        if (!confirm('Are you sure you want to sync this quantity to warehouse?')) return;
-        
-        isLoading.value = true;
-        await axios.post(`/api/goods-receipt-details/${detail.id}/sync`, {
-            received_qty: detail.received_qty
-        });
-        
-        toast.success('Quantity synced to warehouse successfully');
-        router.get(`/${modelName}/${modelData.value.id}`);
-    } catch (error) {
-        console.error('Error syncing quantity:', error);
-        toast.error(error.response?.data?.message || 'Failed to sync quantity');
-    } finally {
-        isLoading.value = false;
-    }
+// const handleSync = async (detail) => {
+//     try {
+//         if (
+//             !confirm(
+//                 "Are you sure you want to sync this quantity to warehouse?"
+//             )
+//         )
+//             return;
+
+//         isLoading.value = true;
+//         await axios.post(`/api/goods-receipt-details/${detail.id}/sync`, {
+//             received_qty: detail.received_qty,
+//         });
+
+//         toast.success("Quantity synced to warehouse successfully");
+//         router.get(`/${modelName}/${modelData.value.id}`);
+//     } catch (error) {
+//         console.error("Error syncing quantity:", error);
+//         toast.error(error.response?.data?.message || "Failed to sync quantity");
+//     } finally {
+//         isLoading.value = false;
+//     }
+// };
+const handleSync = (detail) => {
+    confirmationMessage.value = "Are you sure you want to sync this quantity to warehouse?";
+    showConfirmationModal.value = true;
+
+    confirmAction.value = async () => {
+        try {
+            isLoading.value = true;
+            await axios.post(`/api/goods-receipt-details/${detail.id}/sync`, {
+                received_qty: detail.received_qty,
+            });
+
+            toast.success("Quantity synced to warehouse successfully");
+            router.get(`/${modelName}/${modelData.value.id}`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to sync quantity");
+        } finally {
+            isLoading.value = false;
+            showConfirmationModal.value = false;
+        }
+    };
 };
+
 </script>
 
 <template>
@@ -753,7 +815,11 @@ const handleSync = async (detail) => {
                                                     "
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     class="h-5 w-5 ml-2"
-                                                    :class="detail.is_synced ? 'text-blue-500' : 'text-green-500'"
+                                                    :class="
+                                                        detail.is_synced
+                                                            ? 'text-blue-500'
+                                                            : 'text-green-500'
+                                                    "
                                                     viewBox="0 0 20 20"
                                                     fill="currentColor"
                                                 >
@@ -835,7 +901,8 @@ const handleSync = async (detail) => {
                                                     v-if="
                                                         detail.expected_qty ===
                                                             detail.received_qty &&
-                                                        modelData.status !== 'in-warehouse' &&
+                                                        modelData.status !==
+                                                            'in-warehouse' &&
                                                         !detail.is_synced
                                                     "
                                                     @click="handleSync(detail)"
@@ -1038,7 +1105,11 @@ const handleSync = async (detail) => {
                                                         class="flex space-x-2 justify-end"
                                                     >
                                                         <button
-                                                            v-if="!detail.is_synced && modelData.status !== 'in-warehouse'"
+                                                            v-if="
+                                                                !detail.is_synced &&
+                                                                modelData.status !==
+                                                                    'in-warehouse'
+                                                            "
                                                             @click="
                                                                 startEditSerial(
                                                                     serial
@@ -1062,7 +1133,11 @@ const handleSync = async (detail) => {
                                                             </svg>
                                                         </button>
                                                         <button
-                                                            v-if="!detail.is_synced && modelData.status !== 'in-warehouse'"
+                                                            v-if="
+                                                                !detail.is_synced &&
+                                                                modelData.status !==
+                                                                    'in-warehouse'
+                                                            "
                                                             @click="
                                                                 deleteSerial(
                                                                     serial.id,
@@ -1235,6 +1310,24 @@ const handleSync = async (detail) => {
                                     : ''
                             "
                         />
+                        <p class="text-sm text-gray-500 mt-1">
+                            Expected Quantity:
+                            <strong>
+                                {{
+                                    selectedDetail
+                                        ? selectedDetail.expected_qty
+                                        : "-"
+                                }}
+                            </strong>
+                            &nbsp;| Already Received:
+                            <strong>
+                                {{
+                                    selectedDetail
+                                        ? selectedDetail.received_qty
+                                        : "-"
+                                }}
+                            </strong>
+                        </p>
                     </div>
 
                     <div>
@@ -1245,6 +1338,7 @@ const handleSync = async (detail) => {
                             <input
                                 type="checkbox"
                                 v-model="receiveForm.has_serials"
+                                :disabled="receiveWithSerial"
                                 class="rounded border-gray-300 text-gray-600 shadow-sm focus:border-gray-500 focus:ring-gray-500"
                             />
                         </div>
@@ -1611,4 +1705,29 @@ const handleSync = async (detail) => {
             </div>
         </div>
     </div>
+    <ConfirmationModal :show="showConfirmationModal" @close="showConfirmationModal = false">
+    <template #title>
+        Confirm Action
+    </template>
+
+    <template #content>
+        {{ confirmationMessage }}
+    </template>
+
+    <template #footer>
+        <button
+            class="px-4 py-2 border border-gray-300 rounded mr-2"
+            @click="showConfirmationModal = false"
+        >
+            Cancel
+        </button>
+        <button
+            class="px-4 py-2 bg-indigo-600 text-white rounded"
+            @click="confirmAction"
+        >
+            Confirm
+        </button>
+    </template>
+</ConfirmationModal>
+
 </template>

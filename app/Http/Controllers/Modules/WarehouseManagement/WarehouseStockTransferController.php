@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Modules\WarehouseManagement;
 
 use App\Http\Controllers\Controller;
+use App\Settings\AppSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -50,6 +51,7 @@ class WarehouseStockTransferController extends Controller
 
         return Inertia::render("{$this->modulePath}/{$this->modelName}/Show", [
             'modelData' => $model,
+            'receive_with_serial' => app(AppSettings::class)->receive_with_serial,
         ]);
     }
 

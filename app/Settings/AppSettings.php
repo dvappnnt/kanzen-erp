@@ -63,6 +63,9 @@ class AppSettings extends Settings
     public ?string $claude_api_url;
     public ?string $claude_api_key;
 
+      // ➕ Receive With Serial Toggle
+    public bool $receive_with_serial = false;
+
     public static function group(): string
     {
         return 'app';

@@ -20,11 +20,15 @@ class SettingController extends Controller
 
     public function update(Request $request)
     {
+        $request->merge([
+            'receive_with_serial' => filter_var($request->input('receive_with_serial'), FILTER_VALIDATE_BOOLEAN),
+        ]);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'required|string|max:500',
             'icon' => 'nullable|file|mimes:png,jpg,jpeg,svg,webp,avif|max:2048',
             'logo' => 'nullable|file|mimes:png,jpg,jpeg,svg,webp,avif|max:2048',
+            'receive_with_serial' => 'nullable|boolean',
         ]);
 
         $settings = app(\App\Settings\AppSettings::class);
@@ -40,10 +44,13 @@ class SettingController extends Controller
             $logoPath = $request->file('logo')->store('app-settings', 'public'); // Save to 'storage/app/public/app-settings'
             $settings->logo = $logoPath; // Save the relative path to the database
         }
+       $settings->receive_with_serial = $validated['receive_with_serial'];
+
 
         // Update other settings
         $settings->name = $validated['name'];
         $settings->description = $validated['description'];
+
 
         // Save settings
         $settings->save();

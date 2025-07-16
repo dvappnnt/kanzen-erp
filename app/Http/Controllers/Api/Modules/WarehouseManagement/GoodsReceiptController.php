@@ -9,6 +9,7 @@ use App\Models\WarehouseProductSerial;
 use App\Models\WarehouseTransfer;
 use Illuminate\Support\Facades\DB;
 use App\Models\GoodsReceiptDetail;
+use App\Settings\AppSettings;
 
 class GoodsReceiptController extends Controller
 {
@@ -42,9 +43,10 @@ class GoodsReceiptController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show($id, AppSettings $settings)
     {
         $model = $this->modelClass::findOrFail($id);
+        $model->receive_with_serial = $settings->receive_with_serial;
         return $model;
     }
 

@@ -40,50 +40,105 @@ class WarehouseStockTransfer extends Model
         return $this->hasMany(WarehouseStockTransferDetail::class);
     }
 
+    // protected static function booted()
+    // {
+    //     static::creating(function ($wst) {
+    //         if (empty($wst->number)) {
+    //             // First get the warehouse
+    //             $originWarehouse = \App\Models\Warehouse::find($wst->origin_warehouse_id);
+    //             if (!$originWarehouse) {
+    //                 throw new \Exception('Origin warehouse not found');
+    //             }
+
+    //             $company = \App\Models\Company::find($originWarehouse->company_id);
+
+    //             if ($company) {
+    //                 // Extract base prefix
+    //                 $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+
+    //                 // Get all companies with the same base prefix
+    //                 $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
+    //                     return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+    //                 })->values();
+
+    //                 if ($matchingCompanies->count() === 1) {
+    //                     // Only one company with this prefix
+    //                     $finalPrefix = $basePrefix;
+    //                 } else {
+    //                     // Multiple companies sharing prefix
+    //                     $index = $matchingCompanies->search(function ($comp) use ($company) {
+    //                         return $comp->id === $company->id;
+    //                     });
+    //                     $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
+    //                 }
+
+    //                 // Count WSTs for this company
+    //                 $count = self::where('origin_warehouse_id', $wst->origin_warehouse_id)->withTrashed()->count() + 1;
+    //                 $wst->number = sprintf('%s-WST-%06d', $finalPrefix, $count);
+    //             } else {
+    //                 $wst->number = 'UNK-WST-' . sprintf('%06d', rand(1, 999999));
+    //             }
+    //         }
+
+    //         // Set initial status
+    //         if (empty($wst->status)) {
+    //             $wst->status = 'pending';
+    //         }
+    //     });
+    // }
     protected static function booted()
-    {
-        static::creating(function ($wst) {
-            if (empty($wst->number)) {
-                // First get the warehouse
-                $originWarehouse = \App\Models\Warehouse::find($wst->origin_warehouse_id);
-                if (!$originWarehouse) {
-                    throw new \Exception('Origin warehouse not found');
-                }
+{
+    static::creating(function ($wst) {
+        if (empty($wst->number)) {
+            // First get the warehouse
+            $originWarehouse = \App\Models\Warehouse::find($wst->origin_warehouse_id);
+            if (!$originWarehouse) {
+                throw new \Exception('Origin warehouse not found');
+            }
 
-                $company = \App\Models\Company::find($originWarehouse->company_id);
+            $company = \App\Models\Company::find($originWarehouse->company_id);
 
-                if ($company) {
-                    // Extract base prefix
-                    $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
+            if ($company) {
+                // Extract base prefix
+                $basePrefix = strtoupper(substr(preg_replace('/\s+/', '', $company->name), 0, 3));
 
-                    // Get all companies with the same base prefix
-                    $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
-                        return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
-                    })->values();
+                // Get all companies with the same base prefix
+                $matchingCompanies = \App\Models\Company::all()->filter(function ($comp) use ($basePrefix) {
+                    return strtoupper(substr(preg_replace('/\s+/', '', $comp->name), 0, 3)) === $basePrefix;
+                })->values();
 
-                    if ($matchingCompanies->count() === 1) {
-                        // Only one company with this prefix
-                        $finalPrefix = $basePrefix;
-                    } else {
-                        // Multiple companies sharing prefix
-                        $index = $matchingCompanies->search(function ($comp) use ($company) {
-                            return $comp->id === $company->id;
-                        });
-                        $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
-                    }
-
-                    // Count WSTs for this company
-                    $count = self::where('origin_warehouse_id', $wst->origin_warehouse_id)->withTrashed()->count() + 1;
-                    $wst->number = sprintf('%s-WST-%06d', $finalPrefix, $count);
+                if ($matchingCompanies->count() === 1) {
+                    $finalPrefix = $basePrefix;
                 } else {
-                    $wst->number = 'UNK-WST-' . sprintf('%06d', rand(1, 999999));
+                    $index = $matchingCompanies->search(fn ($comp) => $comp->id === $company->id);
+                    $finalPrefix = $basePrefix . ($index !== false ? $index + 1 : 1);
                 }
-            }
 
-            // Set initial status
-            if (empty($wst->status)) {
-                $wst->status = 'pending';
+                // 🔒 Find last number safely
+                $latest = self::withTrashed()
+                    ->where('number', 'like', "$finalPrefix-WST-%")
+                    ->orderByDesc('id')
+                    ->first();
+
+                $lastNumber = optional($latest)->number;
+                $lastIncrement = 0;
+
+                if ($lastNumber && preg_match('/\d+$/', $lastNumber, $matches)) {
+                    $lastIncrement = (int) $matches[0];
+                }
+
+                $nextNumber = $lastIncrement + 1;
+
+                $wst->number = sprintf('%s-WST-%06d', $finalPrefix, $nextNumber);
+            } else {
+                $wst->number = 'UNK-WST-' . sprintf('%06d', rand(1, 999999));
             }
-        });
-    }
+        }
+
+        if (empty($wst->status)) {
+            $wst->status = 'pending';
+        }
+    });
+}
+
 }

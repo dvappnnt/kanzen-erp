@@ -46,5 +46,7 @@ class DatabaseSeeder extends Seeder
         $this->call(HRModuleSeeder::class);
         $this->call(CourierSeeder::class);
         // $this->call(TypeSeeder::class);
+        $this->call(AppSettingsSeeder::class);
+
     }
 }
