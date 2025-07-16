@@ -64,6 +64,10 @@ Designed with flexibility, security, and scalability in mind, this project serve
 
 ## 👨‍💻 Developed by
 
+**Ian Ichiro Beguas**  
+Full-Stack Web Developer | Full Stack Web Developer 
+🌐 [https://edeesonopina.vercel.app](https://porfolio-ichiro.vercel.app)
+
 **Edeeson Opina**  
 Full-Stack Web Developer | Full Stack Web Developer 
 🌐 [https://edeesonopina.vercel.app](https://edeesonopina.vercel.app)
@@ -97,5 +101,7 @@ php artisan key:generate
 php artisan migrate --seed
 
 # Start development servers
-php artisan serve
 npm run dev
+npm run build
+php artisan serve
+
