@@ -66,7 +66,7 @@ Designed with flexibility, security, and scalability in mind, this project serve
 
 **Ian Ichiro Beguas**  
 Full-Stack Web Developer | Full Stack Web Developer 
-🌐 [https://edeesonopina.vercel.app](https://porfolio-ichiro.vercel.app)
+🌐 [https://porfolio-ichiro.vercel.app](https://porfolio-ichiro.vercel.app)
 
 **Edeeson Opina**  
 Full-Stack Web Developer | Full Stack Web Developer 
