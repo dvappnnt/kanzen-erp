@@ -22,6 +22,7 @@ jobs:
         port: ${{ secrets.SSH_PORT }}
         script: |
           cd /home/nnterp.com/staging
+          git config --global --add safe.directory /home/nnterp.com/staging
           git reset --hard
           git clean -fd
           git config --global user.name "GitHub Actions"
