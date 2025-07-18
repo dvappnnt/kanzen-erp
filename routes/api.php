@@ -144,8 +144,13 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('suppliers', SupplierController::class);
     Route::get('autocomplete/suppliers', [SupplierController::class, 'autocomplete'])->name('suppliers.autocomplete');
+    
+    // Route::group(['prefix' => 'suppliers/{supplier}'], function () {
+    //     Route::apiResource('products', SupplierProductController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    //     Route::put('products/{product}/details/{detail}', [SupplierProductController::class, 'updateDetail']);
+    // });
 
-    Route::group(['prefix' => 'suppliers/{supplier}'], function () {
+    Route::group(['prefix' => 'suppliers/{supplier}', 'as' => 'supplier.'], function () {
         Route::apiResource('products', SupplierProductController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
         Route::put('products/{product}/details/{detail}', [SupplierProductController::class, 'updateDetail']);
     });
