@@ -16,6 +16,7 @@ class RoleSeeder extends Seeder
     {
         $this->createSystemRoles();
         $this->assignSuperAdminPermissions();
+        $this->createStockAlertPermissions();
     }
 
     /**
@@ -36,6 +37,20 @@ class RoleSeeder extends Seeder
                 'name' => $role['name'],
                 'guard_name' => $role['guard_name'],
             ]);
+        }
+    }
+     private function createStockAlertPermissions(): void
+    {
+        $permissions = [
+            'create stock alert thresholds',
+            'read stock alert thresholds',
+            'update stock alert thresholds',
+            'delete stock alert thresholds',
+            'restore stock alert thresholds',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
     }
 

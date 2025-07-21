@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Api\Modules\WarehouseManagement;
 
+use App\Events\LowStockDetected;
 use App\Http\Controllers\Controller;
+use App\Models\StockAlertThreshold;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\WarehouseStockTransfer;
 use App\Models\WarehouseStockTransferDetail;
@@ -10,8 +13,11 @@ use App\Models\WarehouseStockTransferSerial;
 use App\Models\Warehouse;
 use App\Models\WarehouseProduct;
 use App\Models\WarehouseProductSerial;
+use App\Notifications\LowStockNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Role;
 
 class WarehouseStockTransferController extends Controller
 {
@@ -25,9 +31,9 @@ class WarehouseStockTransferController extends Controller
         ])->latest();
 
         if ($request->has('warehouse_id')) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->where('origin_warehouse_id', $request->warehouse_id)
-                  ->orWhere('destination_warehouse_id', $request->warehouse_id);
+                    ->orWhere('destination_warehouse_id', $request->warehouse_id);
             });
         }
 
@@ -65,7 +71,7 @@ class WarehouseStockTransferController extends Controller
             // Process each detail
             foreach ($validated['details'] as $detail) {
                 $originProduct = WarehouseProduct::findOrFail($detail['origin_warehouse_product_id']);
-                
+
                 // Create or get destination warehouse product
                 $destinationProduct = WarehouseProduct::firstOrCreate(
                     [
@@ -121,7 +127,6 @@ class WarehouseStockTransferController extends Controller
                     'details.serials'
                 ])
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -142,7 +147,7 @@ class WarehouseStockTransferController extends Controller
         try {
             // Get the transfer and check its status
             $transfer = WarehouseStockTransfer::findOrFail($request->warehouse_stock_transfer_id);
-            
+
             if (!in_array($transfer->status, ['approved', 'partially_received'])) {
                 return response()->json([
                     'valid' => false,
@@ -182,11 +187,11 @@ class WarehouseStockTransferController extends Controller
             }
 
             // Check if serial is already in another active transfer
-            $existingTransfer = WarehouseStockTransferSerial::whereHas('transfer', function($q) use ($request) {
+            $existingTransfer = WarehouseStockTransferSerial::whereHas('transfer', function ($q) use ($request) {
                 $q->whereIn('status', ['pending', 'approved', 'partially_received'])
-                  ->where('id', '!=', $request->warehouse_stock_transfer_id);
+                    ->where('id', '!=', $request->warehouse_stock_transfer_id);
             })->where('serial_number', $request->serial_number)
-              ->first();
+                ->first();
 
             if ($existingTransfer) {
                 return response()->json([
@@ -199,7 +204,6 @@ class WarehouseStockTransferController extends Controller
                 'valid' => true,
                 'data' => $serial
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'valid' => false,
@@ -218,7 +222,7 @@ class WarehouseStockTransferController extends Controller
             'details',
             'details.serials'
         ])->findOrFail($id);
-        
+
         return response()->json($transfer);
     }
 
@@ -243,19 +247,19 @@ class WarehouseStockTransferController extends Controller
             'destinationWarehouseProduct.supplierProductDetail.product',
             'createdByUser'
         ])
-        ->where(function($q) use ($request) {
-            $q->whereHas('originWarehouse', function($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
+            ->where(function ($q) use ($request) {
+                $q->whereHas('originWarehouse', function ($q) use ($request) {
+                    $q->where('name', 'like', "%{$request->search}%");
+                })
+                    ->orWhereHas('destinationWarehouse', function ($q) use ($request) {
+                        $q->where('name', 'like', "%{$request->search}%");
+                    })
+                    ->orWhereHas('originWarehouseProduct.supplierProductDetail.product', function ($q) use ($request) {
+                        $q->where('name', 'like', "%{$request->search}%");
+                    });
             })
-            ->orWhereHas('destinationWarehouse', function($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            })
-            ->orWhereHas('originWarehouseProduct.supplierProductDetail.product', function($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%");
-            });
-        })
-        ->take(10)
-        ->get();
+            ->take(10)
+            ->get();
 
         return response()->json([
             'data' => $query,
@@ -266,7 +270,7 @@ class WarehouseStockTransferController extends Controller
     public function approve($id)
     {
         $transfer = WarehouseStockTransfer::findOrFail($id);
-        
+
         if ($transfer->status !== 'pending') {
             return response()->json([
                 'message' => 'Stock transfer cannot be approved in its current state'
@@ -287,7 +291,7 @@ class WarehouseStockTransferController extends Controller
     public function reject($id)
     {
         $transfer = WarehouseStockTransfer::findOrFail($id);
-        
+
         if ($transfer->status !== 'pending') {
             return response()->json([
                 'message' => 'Stock transfer cannot be rejected in its current state'
@@ -308,7 +312,7 @@ class WarehouseStockTransferController extends Controller
     public function cancel($id)
     {
         $transfer = WarehouseStockTransfer::findOrFail($id);
-        
+
         if ($transfer->status !== 'pending') {
             return response()->json([
                 'message' => 'Stock transfer cannot be cancelled in its current state'
@@ -325,12 +329,14 @@ class WarehouseStockTransferController extends Controller
             'data' => $transfer
         ]);
     }
-
     public function complete($id)
     {
-        $transfer = WarehouseStockTransfer::with(['details.originWarehouseProduct', 'details.destinationWarehouseProduct', 'details.serials'])
-            ->findOrFail($id);
-        
+        $transfer = WarehouseStockTransfer::with([
+            'details.originWarehouseProduct.supplierProductDetail.product',
+            'details.destinationWarehouseProduct',
+            'details.serials'
+        ])->findOrFail($id);
+
         if ($transfer->status !== 'fully-transferred') {
             return response()->json([
                 'message' => 'Transfer must be fully transferred before completing'
@@ -340,20 +346,47 @@ class WarehouseStockTransferController extends Controller
         try {
             DB::beginTransaction();
 
-            // Process each detail
             foreach ($transfer->details as $detail) {
-                // Deduct from origin warehouse
                 $originProduct = $detail->originWarehouseProduct;
                 $originProduct->decrement('qty', $detail->transferred_qty);
 
-                // Add to destination warehouse
+                $threshold = StockAlertThreshold::where('warehouse_id', $originProduct->warehouse_id)
+                    ->where('product_id', $originProduct->supplierProductDetail->product_id)
+                    ->first();
+
+                $newQty = $originProduct->fresh()->qty;
+
+                \Log::info('Checking stock threshold', [
+                    'product_id' => $originProduct->supplierProductDetail->product_id,
+                    'product_name' => $originProduct->supplierProductDetail->product->name,
+                    'warehouse_id' => $originProduct->warehouse_id,
+                    'remaining_qty' => $newQty,
+                    'min_qty' => optional($threshold)->min_qty
+                ]);
+
+                if ($threshold && $newQty <= $threshold->min_qty) {
+                    // Notify all super-admins (custom check if no role system)
+                   $admins = User::role('super-admin')->get();  // Adjust this to your structure
+                    foreach ($admins as $admin) {
+                        $admin->notify(new \App\Notifications\LowStockNotification(
+                            $originProduct->supplierProductDetail->product,
+                            $originProduct->warehouse,
+                            $newQty
+                        ));
+                    }
+
+                    \Log::info('📦 Low stock notification sent', [
+                        'product' => $originProduct->supplierProductDetail->product->name,
+                        'warehouse' => $originProduct->warehouse->name,
+                        'remaining_qty' => $newQty
+                    ]);
+                }
+
                 $destinationProduct = $detail->destinationWarehouseProduct;
                 $destinationProduct->increment('qty', $detail->transferred_qty);
 
-                // Update serial numbers if any
                 if ($originProduct->has_serials) {
                     foreach ($detail->serials as $serial) {
-                        // Move serial to destination warehouse
                         WarehouseProductSerial::where('warehouse_product_id', $originProduct->id)
                             ->where('serial_number', $serial->serial_number)
                             ->update([
@@ -363,11 +396,7 @@ class WarehouseStockTransferController extends Controller
                 }
             }
 
-            // Update transfer status
-            $transfer->update([
-                'status' => 'completed'
-            ]);
-
+            $transfer->update(['status' => 'completed']);
             DB::commit();
 
             return response()->json([
@@ -379,9 +408,9 @@ class WarehouseStockTransferController extends Controller
                     'details.serials'
                 ])
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('❌ Stock transfer failed', ['error' => $e->getMessage()]);
             return response()->json([
                 'message' => 'Failed to complete stock transfer: ' . $e->getMessage()
             ], 500);
