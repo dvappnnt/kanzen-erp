@@ -54,6 +54,7 @@ const headerActions = ref([
                 <HeaderActions :actions="headerActions" />
             </div>
         </template>
+        
 
         <div class="py-12">
             <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
