@@ -51,6 +51,7 @@ use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeLeaveController
 use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeOvertimeController;
 use App\Http\Controllers\Modules\HumanResourceManagement\DeductionController;
 use App\Http\Controllers\Modules\HumanResourceManagement\DocumentTypeController;
+use App\Http\Controllers\StockAlertThresholdController;
 
 Route::get('/', function () {
     // return Inertia::render('Welcome', [
@@ -70,6 +71,12 @@ Route::middleware([
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/pos', [PosController::class, 'index'])->name('pos');
+
+    Route::get('/stock-alert-thresholds', [StockAlertThresholdController::class, 'index'])->name('stock-alert-thresholds.index');
+    Route::get('/stock-alert-thresholds/create', [StockAlertThresholdController::class, 'create'])->name('stock-alert-thresholds.create');
+    Route::post('/stock-alert-thresholds', [StockAlertThresholdController::class, 'store'])->name('stock-alert-thresholds.store');
+    Route::get('/stock-alert-thresholds/{id}/edit', [StockAlertThresholdController::class, 'edit'])->name('stock-alert-thresholds.edit');
+    Route::put('/stock-alert-thresholds/{id}', [StockAlertThresholdController::class, 'update'])->name('stock-alert-thresholds.update');
 
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'create']);
     Route::post('/users/{user}/send-reset-password', [UserController::class, 'sendResetPasswordLink'])
