@@ -1091,6 +1091,7 @@
                             hasPermission('read roles') ||
                             hasPermission('read activity logs') ||
                             hasPermission('read categories') ||
+                            hasPermission('read stock alert thresholds') ||
                             roles.includes('super-admin') ||
                             $page.props.jetstream.hasApiFeatures
                         "
@@ -1099,6 +1100,40 @@
                     >
                         Settings
                     </div>
+
+                    <Link
+                        v-if="hasPermission('read stock alert thresholds')"
+                        :href="route('stock-alert-thresholds.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route()
+                                .current()
+                                ?.startsWith('stock-alert-thresholds.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route()
+                                .current()
+                                ?.startsWith('stock-alert-thresholds.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-alert-circle-outline text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('stock-alert-thresholds.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3">
+                            Alert Stocks
+                        </span>
+                    </Link>
 
                     <Link
                         v-if="hasPermission('read roles')"

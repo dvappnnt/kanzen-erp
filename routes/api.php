@@ -81,6 +81,7 @@ use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeSkillContro
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeePerformanceReviewController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeLeaveController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeOvertimeController;
+use App\Http\Controllers\StockAlertThresholdController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -92,6 +93,7 @@ Route::get('/all/countries', [CountryController::class, 'all'])->name('api.count
 Route::resource('countries', CountryController::class)->only(['index', 'show', 'destroy']);
 
 Route::as('api.')->middleware('auth:sanctum')->group(function () {
+      Route::apiResource('stock-alert-thresholds', StockAlertThresholdController::class);
     Route::apiResource('users', UserController::class);
     Route::get('autocomplete/users', [UserController::class, 'autocomplete'])->name('users.autocomplete');
     Route::put('/users/update-password/{user}', [UserController::class, 'updatePassword'])->name('users.update-password');
