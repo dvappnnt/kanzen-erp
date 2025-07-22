@@ -93,7 +93,7 @@ Route::get('/all/countries', [CountryController::class, 'all'])->name('api.count
 Route::resource('countries', CountryController::class)->only(['index', 'show', 'destroy']);
 
 Route::as('api.')->middleware('auth:sanctum')->group(function () {
-      Route::apiResource('stock-alert-thresholds', StockAlertThresholdController::class);
+    Route::apiResource('stock-alert-thresholds', StockAlertThresholdController::class);
     Route::apiResource('users', UserController::class);
     Route::get('autocomplete/users', [UserController::class, 'autocomplete'])->name('users.autocomplete');
     Route::put('/users/update-password/{user}', [UserController::class, 'updatePassword'])->name('users.update-password');
@@ -146,8 +146,13 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('suppliers', SupplierController::class);
     Route::get('autocomplete/suppliers', [SupplierController::class, 'autocomplete'])->name('suppliers.autocomplete');
+    
+    // Route::group(['prefix' => 'suppliers/{supplier}'], function () {
+    //     Route::apiResource('products', SupplierProductController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    //     Route::put('products/{product}/details/{detail}', [SupplierProductController::class, 'updateDetail']);
+    // });
 
-    Route::group(['prefix' => 'suppliers/{supplier}'], function () {
+    Route::group(['prefix' => 'suppliers/{supplier}', 'as' => 'supplier.'], function () {
         Route::apiResource('products', SupplierProductController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
         Route::put('products/{product}/details/{detail}', [SupplierProductController::class, 'updateDetail']);
     });
