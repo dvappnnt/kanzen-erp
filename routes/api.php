@@ -93,7 +93,7 @@ Route::get('/all/countries', [CountryController::class, 'all'])->name('api.count
 Route::resource('countries', CountryController::class)->only(['index', 'show', 'destroy']);
 
 Route::as('api.')->middleware('auth:sanctum')->group(function () {
-      Route::apiResource('stock-alert-thresholds', StockAlertThresholdController::class);
+    Route::apiResource('stock-alert-thresholds', StockAlertThresholdController::class);
     Route::apiResource('users', UserController::class);
     Route::get('autocomplete/users', [UserController::class, 'autocomplete'])->name('users.autocomplete');
     Route::put('/users/update-password/{user}', [UserController::class, 'updatePassword'])->name('users.update-password');

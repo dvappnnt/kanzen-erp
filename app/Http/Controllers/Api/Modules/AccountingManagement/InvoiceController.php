@@ -13,6 +13,8 @@ use App\Models\Invoice;
 use App\Models\WarehouseProduct;
 use App\Models\WarehouseProductSerial;
 use App\Models\InvoiceSerial;
+use App\Models\StockAlertThreshold;
+use App\Models\User;
 
 class InvoiceController extends Controller
 {
@@ -190,7 +192,30 @@ class InvoiceController extends Controller
                     $warehouseProduct = WarehouseProduct::find($item['warehouse_product_id']);
                     if ($warehouseProduct) {
                         $warehouseProduct->decrement('qty', $item['qty']);
-                    }
+                         // Low stock check
+                        $threshold = StockAlertThreshold::where('warehouse_id', $warehouseProduct->warehouse_id)
+                            ->where('product_id', $warehouseProduct->supplierProductDetail->product_id ?? null)
+                            ->first();
+
+                        $newQty = $warehouseProduct->fresh()->qty;
+
+                            if ($threshold && $newQty <= $threshold->min_qty) {
+                                $admins = User::role('super-admin')->get();
+                                foreach ($admins as $admin) {
+                                    $admin->notify(new \App\Notifications\LowStockNotification(
+                                        $warehouseProduct->supplierProductDetail->product,
+                                        $warehouseProduct->warehouse,
+                                        $newQty
+                                    ));
+                                }
+
+                                // \Log::info('📦 POS low stock notification sent', [
+                                //     'product' => $warehouseProduct->supplierProductDetail->product->name ?? 'N/A',
+                                //     'warehouse' => $warehouseProduct->warehouse->name ?? 'N/A',
+                                //     'remaining_qty' => $newQty
+                                // ]);
+                             }
+                            }
                 }
 
                 // Handle serials if present (only for non-pre-order items)
