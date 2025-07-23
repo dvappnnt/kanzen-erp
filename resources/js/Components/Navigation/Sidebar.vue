@@ -388,7 +388,8 @@
                             hasPermission('read warehouses') ||
                             hasPermission('read suppliers') ||
                             hasPermission('read products') ||
-                            hasPermission('read shipments')
+                            hasPermission('read shipments') ||
+                            hasPermission('read material request')
                         "
                         v-show="!isMinimized"
                         class="px-4 mt-4 mb-2 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -423,6 +424,35 @@
                         ></span>
                         <span v-show="!isMinimized" class="ml-3"
                             >Purchase Orders</span
+                        >
+                    </Link>
+                     <Link
+                        v-if="hasPermission('read material requests')"
+                        :href="route('material-requests.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('material requests.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('material requests.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-clipboard-text-outline text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('material requests.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Material Request</span
                         >
                     </Link>
 
