@@ -81,6 +81,7 @@ use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeSkillContro
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeePerformanceReviewController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeLeaveController;
 use App\Http\Controllers\Api\Modules\HumanResourceManagement\EmployeeOvertimeController;
+use App\Http\Controllers\Api\Modules\WarehouseManagement\MaterialRequestController;
 use App\Http\Controllers\StockAlertThresholdController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -115,6 +116,12 @@ Route::as('api.')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('invoices', InvoiceController::class);
     Route::post('invoices/export', [InvoiceController::class, 'export'])->name('invoices.export');
     Route::get('autocomplete/invoices', [InvoiceController::class, 'autocomplete'])->name('invoices.autocomplete');
+
+   
+    Route::get('autocomplete/material-requests', [MaterialRequestController::class, 'autocomplete']);
+    Route::apiResource('material-requests', MaterialRequestController::class);
+   
+
 
     // Add new routes for invoice payments
     Route::post('invoices/{invoice}/payments', [InvoicePaymentMethodDetailController::class, 'store'])->name('invoice-payments.store');

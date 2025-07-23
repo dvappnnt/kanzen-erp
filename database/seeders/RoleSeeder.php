@@ -17,6 +17,7 @@ class RoleSeeder extends Seeder
         $this->createSystemRoles();
         $this->assignSuperAdminPermissions();
         $this->createStockAlertPermissions();
+        $this->createMaterialRequestPermissions();
     }
 
     /**
@@ -47,6 +48,25 @@ class RoleSeeder extends Seeder
             'update stock alert thresholds',
             'delete stock alert thresholds',
             'restore stock alert thresholds',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+    }
+      private function createMaterialRequestPermissions(): void
+    {
+        $permissions = [
+            'create material requests',
+            'read material requests',
+            'update material requests',
+            'delete material requests',
+            'restore material requests',
+            'create material request items',
+            'read material request items',
+            'update material request items',
+            'delete material request items',
+            'restore material request items',
         ];
 
         foreach ($permissions as $permission) {
