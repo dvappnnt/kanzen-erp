@@ -11,6 +11,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\MaterialRequestController;
 use App\Http\Controllers\Public\QrController;
 
 use App\Http\Controllers\Modules\ProjectManagement\ProjectController;
@@ -77,6 +78,10 @@ Route::middleware([
     Route::post('/stock-alert-thresholds', [StockAlertThresholdController::class, 'store'])->name('stock-alert-thresholds.store');
     Route::get('/stock-alert-thresholds/{id}/edit', [StockAlertThresholdController::class, 'edit'])->name('stock-alert-thresholds.edit');
     Route::put('/stock-alert-thresholds/{id}', [StockAlertThresholdController::class, 'update'])->name('stock-alert-thresholds.update');
+    Route::resource('material-requests', MaterialRequestController::class);
+    Route::post('material-requests/{materialRequest}/approve', [MaterialRequestController::class, 'approve']);
+    Route::post('material-requests/{materialRequest}/reject', [MaterialRequestController::class, 'reject']);
+
 
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'create']);
     Route::post('/users/{user}/send-reset-password', [UserController::class, 'sendResetPasswordLink'])
