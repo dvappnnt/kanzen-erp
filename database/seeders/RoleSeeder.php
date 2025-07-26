@@ -18,6 +18,7 @@ class RoleSeeder extends Seeder
         $this->assignSuperAdminPermissions();
         $this->createStockAlertPermissions();
         $this->createMaterialRequestPermissions();
+        $this->createPurchaseRequestAndInternalTransferPermissions();
     }
 
     /**
@@ -67,6 +68,25 @@ class RoleSeeder extends Seeder
             'update material request items',
             'delete material request items',
             'restore material request items',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+    }
+     private function createPurchaseRequestAndInternalTransferPermissions(): void
+    {
+        $permissions = [
+            'create purchase requests',
+            'read purchase requests',
+            'update purchase requests',
+            'delete purchase requests',
+            'restore purchase requests',
+            'create internal transfers',
+            'read internal transfers',
+            'update internal transfers',
+            'delete internal transfers',
+            'restore internal transfers',
         ];
 
         foreach ($permissions as $permission) {
