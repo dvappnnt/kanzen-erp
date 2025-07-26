@@ -1,8 +1,6 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
-import Table from "@/Components/Data/Table.vue";
 import HeaderActions from "@/Components/HeaderActions.vue";
-import Autocomplete from "@/Components/Data/Autocomplete.vue";
 import { ref, onMounted, computed } from "vue";
 import { router } from "@inertiajs/vue3";
 import axios from "@/axios";
@@ -31,44 +29,11 @@ const headerActions = ref([
     },
 ]);
 
-// Table columns
-const columns = ref([
-    {
-        label: "Reference No",
-        value: "reference_no",
-        uri: (row) => route("material-requests.show", row.id),
-        class: "text-blue-600 hover:underline",
-        icon: "mdi-file-document-outline",
-    },
-    {
-        label: "Warehouse",
-        value: (row) => row?.warehouse?.name ?? "—",
-        icon: "mdi-warehouse",
-    },
-    {
-        label: "Requested By",
-        value: (row) => row?.requested_by?.name ?? "—",
-    },
-    {
-        label: "Status",
-        value: "status",
-        render: (row) => ({
-            text: humanReadable(row.status),
-            class: getStatusPillClass(row.status),
-        }),
-    },
-    {
-        label: "Date",
-        value: (row) => moment(row.created_at).format("L, LT"),
-    },
-    { label: "Actions" },
-]);
-
-// Add actions per row
+// Format row actions
 const mapCustomButtons = (row) => ({
     ...row,
     viewUrl: `/${modelName}/${row.id}`,
-     editUrl: `/${modelName}/${row.id}/edit`,
+    editUrl: `/${modelName}/${row.id}/edit`,
     label: row.reference_no,
 });
 
@@ -85,8 +50,6 @@ const fetchTableData = async (url = `/api/${modelName}`) => {
             ...response.data,
             data: tableData.map(mapCustomButtons),
         };
-
-        console.log("✅ Material Requests:", response.data);
     } catch (error) {
         console.error(
             "❌ Error fetching:",
@@ -97,50 +60,9 @@ const fetchTableData = async (url = `/api/${modelName}`) => {
     }
 };
 
-// Pagination handler
+// Handlers
+const handleAction = (url) => router.get(url);
 const handlePagination = (url) => fetchTableData(url);
-
-// Action handler
-const handleAction = async ({ action, row }) => {
-    try {
-        if (action === "view" && row.viewUrl) {
-            router.get(row.viewUrl);
-        }else if (action === "edit" && row.editUrl) {
-            router.get(row.editUrl); // 👈 this will open Edit.vue
-        }
-    } catch (error) {
-        alert("Action failed.");
-        console.error(error);
-    }
-};
-const handleAutocomplete = async (selected) => {
-    if (!selected) {
-        fetchTableData(); // fallback to all
-        return;
-    }
-
-    const mapped = mapCustomButtons(selected);
-
-    modelData.value = {
-        data: [mapped],
-        links: {
-            first: null,
-            last: null,
-            prev: null,
-            next: null,
-        },
-        meta: {
-            total: 1,
-            per_page: 10,
-            current_page: 1,
-            last_page: 1,
-            from: 1,
-            to: 1,
-            path: `/api/${modelName}`,
-        },
-    };
-};
-
 
 onMounted(() => fetchTableData());
 </script>
@@ -156,31 +78,112 @@ onMounted(() => fetchTableData());
             </div>
         </template>
 
-        <div class="max-w-12xl">
-            <div class="bg-white overflow-hidden shadow-sm rounded-lg">
-                <div class="p-6">
-                    <!-- <div class="mb-4">
-                        <Autocomplete
-                            :searchUrl="`/api/autocomplete/${modelName}`"
-                            :modelName="modelName"
-                            :placeholder="`Search ${formatName(
-                                modelName
-                            ).toLowerCase()}...`"
-                            :mapCustomButtons="mapCustomButtons"
-                            @select="handleAutocomplete"
-                        />
-                    </div> -->
+        <div class="max-w-12xl mt-6">
+            <div class="bg-white shadow rounded-lg overflow-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Reference No</th>
+                            <th class="px-4 py-2 text-left">Warehouse</th>
+                            <th class="px-4 py-2 text-left">Requested By</th>
+                            <th class="px-4 py-2 text-left">Status</th>
+                            <th class="px-4 py-2 text-left">Date</th>
+                            <th class="px-4 py-2 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody
+                        class="bg-white divide-y divide-gray-100"
+                        v-if="!isLoading"
+                    >
+                        <tr v-for="row in modelData.data" :key="row.id">
+                            <td class="px-4 py-2">
+                                <a
+                                    @click="handleAction(row.viewUrl)"
+                                    class="text-blue-600 hover:underline cursor-pointer"
+                                >
+                                    {{ row.reference_no }}
+                                </a>
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ row.warehouse?.name ?? "—" }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ row.requested_by?.name ?? "—" }}
+                            </td>
+                            <td class="px-4 py-2">
+                                <span :class="getStatusPillClass(row.status)">
+                                    {{ humanReadable(row.status) }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ moment(row.created_at).format("L, LT") }}
+                            </td>
+                            <td class="px-4 py-2 space-x-2">
+                                <button
+                                    @click="handleAction(row.viewUrl)"
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                                >
+                                    View
+                                </button>
+                                <button
+                                    @click="handleAction(row.editUrl)"
+                                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
+                                >
+                                    Edit
+                                </button>
 
-                    <Table
-                        :data="modelData"
-                        :columns="columns"
-                        :modelName="modelName"
-                        :isLoading="isLoading"
-                        @paginate="handlePagination"
-                        @action="handleAction"
-                        @refresh="fetchTableData"
-                    />
-                </div>
+                                <template v-if="row.status === 'approved'">
+                                    <button
+                                        class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
+                                        @click="
+                                            handleAction(
+                                                `/internal-transfers/create?material_request_id=${row.id}`
+                                            )
+                                        "
+                                    >
+                                        Generate Internal Transfer
+                                    </button>
+                                    <button
+                                        class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm"
+                                        @click="
+                                            handleAction(
+                                                `/purchase-requests/create?material_request_id=${row.id}`
+                                            )
+                                        "
+                                    >
+                                        Generate PR
+                                    </button>
+                                </template>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody v-else>
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                Loading...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div
+                v-if="modelData.links?.length"
+                class="mt-4 flex flex-wrap justify-center gap-2"
+            >
+                <button
+                    v-for="link in modelData.links"
+                    :key="link.label"
+                    :disabled="!link.url"
+                    @click="handlePagination(link.url)"
+                    v-html="link.label"
+                    class="px-3 py-1 rounded border text-sm"
+                    :class="[
+                        link.active ? 'bg-black text-white' : 'bg-white hover:bg-gray-100',
+                        !link.url && 'text-gray-400 cursor-not-allowed',
+                    ]"
+                />
             </div>
         </div>
     </AppLayout>
