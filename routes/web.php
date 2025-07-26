@@ -11,6 +11,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\InternalTransferController;
 use App\Http\Controllers\MaterialRequestController;
 use App\Http\Controllers\Public\QrController;
 
@@ -52,7 +53,9 @@ use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeLeaveController
 use App\Http\Controllers\Modules\HumanResourceManagement\EmployeeOvertimeController;
 use App\Http\Controllers\Modules\HumanResourceManagement\DeductionController;
 use App\Http\Controllers\Modules\HumanResourceManagement\DocumentTypeController;
+use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\StockAlertThresholdController;
+use App\Models\MaterialRequest;
 
 Route::get('/', function () {
     // return Inertia::render('Welcome', [
@@ -81,6 +84,32 @@ Route::middleware([
     Route::resource('material-requests', MaterialRequestController::class);
     Route::post('material-requests/{materialRequest}/approve', [MaterialRequestController::class, 'approve']);
     Route::post('material-requests/{materialRequest}/reject', [MaterialRequestController::class, 'reject']);
+
+    Route::prefix('internal-transfers')->name('internal-transfers.')->group(function () {
+    Route::get('/', [InternalTransferController::class, 'index'])->name('index');
+    Route::get('/create', [InternalTransferController::class, 'create'])->name('create');
+    Route::post('/', [InternalTransferController::class, 'store'])->name('store');
+    Route::get('/{internalTransfer}', [InternalTransferController::class, 'show'])->name('show');
+    Route::get('/{internalTransfer}/edit', [InternalTransferController::class, 'edit'])->name('edit');
+    Route::put('/{internalTransfer}', [InternalTransferController::class, 'update'])->name('update');
+    Route::delete('/{internalTransfer}', [InternalTransferController::class, 'destroy'])->name('destroy');
+});
+Route::prefix('purchase-requests')->name('purchase-requests.')->group(function () {
+    Route::get('/', [PurchaseRequestController::class, 'index'])->name('index');
+    Route::get('/create', [PurchaseRequestController::class, 'create'])->name('create');
+    Route::post('/', [PurchaseRequestController::class, 'store'])->name('store');
+    Route::get('/{purchaseRequest}', [PurchaseRequestController::class, 'show'])->name('show');
+    Route::get('/{purchaseRequest}/edit', [PurchaseRequestController::class, 'edit'])->name('edit');
+    Route::put('/{purchaseRequest}', [PurchaseRequestController::class, 'update'])->name('update');
+    Route::delete('/{purchaseRequest}', [PurchaseRequestController::class, 'destroy'])->name('destroy');
+});
+Route::get('/material-requests/{id}/items', function ($id) {
+    $materialRequest = MaterialRequest::with('items.product')->findOrFail($id);
+
+    return response()->json([
+        'items' => $materialRequest->items,
+    ]);
+});
 
 
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'create']);

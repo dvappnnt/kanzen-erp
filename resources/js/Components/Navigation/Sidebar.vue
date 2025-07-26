@@ -426,7 +426,7 @@
                             >Purchase Orders</span
                         >
                     </Link>
-                     <Link
+                    <Link
                         v-if="hasPermission('read material requests')"
                         :href="route('material-requests.index')"
                         :class="[
@@ -452,7 +452,80 @@
                             "
                         ></span>
                         <span v-show="!isMinimized" class="ml-3"
-                            >Material Request</span
+                            >Material Request
+                            <span
+                                class="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full"
+                            >
+                                Beta
+                            </span></span
+                        >
+                    </Link>
+                    <Link
+                        v-if="hasPermission('read purchase requests')"
+                        :href="route('purchase-requests.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('purchase-requests.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('purchase-requests.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-cart-arrow-down text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('purchase-requests.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Purchase Request
+                            <span
+                                class="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full"
+                            >
+                                Beta
+                            </span></span
+                        >
+                    </Link>
+                    <Link
+                        v-if="hasPermission('read internal transfers')"
+                        :href="route('internal-transfers.index')"
+                        :class="[
+                            'flex items-center px-4 py-2 rounded-lg transition-colors',
+                            route().current()?.startsWith('internal-transfers.')
+                                ? 'active-link'
+                                : 'hover:bg-gray-100',
+                        ]"
+                        :style="
+                            route().current()?.startsWith('internal-transfers.')
+                                ? activeStyles
+                                : sidebarTextStyle
+                        "
+                    >
+                        <span
+                            class="mdi mdi-transfer text-xl"
+                            :style="
+                                route()
+                                    .current()
+                                    ?.startsWith('internal-transfers.')
+                                    ? { color: activeTextColor }
+                                    : sidebarTextStyle
+                            "
+                        ></span>
+                        <span v-show="!isMinimized" class="ml-3"
+                            >Internal Transfer
+                            <span
+                                class="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full"
+                            >
+                                Beta
+                            </span></span
                         >
                     </Link>
 
